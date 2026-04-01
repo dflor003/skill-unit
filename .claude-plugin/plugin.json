@@ -1,0 +1,10 @@
+{
+  "name": "skill-unit",
+  "version": "0.1.0",
+  "description": "Reproducible unit testing framework for AI agent skills",
+  "author": {
+    "name": "skill-unit contributors"
+  },
+  "license": "MIT",
+  "keywords": ["testing", "skills", "evaluation", "ci-cd"]
+}
