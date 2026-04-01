@@ -1,0 +1,26 @@
+# .skill-unit.yml
+# Place this file at your repo root to configure skill-unit for this project.
+# All fields are optional — skill-unit has sensible built-in defaults.
+
+# Directory where test spec files (*.spec.md) are discovered recursively.
+test-dir: tests
+
+# Output settings
+output:
+  # Display format for results. Use "json" for CI/CD pipelines and machine-readable output.
+  format: interactive
+
+  # When false, passing tests are collapsed to a single summary line.
+  # Set to true to show full expectation details for passing tests as well.
+  show-passing-details: false
+
+# Execution settings
+execution:
+  # Default per-test timeout. Can be overridden per spec file via frontmatter.
+  timeout: 60s
+
+# Default setup and teardown scripts. Applied to all spec files that do not
+# declare their own setup/teardown in frontmatter.
+defaults:
+  setup: setup.sh
+  teardown: teardown.sh
