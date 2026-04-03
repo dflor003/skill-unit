@@ -51,7 +51,7 @@ This skill operates on a single target skill per invocation. If the user wants t
 
 Read `.skill-unit.yml` from the repo root (if it exists) to determine the test directory. Default to `tests/` if not configured.
 
-Use the Glob tool to search recursively for `**/*.spec.md` under the test directory. For each found spec file, read its YAML frontmatter and check if the `skill` field matches the selected skill name.
+Use the Glob tool to search recursively for `**/*.spec.md` under the test directory. For each found spec file, read its YAML frontmatter and check if the `skill` field matches the selected skill name. Skip files with missing or malformed frontmatter, or where the `skill` field is absent.
 
 **If one spec file is found:**
 
@@ -70,7 +70,7 @@ Use the Glob tool to search recursively for `**/*.spec.md` under the test direct
 > Which one would you like to work with, or should I review all of them for gaps?"
 
 - If the user picks one → ask gap review or specific changes as above.
-- If the user wants all reviewed → run gap analysis across all of them sequentially.
+- If the user wants all reviewed → run gap analysis across all of them sequentially: for each spec file, present findings, work through improvements with the user, write changes back to that file, then move to the next spec file.
 
 **If no spec files are found:**
 
@@ -89,7 +89,7 @@ Read the target skill's SKILL.md using the Read tool. Extract and summarize:
 - **Outputs:** What the skill produces (text response, file changes, git operations, etc.).
 - **Constraints:** Any explicit rules or restrictions the skill follows.
 
-If the skill uses Read, Write, Edit, Glob, or Grep on project files, or references specific file types or directory structures, or depends on git state — note that **fixtures will likely be needed**. Load `references/fixture-design.md` for guidance on fixture design and incorporate fixture questions into the targeted questions below.
+If the skill uses Read, Write, Edit, Glob, or Grep on project files, or references specific file types or directory structures, or depends on git state — note that **fixtures will likely be needed**. Use the Read tool to load this skill's `references/fixture-design.md` (path: `skills/test-design/references/fixture-design.md` from repo root) for guidance on fixture design and incorporate fixture questions into the targeted questions below.
 
 ### Step 4: Targeted Questions
 
@@ -366,7 +366,7 @@ All generated spec files must follow this exact structure.
 | Field | Required | Type | Description |
 |-------|----------|------|-------------|
 | `name` | Yes | string | Human-readable name for the test suite |
-| `skill` | No | string | Skill being tested (informational) |
+| `skill` | No | string | Skill being tested (always emitted during generation; used for spec detection) |
 | `tags` | No | list | Tags for filtering test runs |
 | `timeout` | No | duration | Per-test timeout (e.g., `90s`) |
 | `fixtures` | No | path | Path to fixture folder, relative to spec file directory |
