@@ -5,6 +5,14 @@
 # Directory where test spec files (*.spec.md) are discovered recursively.
 test-dir: tests
 
+# Runner configuration — how test prompts are executed in isolated sessions.
+# Change this to match your AI agent harness (Claude, Copilot, Codex, etc.).
+runner:
+  # The CLI executable to invoke for each test prompt.
+  command: claude
+  # Default arguments passed to the CLI. The prompt is piped via stdin.
+  args: ["--print", "--output-format", "text", "--max-turns", "10"]
+
 # Output settings
 output:
   # Display format for results. Use "json" for CI/CD pipelines and machine-readable output.

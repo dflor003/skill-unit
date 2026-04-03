@@ -1,0 +1,13 @@
+{
+  "name": "skill-unit",
+  "owner": {
+    "name": "Danil Flores"
+  },
+  "plugins": [
+    {
+      "name": "skill-unit",
+      "source": "./",
+      "description": "Reproducible unit testing framework for AI agent skills"
+    }
+  ]
+}
