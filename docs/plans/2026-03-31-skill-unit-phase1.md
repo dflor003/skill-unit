@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a Claude Code plugin that provides reproducible, anti-bias skill testing via a three-role agent architecture (evaluator, test-executor, grader) with sequential execution, fixture support, and checked-in results.
+**Goal:** Build a harness-agnostic plugin that provides reproducible, anti-bias skill testing with a configurable CLI runner for test execution, inline grading, fixture support, and checked-in results.
 
-**Architecture:** SKILL.md acts as the main-thread evaluator/orchestrator. It discovers `*.spec.md` test files, dispatches locked-down test-executor subagents with only the prompt, then dispatches grader subagents that write timestamped results to disk. A PreToolUse hook enforces anti-bias by blocking test-executor access to spec files.
+**Architecture:** SKILL.md acts as evaluator and inline grader. It discovers `*.spec.md` test files, executes prompts via a configurable CLI runner (isolated process per test), grades responses inline, writes timestamped results to disk, and presents a summary. A conditional PreToolUse hook (marker-file activated) enforces anti-bias by blocking access to spec files during test execution. Agent definitions (test-executor, grader) are kept for future Phase 2 enhancement.
 
-**Tech Stack:** Claude Code plugin system (markdown agents, skills, hooks), Bash scripts, YAML configuration.
+**Tech Stack:** Plugin system (markdown skills, agents, hooks), Bash scripts, YAML configuration. Harness-agnostic — works with Claude Code, Copilot, Codex, or any harness supporting the skill/plugin format.
 
 **Spec:** `docs/specs/2026-03-31-skill-unit-design.md`
 
@@ -17,30 +17,55 @@
 ```
 skill-unit/
 ├── .claude-plugin/
-│   └── plugin.json                          # Plugin manifest
+│   ├── plugin.json                          # Plugin manifest
+│   └── marketplace.json                     # Marketplace registration
+├── .claude/
+│   └── skills/
+│       └── report-card/
+│           └── SKILL.md                     # Dummy skill for self-testing
 ├── agents/
-│   ├── test-executor.md                     # Subagent — runs prompts, locked down
-│   └── grader.md                            # Subagent — grades responses, writes results
+│   ├── test-executor.md                     # Future: subagent-based execution
+│   └── grader.md                            # Future: Phase 2 consumer pattern
 ├── skills/
 │   └── skill-unit/
-│       ├── SKILL.md                         # Evaluator/orchestrator (largest file)
+│       ├── SKILL.md                         # Evaluator + inline grader (core)
 │       ├── references/
 │       │   ├── spec-format.md               # Spec file format documentation
 │       │   └── testing-guidelines.md        # Skill testing best practices
 │       ├── templates/
 │       │   ├── example.spec.md              # Starter template for new spec files
-│       │   └── .skill-unit.yml              # Default configuration template
+│       │   └── .skill-unit.yml              # Default config (includes runner section)
 │       └── scripts/
 │           └── setup-tests.sh               # Scaffolds test directory in a project
 ├── hooks/
 │   ├── hooks.json                           # Hook configuration
 │   └── scripts/
-│       └── block-test-access.sh             # PreToolUse hook — blocks *.spec.md access
+│       └── block-test-access.sh             # Conditional PreToolUse hook (marker-file)
 └── tests/
     └── skill-unit/
-        ├── spec-parsing.spec.md             # Self-tests: activation, parsing, discovery
-        └── results/                         # Results written here by grader
+        ├── spec-parsing.spec.md             # Self-tests using report-card fixture
+        ├── fixtures/
+        │   └── report-card/                 # Fixture: fake project with tests
+        │       └── tests/report-card/
+        │           ├── report-card.spec.md  # Spec targeting report-card skill
+        │           └── fixtures/basic-class/
+        │               └── students.json    # Test data (3 students)
+        └── results/                         # Results written here by evaluator
 ```
+
+## Key Architectural Decisions
+
+### CLI Runner Instead of Subagents
+
+Skills run inside a subagent context, and subagents cannot spawn sub-subagents. This constraint applies across all harnesses. The CLI runner solves this by shelling out to the harness's CLI for each test prompt, providing process-level isolation (stronger anti-bias than subagents) and harness-agnosticism.
+
+### Inline Grading Instead of Separate Grader
+
+Grading does not require anti-bias isolation. The evaluator grades responses inline immediately after each test case is executed, avoiding the overhead of a separate process. The grader agent (`agents/grader.md`) is kept for future Phase 2 consumer pattern.
+
+### Workspace Isolation Instead of Hooks
+
+Fixtures are copied into a temp directory (`/tmp/skill-unit-workspace-XXXXXX/`) using a helper script. The CLI runner is invoked from this workspace directory. The spawned session sees only the fixture contents — no test specs, no results, no test directory. This provides process-level anti-bias isolation without hooks or marker files. Helper scripts (`create-workspace.sh`, `cleanup-workspace.sh`) manage the workspace lifecycle. Fixtures should be self-contained projects including any skills, config files, and data the CLI session needs.
 
 ---
 
@@ -1243,13 +1268,13 @@ The evaluator should present an interactive summary after all tests complete, sh
 
 - [ ] **Step 8: Run self-tests with skill-unit**
 
-The ultimate validation — use skill-unit to test itself:
+The ultimate validation — use skill-unit to run its self-tests against the report-card fixture:
 
 ```
-/skill-unit tests/skill-unit
+/skill-unit
 ```
 
-Expected: Skill-unit runs its own spec files and reports results.
+Expected: Skill-unit discovers `tests/skill-unit/spec-parsing.spec.md`, copies the report-card fixture, executes prompts via the CLI runner against the report-card skill, grades results inline, writes a timestamped results file, and presents a summary.
 
 - [ ] **Step 9: Document any issues found**
 
@@ -1268,11 +1293,13 @@ git commit -m "fix: address issues found during end-to-end validation"
 
 The following items are deferred to Phase 2 and later. They are documented here for context:
 
-- **Parallel test execution** — dispatch multiple test-executors concurrently within a spec file
-- **Persistent grader consumer pattern** — spawn grader once, stream results via SendMessage as executors complete
+- **Parallel test execution** — dispatch multiple CLI runner sessions concurrently within a spec file
+- **Persistent grader consumer pattern** — spawn grader agent once, stream results via SendMessage as executors complete (uses `agents/grader.md`)
+- **Subagent-based execution** — alternative to CLI runner for harnesses that support main-thread agent spawning (uses `agents/test-executor.md`)
 - **JSON output format** — machine-readable output for CI/CD pipelines
 - **Tag-based filtering** — `/skill-unit --tag happy-path` to run a subset of tests
 - **Rubric-style scoring** — graduated pass/fail instead of binary (future grading model)
-- **Worktree isolation** — for artifact-producing tests (Phase 3)
+- **Worktree isolation** — for artifact-producing tests (Phase 3, Approach B experiment)
+- **Neutral workspace directory** — alternative fixture placement (Phase 3, Approach D experiment)
 - **AI-assisted test generation** — generate spec files from skill descriptions (Phase 4)
 - **Skill coverage analysis** — identify gaps in test suites (Phase 4)
