@@ -2,116 +2,120 @@
 
 ## Overview
 
-Skill Unit is a Claude Code plugin that provides a structured, reproducible testing framework for AI agent skills. It follows the conventions of traditional unit testing frameworks (Jest, JUnit, NUnit) — well-defined test files, a test runner, structured pass/fail results — applied to the problem of evaluating skill behavior.
+Skill Unit is a plugin that provides a structured, reproducible testing framework for AI agent skills. It follows the conventions of traditional unit testing frameworks (Jest, JUnit, NUnit) — well-defined test files, a test runner, structured pass/fail results — applied to the problem of evaluating skill behavior.
 
-The framework uses a three-role agent architecture to ensure unbiased evaluation: an evaluator orchestrates test discovery and reporting, a test-executor runs prompts without knowledge of expected outcomes, and a grader assesses results and writes them to disk.
+The framework is **harness-agnostic** — it works with any AI agent harness that supports the skill/plugin format (Claude Code, Copilot, Codex, etc.). Test execution is performed via a configurable CLI runner, allowing the same test suite to run against any harness.
+
+The architecture uses two roles: an evaluator skill that orchestrates test discovery, execution dispatch, inline grading, and reporting; and an isolated CLI session per test prompt that ensures anti-bias execution.
 
 ## Goals
 
 - **Reproducibility:** Testing is as easy as installing a unit testing framework. Well-defined folders, well-defined file format, familiar mental model for anyone who has written a unit test.
-- **Quick Feedback:** Fast feedback loop during skill development. CI/CD support out of the box via `claude --task` with the plugin loaded.
+- **Quick Feedback:** Fast feedback loop during skill development. CI/CD support out of the box via any harness's CLI task runner.
 - **Prompt as Source of Truth:** Test cases are prompts with expected outcomes. The prompt is what gets tested — no mocking, no simulation.
 - **Anti-Bias Evaluation:** The agent executing the prompt has no access to expected outcomes or any indication it is being tested. Evaluation accuracy reflects real-world skill performance.
 - **Checked-In Results:** Timestamped results files are committed to the repo, enabling regression tracking and cross-run comparison via git history and PR diffs.
+- **Harness-Agnostic:** The framework MUST work across multiple agentic harnesses — Claude Code, GitHub Copilot, OpenAI Codex, and any future tool that adopts the industry-standard skill/plugin format. Test execution uses a configurable CLI runner, not harness-specific subagent APIs. A test suite written once should run identically regardless of which harness executes it.
 
 ## Architecture
 
-### Three-Role Agent Model
+### Two-Role Model
 
 ```
 User invokes /skill-unit or asks to test a skill
         │
         ▼
-┌─────────────────────────────────────┐
-│  SKILL.md (main-thread evaluator)   │
-│  - Discovers *.spec.md files        │
-│  - Parses frontmatter + test cases  │
-│  - Runs setup scripts/fixtures      │
-│  - Dispatches test-executor agents  │
-│  - Dispatches grader agents         │
-│  - Reads result files               │
-│  - Formats & presents summary       │
-│  - Runs teardown scripts            │
-└──────┬──────────────┬───────────────┘
-       │              │
-       ▼              ▼
-┌──────────────┐  ┌──────────────┐
-│ TEST-EXECUTOR│  │    GRADER    │
-│ (subagent)   │  │  (subagent)  │
-│              │  │              │
-│ Receives:    │  │ Receives:    │
-│ - Prompt     │  │ - Subagent   │
-│   only       │  │   response   │
-│              │  │ - Expected   │
-│ Cannot:      │  │   outcomes   │
-│ - Read       │  │ - Negative   │
-│   *.spec.md  │  │   outcomes   │
-│ - Access     │  │ - Results    │
-│   test dir   │  │   file path  │
-│              │  │              │
-│ Returns:     │  │ Writes:      │
-│ - Raw        │  │ - Results    │
-│   response   │  │   to disk    │
-└──────────────┘  └──────────────┘
+┌─────────────────────────────────────────┐
+│  SKILL.md (evaluator + inline grader)   │
+│  - Discovers *.spec.md files            │
+│  - Parses frontmatter + test cases      │
+│  - Runs setup scripts/fixtures          │
+│  - Dispatches CLI runner per prompt     │
+│  - Grades responses inline              │
+│  - Writes timestamped results to disk   │
+│  - Formats & presents summary           │
+│  - Runs teardown scripts                │
+└──────────────┬──────────────────────────┘
+               │
+               ▼ (one per test case)
+┌──────────────────────────────────┐
+│  ISOLATED CLI SESSION            │
+│  (configurable runner command)   │
+│                                  │
+│  Receives: prompt only           │
+│  Has no access to:               │
+│  - Expectations                  │
+│  - Test metadata                 │
+│  - Other test cases              │
+│                                  │
+│  Returns: raw response (stdout)  │
+└──────────────────────────────────┘
 ```
+
+### Why CLI Runner Instead of Subagents?
+
+Skills run inside a subagent context, and subagents cannot spawn sub-subagents. This is a constraint across all harnesses (Claude Code, Copilot, Codex, etc.). The CLI runner approach solves this by shelling out to the harness's CLI for each test prompt, which provides:
+
+- **Process-level isolation** — stronger anti-bias than subagents (completely separate context)
+- **Harness-agnostic** — any harness with a CLI entry point works
+- **No shared state** — each test case runs in a fresh session
+
+### Why Inline Grading?
+
+Grading does not require anti-bias isolation — it only needs the response text and the expectations. By grading inline in the evaluator, we avoid the overhead of spawning a separate process for grading and keep the evaluator's context manageable by grading each test case immediately after execution.
+
+A separate grader agent (`agents/grader.md`) is included in the plugin for future Phase 2 enhancement (persistent grader consumer pattern) but is not used in Phase 1.
 
 ### Execution Flow (Phase 1 — Sequential)
 
 1. Skill activates via `/skill-unit` or natural language ("test my skill", "run skill tests").
 2. Evaluator captures suite start timestamp.
-3. Evaluator reads `.skill-unit.yml` (if present) for configuration.
+3. Evaluator reads `.skill-unit.yml` (if present) for configuration, including the CLI runner command.
 4. Evaluator discovers all `*.spec.md` files under the configured test directory.
 5. For each spec file (sequential):
    a. Parse YAML frontmatter and test case sections.
-   b. Copy fixture folder (if configured) into the working directory.
-   c. Run setup script (if configured).
+   b. Create isolated workspace from fixture folder (if configured) using helper script.
+   c. Run setup script (if configured) inside the workspace.
    d. For each test case (sequential):
-      - Spawn test-executor subagent with only the prompt.
-      - Collect raw response.
-   e. Once all test cases for this spec file have been executed, spawn grader subagent with the collected responses + expectations for the entire spec file.
-      - Grader evaluates each test case: binary pass/fail per expectation.
-      - Grader writes timestamped results file to `results/` subfolder.
-   f. Run teardown script (if configured).
+      - Execute the prompt via the configured CLI runner from the workspace directory.
+      - Collect the raw stdout response.
+      - Grade the response inline: binary pass/fail per expectation.
+   e. Write timestamped results file to `results/` subfolder.
+   f. Run teardown script (if configured) inside the workspace.
+   g. Clean up workspace using helper script.
 6. Evaluator reads all results files for this run and presents the summary.
-
-### Why Three Roles?
-
-- **Test-executor isolation:** Never sees expectations, never knows it is being tested. This is the anti-bias guarantee.
-- **Grader writes to disk:** Offloads result accumulation from the evaluator's context. The evaluator stays lean — it hands off responses and reads final result files.
-- **Evaluator orchestrates:** Owns the overall flow, fixture management, and summary presentation. Does not hold all test responses in context simultaneously.
 
 ## Anti-Bias Layer
 
-Four layers of protection ensure the test-executor cannot access test metadata:
+Two layers of protection ensure the test-executor session cannot access test metadata:
 
 ### Layer 1: Prompt Isolation
 
-The evaluator passes only the raw prompt text to the test-executor. No test ID, no expectations, no mention of "testing" or "evaluation." The subagent believes it is handling a normal user request.
+The evaluator passes only the raw prompt text to the CLI runner. No test ID, no expectations, no mention of "testing" or "evaluation." The isolated session believes it is handling a normal user request.
 
-### Layer 2: Tool Restrictions
+### Layer 2: Workspace Isolation
 
-`test-executor.md` frontmatter restricts available tools. No Agent tool (cannot spawn sub-subagents).
+When fixtures are configured, the evaluator creates a temp directory (`/tmp/skill-unit-workspace-XXXXXX/`) containing only the fixture files. The CLI runner is invoked from this workspace directory. The spawned session sees only the fixture contents — no test specs, no results files, no test directory. This provides process-level anti-bias isolation without hooks or marker files.
 
-### Layer 3: PreToolUse Hook
+Helper scripts manage the workspace lifecycle:
+- `create-workspace.sh <fixture-path>` — creates the temp directory, copies fixture contents, returns the path
+- `cleanup-workspace.sh <workspace-path>` — safely removes the temp directory (validates the naming pattern before deletion)
 
-`block-test-access.sh` intercepts Read, Glob, and Grep calls targeting `*.spec.md` files or the configured test directory. Returns exit code 2 to block the operation.
-
-### Layer 4: Convention
-
-The test directory (`tests/`) lives at repo root, separate from skill source. Combined with the hook, the subagent cannot access test data even if it tries.
+The fixture should be a self-contained project — including any skills, config files, and data the CLI session needs to discover and operate on.
 
 ## Plugin Structure
 
 ```
 skill-unit/
 ├── .claude-plugin/
-│   └── plugin.json
+│   ├── plugin.json
+│   └── marketplace.json
 ├── agents/
-│   ├── test-executor.md
-│   └── grader.md
+│   ├── test-executor.md         # Available for future subagent-based execution
+│   └── grader.md                # Available for future Phase 2 consumer pattern
 ├── skills/
 │   └── skill-unit/
-│       ├── SKILL.md              # Evaluator/orchestrator
+│       ├── SKILL.md             # Evaluator + inline grader (core of the plugin)
 │       ├── references/
 │       │   ├── spec-format.md
 │       │   └── testing-guidelines.md
@@ -119,11 +123,9 @@ skill-unit/
 │       │   ├── example.spec.md
 │       │   └── .skill-unit.yml
 │       └── scripts/
-│           └── setup-tests.sh
-└── hooks/
-    ├── hooks.json
-    └── scripts/
-        └── block-test-access.sh
+│           ├── setup-tests.sh       # Scaffolds test directory in a project
+│           ├── create-workspace.sh  # Creates isolated temp workspace from fixture
+│           └── cleanup-workspace.sh # Safely removes workspace temp directory
 ```
 
 ## Spec File Format
@@ -203,15 +205,15 @@ A companion folder (referenced in frontmatter as `fixtures: ./fixtures/basic-rep
 
 #### Fixture Placement Strategy
 
-The subagent must operate in an environment that looks like a real project — it cannot work inside the test directory (the PreToolUse hook blocks access, and a `tests/` path would reveal it's being tested). Three approaches to explore:
+The isolated CLI session must operate in an environment that looks like a real project. Fixtures are copied into a temporary workspace directory (`/tmp/skill-unit-workspace-XXXXXX/`) using the `create-workspace.sh` helper script. The CLI runner is invoked from this workspace.
 
-**Approach C (Phase 1 default): Copy to repo root.** Fixtures are copied directly into the repo's working directory. This is the most realistic — it matches where a real user's skill would operate. The evaluator tracks which files were added (via `git status` or explicit file list) and removes them during cleanup, regardless of whether the teardown script succeeds. Risk: a failed or interrupted cleanup leaves fixture files in the repo.
+This approach provides:
+- **Complete isolation** — the CLI session sees only the fixture files, no test specs or results
+- **No repo pollution** — fixtures never touch the real working directory
+- **Clean teardown** — `cleanup-workspace.sh` removes the entire temp directory
+- **Self-contained projects** — fixtures should include everything the CLI session needs (skills, config, data files)
 
-**Approach B (Experiment): Git worktree.** The evaluator creates a worktree for the test run and copies fixtures into it. The Agent tool's `isolation: "worktree"` parameter runs the subagent there. The subagent sees a clean repo checkout with fixtures in place. Cleanest isolation, but adds worktree creation overhead and requires cleanup of temporary branches.
-
-**Approach D (Experiment): Neutral workspace directory.** A `.gitignore`'d directory at repo root (e.g., `.workspace/`) receives the fixtures. The evaluator instructs the subagent to treat it as the project root. Generic enough to not leak "testing," but the subagent's working directory differs from a real user scenario.
-
-Phase 1 implements Approach C. The implementation plan includes experiments with B and D to compare cleanup reliability, subagent behavior realism, and performance overhead.
+Future experiments may explore git worktrees or other isolation mechanisms for artifact-producing tests (Phase 3).
 
 ### Setup/Teardown Scripts
 
@@ -286,6 +288,14 @@ Placed at repo root. All fields optional — sensible defaults built in.
 # Where test spec files live
 test-dir: tests
 
+# Runner configuration — how test prompts are executed in isolated sessions.
+# Change this to match your AI agent harness.
+runner:
+  # The CLI executable to invoke for each test prompt.
+  command: claude
+  # Default arguments passed to the CLI. The prompt is piped via stdin.
+  args: ["--print", "--output-format", "text", "--max-turns", "10"]
+
 # Output settings
 output:
   format: interactive  # or "json"
@@ -293,7 +303,7 @@ output:
 
 # Execution settings
 execution:
-  timeout: 60s
+  timeout: 120s
 
 # Setup/teardown defaults
 defaults:
@@ -306,6 +316,30 @@ defaults:
 1. Spec file frontmatter (highest priority)
 2. `.skill-unit.yml` at repo root
 3. Built-in defaults from the plugin
+
+## Self-Testing
+
+Skill Unit tests itself using a dummy **report-card skill** — a simple, deterministic skill that reads a `students.json` fixture file and produces a formatted grade summary. The report-card skill lives as a repo-level skill at `.claude/skills/report-card/SKILL.md`.
+
+The self-test structure:
+
+```
+tests/skill-unit/
+  spec-parsing.spec.md                  # Self-tests exercising skill-unit's behavior
+  fixtures/
+    report-card/                        # Fixture: a self-contained project
+      .claude/skills/report-card/
+        SKILL.md                        # Dummy skill — reads students.json, outputs grades
+      tests/report-card/
+        report-card.spec.md             # Spec targeting the report-card skill
+        fixtures/basic-class/
+          students.json                 # Test data (3 students with known grades)
+  results/                              # Results written here by skill-unit
+```
+
+When skill-unit's self-tests run, the fixture is copied into a temp workspace via `create-workspace.sh`. The CLI runner is invoked from that workspace, where it sees a complete project with the report-card skill, test specs, and test data. The self-test expectations then verify that skill-unit discovered the specs, executed prompts, graded correctly, wrote results files, and presented the summary.
+
+This avoids infinite recursion (skill-unit testing itself) by pointing skill-unit at a simple, deterministic target skill instead. The workspace isolation ensures the CLI session has no visibility into skill-unit's own test suite.
 
 ## Skill Testing Guidelines
 
@@ -350,27 +384,24 @@ Baked into the plugin at `references/testing-guidelines.md`. Used by AI-assisted
 
 - Test that the skill adapts to different project states (empty repo vs. large codebase, different languages, etc.).
 
-## Self-Testing
-
-Skill Unit tests itself. The repo includes `tests/skill-unit/` containing spec files that exercise the plugin's own functionality. Each phase adds tests for its new features before the phase is considered complete.
-
 ## Phasing
 
 ### Phase 1 — MVP
 
-- Plugin structure: SKILL.md (evaluator), test-executor agent, grader agent
+- Plugin structure: SKILL.md (evaluator + inline grader), agent definitions kept for future use
+- Configurable CLI runner for harness-agnostic test execution
 - Spec file format (`*.spec.md`) with repeated section headings
 - Sequential execution: one spec file at a time, one test case at a time
-- Grader writes timestamped results files to disk (checked in)
-- Binary pass/fail grading per expectation
-- Fixture folder support (copy verbatim)
+- Evaluator grades responses inline (binary pass/fail per expectation)
+- Evaluator writes timestamped results files to disk (checked in)
+- Workspace isolation: fixtures copied into temp directory, CLI runner invoked from there
+- Helper scripts for workspace lifecycle (create-workspace.sh, cleanup-workspace.sh)
 - Polyglot setup/teardown scripts
-- PreToolUse hook for anti-bias enforcement
-- `.skill-unit.yml` configuration
+- `.skill-unit.yml` configuration with runner section
 - Interactive results output
 - `/skill-unit` slash command + natural-language activation
 - Skill testing guidelines in `references/`
-- Self-test suite for skill-unit itself
+- Self-test suite using report-card dummy skill as self-contained fixture
 
 ### Phase 2 — Performance & Parallelism
 
@@ -379,12 +410,12 @@ Skill Unit tests itself. The repo includes `tests/skill-unit/` containing spec f
 - JSON output format for CI/CD
 - Tag-based test filtering (`/skill-unit --tag happy-path`)
 
-### Phase 3 — Worktrees & Artifacts
+### Phase 3 — Artifacts & Advanced Isolation
 
-- Worktree isolation for artifact-producing tests
+- Artifact validation expectations in spec files (expected files, file contents assertions)
+- Git worktree experiment for artifact-producing tests (stronger isolation than temp directories)
 - Worktree cleanup to prevent branch bloat
-- Artifact validation expectations in spec files
-- Expected file/artifact assertions
+- Workspace persistence option (keep workspace after run for debugging)
 
 ### Phase 4 — AI-Assisted
 
@@ -401,12 +432,12 @@ Skill Unit tests itself. The repo includes `tests/skill-unit/` containing spec f
 
 ## Landscape Context
 
-No existing framework combines Claude Code skill-aware test execution, anti-bias evaluator/executor separation, artifact validation, a traditional CLI-style test runner with structured output, and CI/CD integration. The closest existing tools:
+No existing framework combines skill-aware test execution, anti-bias evaluator/executor separation, artifact validation, a traditional CLI-style test runner with structured output, and CI/CD integration. The closest existing tools:
 
 - **Anthropic Skill Creator** — eval mode with JSON test cases and blind A/B, but no standalone CLI or CI/CD support
 - **Promptfoo** — YAML config + CLI with JUnit output and GitHub Actions, but single-turn focused with no agent trajectory or artifact validation
-- **DeepEval** — pytest-style unit testing for LLMs, but Python-only with no Claude Code skill awareness
+- **DeepEval** — pytest-style unit testing for LLMs, but Python-only with no skill-format awareness
 - **Evalite / vitest-evals** — TypeScript-native eval runners, but scoring-focused rather than pass/fail with no agent support
 - **Google ADK Eval** — tool trajectory matching and user simulation, but tied to Google's ecosystem
 
-Skill Unit fills the gap as a plugin-native testing framework purpose-built for the skill format that has become the industry standard across Claude Code, Copilot, and Codex.
+Skill Unit fills the gap as a plugin-native, harness-agnostic testing framework purpose-built for the skill format that has become the industry standard across Claude Code, Copilot, and Codex.
