@@ -2,7 +2,7 @@
 name: skill-unit-self-tests
 skill: skill-unit
 tags: [self-test, end-to-end]
-fixtures: ./fixtures/report-card
+global-fixtures: ./fixtures/report-card
 ---
 
 ### SU-1: discovers-and-runs-spec-file

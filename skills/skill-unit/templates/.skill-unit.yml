@@ -13,7 +13,7 @@ runner:
   # Model to use for test execution (optional, uses harness default if omitted).
   # model: sonnet
   # Max conversation turns per test case.
-  max-turns: 10
+  max-turns: 50
 
   # Tool permissions for test sessions. Controls what the harness agent can do.
   # Built-in defaults allow: Read, Write, Edit, Bash, Glob, Grep, Agent, Skill

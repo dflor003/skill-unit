@@ -2,7 +2,7 @@
 name: report-card-tests
 skill: report-card
 tags: [happy-path, activation, fixtures]
-fixtures: ./fixtures/basic-class
+global-fixtures: ./fixtures/basic-class
 ---
 
 ### RC-1: activation-natural-language

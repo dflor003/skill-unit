@@ -36,7 +36,7 @@ The runner script (`skills/skill-unit/scripts/runner.js`) manages the full works
 2. **Per test case** — For each test case in the manifest:
    - A UUID is generated via `crypto.randomUUID()`.
    - A workspace base directory is created at `.workspace/workspaces/{uuid}/`.
-   - **`work/`** — The fixture folder (if configured) is copied into `{uuid}/work/`. If no fixture is configured, an empty directory is created. This becomes the agent's `cwd`.
+   - **`work/`** — The global fixture folder (from `global-fixtures` in spec frontmatter) is copied into `{uuid}/work/` first. Then any per-test fixtures (from the test case's `**Fixtures:**` section) are layered on top in list order, allowing per-test fixtures to add or override files from the global fixture. If no fixtures are configured, an empty directory is created. This becomes the agent's `cwd`.
    - **`plugin/`** — If the spec declares a `skill` field, the skill directory is copied into `{uuid}/plugin/skills/{skill-name}/` and a bare `plugin.json` is generated at `{uuid}/plugin/.claude-plugin/plugin.json`. The `--plugin-dir` flag points here.
 
 3. **Execution** — The CLI harness is spawned with `cwd` set to the `work/` directory. The `--plugin-dir` flag points to the sibling `plugin/` directory. File tool permissions are scoped to `work/`.
@@ -100,7 +100,7 @@ Evaluator (SKILL.md)
   │    │
   │    ├─ for each test case:
   │    │   ├─ generates UUID
-  │    │   ├─ creates .workspace/workspaces/{uuid}/work/ (copies fixtures)
+  │    │   ├─ creates .workspace/workspaces/{uuid}/work/ (copies global + per-test fixtures)
   │    │   ├─ creates .workspace/workspaces/{uuid}/plugin/ (installs skill)
   │    │   ├─ spawns CLI: cwd=work/, --plugin-dir=plugin/
   │    │   ├─ writes transcript to .workspace/runs/{ts}/results/{spec}.{id}.transcript.md

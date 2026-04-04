@@ -3,7 +3,7 @@ name: my-skill-tests
 skill: my-skill
 tags: [happy-path]
 # timeout: 60s
-# fixtures: ./fixtures/basic-repo
+# global-fixtures: ./fixtures/basic-repo
 # setup: setup.sh
 # teardown: teardown.sh
 ---
