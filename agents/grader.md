@@ -2,17 +2,8 @@
 name: grader
 description: |
   Use this agent to grade test-executor responses against expected outcomes and write results to disk. This agent should only be spawned by the skill-unit evaluator.
-
-  <example>
-  Context: The skill-unit evaluator has collected responses for all test cases in a spec file
-  user: "The evaluator sends responses and expectations to the grader for evaluation"
-  assistant: "I'll spawn the grader agent to evaluate each response and write the results file"
-  <commentary>
-  The grader evaluates responses against expectations and writes structured results to a file.
-  </commentary>
-  </example>
-model: inherit
-color: yellow
+model: sonnet
+color: green
 tools: ["Read", "Write", "Bash"]
 ---
 

@@ -1,11 +1,12 @@
 ---
 name: skill-unit
 description: This skill should be used when the user asks to "test my skill", "run skill tests", "evaluate a skill", "run the test suite", "check skill quality", "/skill-unit", or mentions skill testing, skill evaluation, or running spec files. It provides a structured unit testing framework for AI agent skills with anti-bias evaluation.
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/runner.js *) Bash(date *) Bash(mkdir -p .workspace/*)
 ---
 
 # Skill Unit — Skill Testing Framework
 
-A structured, reproducible testing framework for AI agent skills. Discover test cases, execute prompts in isolated workspaces via a configurable CLI runner, grade results inline, and present a clear pass/fail summary.
+A structured, reproducible testing framework for AI agent skills. Discover test cases, delegate execution to an isolated CLI runner, grade results inline, and present a clear pass/fail summary.
 
 ## Invocation
 
@@ -18,7 +19,13 @@ Follow these steps in exact order:
 
 ### Step 1: Capture Timestamp
 
-Record the current time as the suite start timestamp in `YYYY-MM-DD-HH-MM-SS` format. Use the Bash tool to run `date +%Y-%m-%d-%H-%M-%S`. All results files from this run share this timestamp.
+Record the current time as the suite start timestamp in `YYYY-MM-DD-HH-MM-SS` format:
+
+```bash
+date +%Y-%m-%d-%H-%M-%S
+```
+
+All results files from this run share this timestamp.
 
 ### Step 2: Load Configuration
 
@@ -27,8 +34,9 @@ Read `.skill-unit.yml` from the repository root if it exists. Apply these defaul
 ```yaml
 test-dir: tests
 runner:
-  command: claude
-  args: ["--print", "--output-format", "text", "--max-turns", "10"]
+  tool: claude        # The harness CLI to use (claude, copilot, codex)
+  model: sonnet       # Model to use for test execution (optional)
+  max-turns: 10       # Max turns per test case
 output:
   format: interactive
   show-passing-details: false
@@ -39,7 +47,28 @@ defaults:
   teardown: teardown.sh
 ```
 
-The `runner` section configures how test prompts are executed in isolated sessions. The `command` is the CLI executable and `args` are the default arguments. This allows the framework to work with any AI agent harness (Claude, Copilot, Codex, etc.).
+The `runner` section configures test execution. The `tool` selects the harness CLI (claude, copilot, codex). The runner script controls all CLI parameters internally to ensure proper isolation — no external skills leak in, no MCPs, and tool permissions are explicitly allowlisted. Users configure the tool, model, max turns, and optionally which tools the test agent may use.
+
+#### Tool Permission Defaults
+
+The runner uses `--permission-mode dontAsk` with explicit tool allowlists instead of `--dangerously-skip-permissions`. Built-in defaults (used when `.skill-unit.yml` omits these fields):
+
+```yaml
+runner:
+  allowed-tools:
+    - Read
+    - Write
+    - Edit
+    - Bash
+    - Glob
+    - Grep
+    - Agent
+    - Skill
+  disallowed-tools:
+    - AskUserQuestion
+```
+
+If `.skill-unit.yml` specifies `runner.allowed-tools`, it fully replaces the built-in allowed list. Same for `runner.disallowed-tools`. Each field is independent.
 
 ### Step 3: Discover Test Files
 
@@ -65,22 +94,123 @@ Read the spec file and parse it into:
    - **Expectations:** Bullet list under `**Expectations:**`.
    - **Negative Expectations:** Bullet list under `**Negative Expectations:**` (may be absent).
 
-#### 4b: Create Workspace (if fixtures configured)
+#### 4b: Write Manifest and Execute via Runner CLI
 
-If the spec frontmatter includes a `fixtures` field:
+After parsing, write a manifest JSON file and invoke the runner CLI to handle all test execution.
 
-1. Resolve the fixture path relative to the spec file's directory.
-2. Create an isolated workspace using the helper script:
+**Step 0: Resolve tool permissions.**
 
-```bash
-WORKSPACE=$(bash ${CLAUDE_PLUGIN_ROOT}/skills/skill-unit/scripts/create-workspace.sh "<absolute-fixture-path>")
+Apply the three-level resolution chain to produce the final `allowed-tools` and `disallowed-tools` lists:
+
+1. Start with the built-in defaults: `allowed = [Read, Write, Edit, Bash, Glob, Grep, Agent, Skill]`, `disallowed = [AskUserQuestion]`.
+2. If `.skill-unit.yml` has `runner.allowed-tools`, replace the allowed list entirely. If it has `runner.disallowed-tools`, replace the disallowed list entirely.
+3. Apply spec frontmatter overrides:
+   - If `allowed-tools` is present, it fully replaces the resolved allowed list (`allowed-tools-extra` is ignored).
+   - If only `allowed-tools-extra` is present, union its entries with the resolved allowed list.
+   - Same logic for `disallowed-tools` / `disallowed-tools-extra`.
+4. Conflict resolution: if a tool appears in both final lists, remove it from allowed (disallow wins).
+
+**Step 1: Create the manifest file.**
+
+Write `.workspace/runs/{timestamp}/manifests/{spec-name}.manifest.json` using the Write tool:
+
+```json
+{
+  "spec-name": "{name from frontmatter}",
+  "fixture-path": "{resolved fixture path relative to repo root, or null}",
+  "skill-path": "{path to the skill directory being tested, or null}",
+  "timestamp": "{timestamp from Step 1}",
+  "timeout": "{timeout from spec frontmatter, or from config execution.timeout, e.g. '120s'}",
+  "runner": {
+    "tool": "{tool from config, e.g. 'claude'}",
+    "model": "{model from config, or null}",
+    "max-turns": 10,
+    "allowed-tools": ["{resolved allowed tools list}"],
+    "disallowed-tools": ["{resolved disallowed tools list}"]
+  },
+  "test-cases": [
+    {"id": "{test-id}", "prompt": "{prompt text from blockquote}"},
+    {"id": "{test-id}", "prompt": "{prompt text from blockquote}"}
+  ]
+}
 ```
 
-3. Store the workspace path — all CLI runner invocations for this spec file will use this directory.
+**Resolving skill-path:** If the spec frontmatter has a `skill` field, search for the skill directory:
+1. Check `.claude/skills/{skill-name}/SKILL.md` (repo-level skills)
+2. Check `skills/{skill-name}/SKILL.md` (plugin skills)
+3. If found, use the directory path (e.g., `.claude/skills/report-card`). If not found, set to null.
 
-The workspace is a temp directory containing a complete copy of the fixture. The CLI runner session launched from it sees ONLY the fixture files, providing process-level anti-bias isolation. No hooks or marker files needed.
+The runner installs the skill as a plugin in a sibling directory alongside each workspace's work directory. The agent cannot see the plugin files — only the harness loads them via `--plugin-dir`.
 
-**If no fixtures are configured**, the CLI runner executes from the current working directory.
+Ensure the run directory exists:
+
+```bash
+mkdir -p .workspace/runs/{timestamp}/manifests
+```
+
+**Step 2: Invoke the runner CLI in the background.**
+
+Use the Bash tool with `run_in_background: true`:
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/runner.js .workspace/runs/{timestamp}/manifests/{spec-name}.manifest.json
+```
+
+To keep workspaces for debugging, add `--keep-workspaces`:
+
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/runner.js .workspace/runs/{timestamp}/manifests/{spec-name}.manifest.json --keep-workspaces
+```
+
+**Step 3: Poll progress and report to user.**
+
+While the runner executes in the background, poll the progress file to provide real-time feedback. The progress file is at `.workspace/runs/{timestamp}/manifests/{spec-name}.progress.json`.
+
+Read it periodically using the Read tool. It contains:
+
+```json
+{
+  "status": "running",
+  "spec-name": "report-card-tests",
+  "total": 4,
+  "completed": 2,
+  "current": "RC-3",
+  "results": [
+    {"id": "RC-1", "status": "OK", "duration-ms": 5200},
+    {"id": "RC-2", "status": "OK", "duration-ms": 3100}
+  ]
+}
+```
+
+Report progress to the user as test cases complete:
+
+```
+Running report-card-tests (4 test cases)...
+  ✓ RC-1: OK (5.2s)
+  ✓ RC-2: OK (3.1s)
+  ⏳ RC-3: running...
+```
+
+When `status` changes to `"complete"`, the progress file includes the `responses-path` field.
+
+**Step 4: Read the responses file.**
+
+Once the runner completes, read the responses JSON file at the path indicated in the progress file's `responses-path` field. It contains:
+
+```json
+{
+  "{test-id}": {
+    "response": "the raw response text",
+    "exit-code": 0,
+    "duration-ms": 12340
+  }
+}
+```
+
+**Critical anti-bias notes:**
+- The manifest contains ONLY test IDs and prompts — no expectations or test metadata.
+- Each test case runs in a completely isolated CLI session from its own workspace.
+- The workspace contains only fixture files — no spec files, no results, no test metadata.
 
 #### 4c: Run Setup Script (if configured)
 
@@ -92,46 +222,14 @@ If the spec frontmatter includes a `setup` field, or if a default setup script e
    - `.js` → `node`
    - `.ts` → `npx tsx`
    - `.py` → `python3`
-3. If a workspace was created in Step 4b, run the setup script inside the workspace directory.
 
-#### 4d: Execute Test Cases (Sequential)
+Note: setup scripts run before the runner CLI is invoked.
 
-For each test case in the spec file, execute the prompt in an **isolated CLI session** using the configured runner.
+#### 4d: Grade Results (Inline)
 
-**How to execute a test prompt:**
-
-1. Build the runner command from `.skill-unit.yml` config (or defaults).
-2. Use the Bash tool to run the command from the workspace directory (if created) or the current directory:
-
-```bash
-cd "$WORKSPACE" && echo "PROMPT_TEXT_HERE" | claude --print --output-format text --max-turns 10
-```
-
-Or without a workspace:
-
-```bash
-echo "PROMPT_TEXT_HERE" | claude --print --output-format text --max-turns 10
-```
-
-Replace `claude` and the args with whatever is configured in the `runner` section. The prompt text comes from the blockquote in the test case.
-
-3. Capture the full stdout as the test-executor's response.
-4. Store the response paired with its test case ID for grading.
-
-**Critical anti-bias rules:**
-- NEVER include expectations, test IDs, or test metadata in the prompt.
-- NEVER mention "test", "evaluation", "expected", or "spec" in the prompt.
-- Pass the prompt EXACTLY as written in the blockquote — do not modify, rephrase, or add context.
-- Each test case runs in a completely isolated CLI session with no shared context.
-- The workspace directory scoping ensures the CLI session has no visibility into the test suite.
-
-#### 4e: Grade Results (Inline)
-
-After each test case is executed, grade the response immediately. Do NOT spawn a separate agent or CLI session for grading.
+For each test case, read its response from the responses JSON and grade it against expectations.
 
 **Grading process:**
-
-For each test case, compare the test-executor's response against the expectations:
 
 1. For each **Expectation**, determine if the response satisfies it:
    - **MET** if the response clearly demonstrates the described behavior or outcome.
@@ -146,14 +244,11 @@ For each test case, compare the test-executor's response against the expectation
 - Base evaluation only on what is observable in the response.
 - When an expectation is not met, note a brief, specific reason.
 
-#### 4f: Write Results File
+#### 4e: Write Results File
 
 Once all test cases for this spec file have been graded:
 
-1. Determine the results file path: `{spec-dir}/results/{timestamp}.{spec-name}.results.md`
-   - `{spec-dir}` is the directory containing the spec file.
-   - `{timestamp}` is the suite start timestamp from Step 1.
-   - `{spec-name}` is the spec file name without the `.spec.md` extension.
+1. Determine the results file path: `.workspace/runs/{timestamp}/results/{spec-name}.results.md`
 2. Ensure the `results/` directory exists (create it if not).
 3. Write the results file using the Write tool in this format:
 
@@ -183,25 +278,15 @@ Once all test cases for this spec file have been graded:
 
 Include ALL test cases in the results, not just failures.
 
-#### 4g: Run Teardown (if configured)
+#### 4f: Run Teardown (if configured)
 
-If the spec frontmatter includes a `teardown` field, execute it using the same runtime resolution as setup scripts. If a workspace exists, run teardown inside it.
-
-#### 4h: Clean Up Workspace
-
-If a workspace was created in Step 4b, remove it:
-
-```bash
-bash ${CLAUDE_PLUGIN_ROOT}/skills/skill-unit/scripts/cleanup-workspace.sh "$WORKSPACE"
-```
-
-This safely removes the temp directory. If cleanup fails, warn the user but continue processing remaining spec files.
+If the spec frontmatter includes a `teardown` field, execute it using the same runtime resolution as setup scripts.
 
 ### Step 5: Present Summary
 
 After all spec files have been processed:
 
-1. Read all results files for this run (matching the suite timestamp) from across all `results/` subdirectories.
+1. Read all results files for this run from `.workspace/runs/{timestamp}/results/`.
 2. Aggregate pass/fail counts.
 3. Present the summary in the configured output format.
 
@@ -229,9 +314,8 @@ After all spec files have been processed:
 
 ## Helper Scripts
 
-- **`scripts/create-workspace.sh <fixture-path>`** — Creates a temp directory, copies fixture contents into it, prints the workspace path to stdout.
-- **`scripts/cleanup-workspace.sh <workspace-path>`** — Safely removes a workspace directory (validates the path matches the naming pattern before deleting).
-- **`scripts/setup-tests.sh [skill-name]`** — Scaffolds a test directory structure in a user's project.
+- **`scripts/runner.js`** — The test execution CLI. Reads a manifest JSON, creates isolated workspaces, invokes the configured CLI runner per prompt, captures responses, writes a responses JSON file. Usage: `node ${CLAUDE_SKILL_DIR}/runner.js <manifest-path> [--keep-workspaces]`
+- **`${CLAUDE_SKILL_DIR}/scripts/setup-tests.sh [skill-name]`** — Scaffolds a test directory structure in a user's project.
 
 ## Reference Material
 
@@ -245,5 +329,5 @@ For detailed documentation, consult these files as needed:
 The framework reads `.skill-unit.yml` from the repository root. See `templates/.skill-unit.yml` for all available options with documentation. A template can be copied with:
 
 ```bash
-cp ${CLAUDE_PLUGIN_ROOT}/skills/skill-unit/templates/.skill-unit.yml .skill-unit.yml
+cp ${CLAUDE_SKILL_DIR}/templates/.skill-unit.yml .skill-unit.yml
 ```

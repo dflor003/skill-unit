@@ -109,6 +109,27 @@ tests/
 
 Do not duplicate fixture folders. If two specs need the same files, point both to the same folder.
 
+## Skill Fixtures
+
+When testing skills that discover or read other skills (e.g., a test-design skill that scans for `SKILL.md` files), the fixture must contain mock skills in the same directory structure the skill under test expects.
+
+Place mock skills under `.claude/skills/` within the fixture folder so they are copied into the workspace's repo-level skill location:
+
+```
+fixtures/
+  has-two-skills/
+    .claude/
+      skills/
+        alpha/
+          SKILL.md
+        beta/
+          SKILL.md
+```
+
+This ensures that when the workspace is created, the mock skills appear at `.claude/skills/*/SKILL.md` — exactly where skill-discovery logic looks.
+
+**Keep mock SKILL.md files minimal.** Include only the frontmatter and sections the skill under test actually reads. A 10-line stub is better than a copy of a real skill.
+
 ## Cleanup Considerations
 
 The skill-unit evaluator copies fixtures to the repo root or a workspace directory and handles cleanup after tests run. When designing fixtures:
