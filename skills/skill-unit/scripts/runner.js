@@ -26,9 +26,9 @@ const { spawn } = require("child_process");
 //   .workspace/                        — repo root, gitignored
 //     runs/{timestamp}/                — one folder per run
 //       manifests/{spec}.manifest.json — manifest + progress files
-//       results/{spec}.results.md      — graded results (written by evaluator)
 //       logs/{spec}.{id}.log.jsonl     — raw CLI output
-//       logs/{spec}.{id}.log.md        — formatted transcript
+//       results/{spec}.{id}.transcript.md — conversation transcript
+//       results/{spec}.{id}.results.md — grader evaluation (per test case)
 //       responses/{spec}.responses.json— raw responses
 //     workspaces/{uuid}/               — ephemeral, per test case
 //       work/                          — agent cwd, contains fixtures
@@ -250,7 +250,7 @@ function runAsync(cmd, cliArgs, options) {
 
     // Write markdown log header
     if (mdLogStream) {
-      mdLogStream.write(`# Test Log: ${options.testId || "unknown"}\n\n`);
+      mdLogStream.write(`# Transcript: ${options.testId || "unknown"}\n\n`);
       mdLogStream.write(`**Prompt:** ${options.prompt || "n/a"}\n\n`);
       mdLogStream.write(`---\n\n`);
     }
@@ -417,11 +417,13 @@ ensureGitignore(cwd, ".workspace/");
 const runDir = path.join(workspaceRoot, "runs", timestamp);
 const manifestsDir = path.join(runDir, "manifests");
 const logsDir = path.join(runDir, "logs");
+const resultsDir = path.join(runDir, "results");
 const responsesDir = path.join(runDir, "responses");
 const workspacesDir = path.join(workspaceRoot, "workspaces");
 
 fs.mkdirSync(manifestsDir, { recursive: true });
 fs.mkdirSync(logsDir, { recursive: true });
+fs.mkdirSync(resultsDir, { recursive: true });
 fs.mkdirSync(responsesDir, { recursive: true });
 fs.mkdirSync(workspacesDir, { recursive: true });
 
@@ -498,7 +500,7 @@ async function main() {
 
     // Log files
     const logPath = path.join(logsDir, `${specName}.${testId}.log.jsonl`);
-    const mdLogPath = path.join(logsDir, `${specName}.${testId}.log.md`);
+    const mdLogPath = path.join(resultsDir, `${specName}.${testId}.transcript.md`);
 
     log(`[${i + 1}/${testCases.length}] ${testId}: Executing prompt via ${tool}...`);
     log(`[${i + 1}/${testCases.length}] ${testId}: Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`);

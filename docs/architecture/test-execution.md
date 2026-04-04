@@ -71,7 +71,21 @@ The original design spec and plan included a `test-executor` agent (`agents/test
 3. **Harness lock-in** — Subagent APIs are harness-specific; a CLI runner is portable.
 4. **Architectural simplicity** — The runner script handles workspace creation, CLI invocation, output parsing, and cleanup in a single, testable unit. Adding a subagent layer would split this responsibility without adding value.
 
-The `grader` agent (`agents/grader.md`) is retained for potential Phase 2 use (persistent grader consumer pattern for parallel execution).
+The `grader` agent (`agents/grader.md`) is now actively used — the evaluator dispatches it once per test case for transcript-based grading. See the "Grader Delegation" section above.
+
+## Grader Delegation
+
+After the runner completes, the evaluator dispatches the `grader` agent (`agents/grader.md`) once per test case. Each grader reads the full conversation transcript (`.transcript.md`) and writes a per-test-case results file (`.results.md`). Graders are dispatched in configurable batches (default 5 concurrent) to manage API costs.
+
+The grader agent prompt is self-contained — all grading logic, transcript format understanding, and output format are baked into the agent definition. The evaluator's dispatch is lightweight: test metadata inline, plus paths to the transcript and output files.
+
+A deterministic Node.js script (`scripts/report.js`) then assembles a consolidated `report.md` from all grader outputs. This separation means:
+
+- **Grading** is AI-powered (nuanced evaluation of behavioral trajectories)
+- **Reporting** is deterministic (pure parsing and template assembly)
+- **The evaluator** stays lean (no transcript data in its context)
+
+See `docs/specs/2026-04-04-grader-delegation-design.md` for the full design rationale.
 
 ## Relationship to Other Architecture Docs
 

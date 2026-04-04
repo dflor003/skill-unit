@@ -12,13 +12,14 @@ The `.workspace/` directory at the repository root is the single location for al
     manifests/
       {spec-name}.manifest.json             # input manifest for the runner
       {spec-name}.progress.json             # real-time progress (polled by evaluator)
-    results/
-      {spec-name}.results.md                # graded results (written by evaluator)
     logs/
-      {spec-name}.{test-id}.log.jsonl       # raw CLI stream-json output
-      {spec-name}.{test-id}.log.md          # human-readable formatted transcript
+      {spec-name}.{test-id}.log.jsonl       # raw CLI stream-json output (debug artifact)
     responses/
-      {spec-name}.responses.json            # raw response text per test case
+      {spec-name}.responses.json            # abbreviated responses (used for progress)
+    results/
+      {spec-name}.{test-id}.transcript.md   # conversation transcript (from runner)
+      {spec-name}.{test-id}.results.md      # grader evaluation (from grader agent)
+      report.md                             # consolidated report (from report script)
   workspaces/{uuid}/                        # one per test case, ephemeral
     work/                                   # agent's working directory (cwd)
     plugin/                                 # skill-under-test installed as plugin
@@ -95,14 +96,15 @@ Evaluator (SKILL.md)
   │
   │  Runner (runner.js)
   │    ├─ creates .workspace/ at repo root (idempotent)
-  │    ├─ creates run dirs: manifests/, logs/, responses/
+  │    ├─ creates run dirs: manifests/, logs/, responses/, results/
   │    │
   │    ├─ for each test case:
   │    │   ├─ generates UUID
   │    │   ├─ creates .workspace/workspaces/{uuid}/work/ (copies fixtures)
   │    │   ├─ creates .workspace/workspaces/{uuid}/plugin/ (installs skill)
   │    │   ├─ spawns CLI: cwd=work/, --plugin-dir=plugin/
-  │    │   ├─ writes logs to .workspace/runs/{ts}/logs/
+  │    │   ├─ writes transcript to .workspace/runs/{ts}/results/{spec}.{id}.transcript.md
+  │    │   ├─ writes raw log to .workspace/runs/{ts}/logs/{spec}.{id}.log.jsonl
   │    │   └─ updates progress file
   │    │
   │    ├─ writes responses to .workspace/runs/{ts}/responses/
@@ -110,8 +112,19 @@ Evaluator (SKILL.md)
   │    └─ writes final progress with responses-path
   │
   ├─ polls progress file for status updates
-  ├─ reads responses file
-  ├─ grades responses against expectations (inline)
-  ├─ writes results to .workspace/runs/{ts}/results/{spec}.results.md
+  ├─ reads responses file (for completion confirmation)
+  ├─ dispatches grader agent per test case (batched at grader-concurrency)
+  │
+  │  Grader (agents/grader.md) — one per test case
+  │    ├─ reads .workspace/runs/{ts}/results/{spec}.{id}.transcript.md
+  │    └─ writes .workspace/runs/{ts}/results/{spec}.{id}.results.md
+  │
+  ├─ invokes report.js to generate consolidated report
+  │
+  │  Report Script (report.js)
+  │    ├─ reads all .workspace/runs/{ts}/results/*.results.md
+  │    └─ writes .workspace/runs/{ts}/results/report.md
+  │
+  ├─ reads report.md
   └─ presents summary to user
 ```
