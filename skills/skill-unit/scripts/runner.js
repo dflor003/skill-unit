@@ -217,8 +217,8 @@ function installSkillPlugin(skillSrcPath, pluginPath) {
   const pluginMetaDir = path.join(pluginPath, ".claude-plugin");
   fs.mkdirSync(pluginMetaDir, { recursive: true });
   const pluginJson = {
-    name: "skill-under-test",
-    description: "Auto-generated plugin for skill testing",
+    name: "my-plugins",
+    description: "Local plugin",
   };
   fs.writeFileSync(
     path.join(pluginMetaDir, "plugin.json"),

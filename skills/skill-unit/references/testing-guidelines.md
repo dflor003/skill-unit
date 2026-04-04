@@ -20,7 +20,7 @@ Example: A `commit` skill should activate on "commit my changes" but not activat
 
 ## Prompt Realism
 
-The test-executor subagent has no knowledge it is being tested. Its behavior accurately reflects how the skill performs for real users only if the prompts resemble what real users actually send.
+The isolated CLI session has no knowledge it is being tested. Its behavior accurately reflects how the skill performs for real users only if the prompts resemble what real users actually send.
 
 **Write from the human perspective.** The prompt is what the user typed, not a test specification. It should read as a genuine user request — incomplete, informal, and free of implementation vocabulary.
 
@@ -71,7 +71,7 @@ A complete test suite covers four behavioral regions:
 
 ## Expectation Quality
 
-Expectations are evaluated by a grader subagent reading the test-executor's response. Well-written expectations give the grader clear, objective criteria.
+Expectations are evaluated by the grader reading the agent's response. Well-written expectations give the grader clear, objective criteria.
 
 **Describe observable outcomes, not implementation details.**
 
