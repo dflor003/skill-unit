@@ -4,7 +4,7 @@
 
 **Goal:** Build a harness-agnostic plugin that provides reproducible, anti-bias skill testing with a configurable CLI runner for test execution, inline grading, fixture support, and checked-in results.
 
-**Architecture:** SKILL.md acts as evaluator and inline grader. It discovers `*.spec.md` test files, executes prompts via a configurable CLI runner (isolated process per test), grades responses inline, writes timestamped results to disk, and presents a summary. A conditional PreToolUse hook (marker-file activated) enforces anti-bias by blocking access to spec files during test execution. Agent definitions (test-executor, grader) are kept for future Phase 2 enhancement.
+**Architecture:** SKILL.md acts as evaluator and inline grader. It discovers `*.spec.md` test files, executes prompts via a configurable CLI runner (isolated process per test), grades responses inline, writes timestamped results to disk, and presents a summary. A conditional PreToolUse hook (marker-file activated) enforces anti-bias by blocking access to spec files during test execution. The grader agent definition is kept for future Phase 2 enhancement. Test execution uses a Node.js runner script that spawns isolated CLI processes (see `docs/architecture/test-execution.md`).
 
 **Tech Stack:** Plugin system (markdown skills, agents, hooks), Bash scripts, YAML configuration. Harness-agnostic — works with Claude Code, Copilot, Codex, or any harness supporting the skill/plugin format.
 
@@ -24,7 +24,6 @@ skill-unit/
 │       └── report-card/
 │           └── SKILL.md                     # Dummy skill for self-testing
 ├── agents/
-│   ├── test-executor.md                     # Future: subagent-based execution
 │   └── grader.md                            # Future: Phase 2 consumer pattern
 ├── skills/
 │   └── skill-unit/

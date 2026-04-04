@@ -87,7 +87,7 @@ A separate grader agent (`agents/grader.md`) is included in the plugin for futur
 
 ## Anti-Bias Layer
 
-Two layers of protection ensure the test-executor session cannot access test metadata:
+Two layers of protection ensure the isolated CLI session cannot access test metadata:
 
 ### Layer 1: Prompt Isolation
 
@@ -111,7 +111,6 @@ skill-unit/
 │   ├── plugin.json
 │   └── marketplace.json
 ├── agents/
-│   ├── test-executor.md         # Available for future subagent-based execution
 │   └── grader.md                # Available for future Phase 2 consumer pattern
 ├── skills/
 │   └── skill-unit/

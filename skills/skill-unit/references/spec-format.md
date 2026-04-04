@@ -93,7 +93,7 @@ The prompt is a blockquote directly below the `**Prompt:**` label:
 
 ```markdown
 **Prompt:**
-> The text of the prompt sent to the test-executor subagent.
+> The text of the prompt sent to the isolated CLI session.
 ```
 
 Multi-line prompts use continued blockquote lines:
@@ -104,7 +104,7 @@ Multi-line prompts use continued blockquote lines:
 > Second line of the prompt.
 ```
 
-The prompt is passed verbatim to the test-executor. It must read as a genuine user request — no test metadata, no skill names, no hints.
+The prompt is passed verbatim to the isolated CLI session. It must read as a genuine user request — no test metadata, no skill names, no hints.
 
 ### Expectations
 
@@ -197,7 +197,7 @@ teardown: teardown.sh
 Good: "Commit message references the nature of the changes"
 Avoid: "Called `git commit -m` with a message"
 
-The grader reads the test-executor's response and decides whether each expectation was met. Expectations phrased as observable outcomes give the grader clear criteria. Implementation-detail assertions are fragile and may fail when the behavior is correct but the tool invocation differs.
+The grader reads the agent's response and decides whether each expectation was met. Expectations phrased as observable outcomes give the grader clear criteria. Implementation-detail assertions are fragile and may fail when the behavior is correct but the tool invocation differs.
 
 **Make each expectation independently verifiable.**
 
@@ -241,6 +241,6 @@ If the prompt contains the skill name, you are testing keyword matching rather t
 
 Vary phrasing across test cases. Include typos, casual phrasing, and abbreviated requests where realistic. This validates robustness across natural language variation.
 
-**Do not lead the subagent.**
+**Do not lead the agent.**
 
-The test-executor has no access to expected outcomes. If the prompt implies the expected answer, you are contaminating the test rather than measuring skill performance.
+The isolated CLI session has no access to expected outcomes. If the prompt implies the expected answer, you are contaminating the test rather than measuring skill performance.
