@@ -5,6 +5,7 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
+const fmt = require("./transcript-formatter");
 
 // ---------------------------------------------------------------------------
 // skill-unit runner — executes test prompts in isolated workspaces
@@ -44,6 +45,17 @@ function log(msg) {
 
 // -- CLI argument profiles per harness tool ---------------------------------
 
+function buildSystemPrompt(workspacePath) {
+  return `You are working in the directory: ${workspacePath}
+You MUST NOT read, write, or access any files outside this directory.
+All file operations (Read, Write, Edit, Glob, Grep, Bash) must target only files within this directory.
+Do not use parent directory traversal or absolute paths outside this directory.
+
+Always use relative paths from within the working directory for all tool calls.
+
+Always use the Write or Edit tools for writing files. DO NOT fall back to the Bash tool for file writes if a tool call is blocked. Instead, inform the user and wait for further instructions.`;
+}
+
 const TOOL_PROFILES = {
   claude: (model, maxTurns, pluginDir, allowedTools, disallowedTools, workspacePath) => [
     "--print",
@@ -58,7 +70,7 @@ const TOOL_PROFILES = {
     "--no-session-persistence",
     "--setting-sources", "local",
     "--strict-mcp-config",
-    "--system-prompt", `You are working in the directory: ${workspacePath}\nYou MUST NOT read, write, or access any files outside this directory. All file operations (Read, Write, Edit, Glob, Grep, Bash) must target only files within this directory. Do not use parent directory traversal or absolute paths outside this directory.`,
+    "--system-prompt", buildSystemPrompt(workspacePath),
     ...(model ? ["--model", model] : []),
     ...(pluginDir ? ["--plugin-dir", pluginDir] : []),
   ],
@@ -105,7 +117,8 @@ try {
 
 const {
   "spec-name": specName,
-  "fixture-path": rawFixturePath,
+  "global-fixture-path": rawGlobalFixturePath,
+  "fixture-path": rawLegacyFixturePath,
   "skill-path": rawSkillPath,
   timestamp,
   timeout: timeoutStr,
@@ -114,8 +127,10 @@ const {
 } = manifest;
 
 // Resolve all paths relative to the current working directory (repo root)
+// Support both "global-fixture-path" (new) and "fixture-path" (legacy)
 const cwd = process.cwd();
-const fixturePath = rawFixturePath ? path.resolve(cwd, rawFixturePath) : null;
+const rawFixturePath = rawGlobalFixturePath || rawLegacyFixturePath;
+const globalFixturePath = rawFixturePath ? path.resolve(cwd, rawFixturePath) : null;
 const skillPath = rawSkillPath ? path.resolve(cwd, rawSkillPath) : null;
 
 if (!specName || !timestamp || !runner || !testCases) {
@@ -138,8 +153,8 @@ log(`Spec: ${specName}`);
 log(`Test cases: ${testCases.length}`);
 log(`Tool: ${tool}${model ? ` (model: ${model})` : ""}`);
 log(`CWD: ${cwd}`);
-log(`Fixture path (resolved): ${fixturePath || "(none)"}`);
-log(`Fixture exists: ${fixturePath ? fs.existsSync(fixturePath) : "n/a"}`);
+log(`Global fixture path (resolved): ${globalFixturePath || "(none)"}`);
+log(`Global fixture exists: ${globalFixturePath ? fs.existsSync(globalFixturePath) : "n/a"}`);
 log(`Skill path (resolved): ${skillPath || "(none)"}`);
 log(`Skill exists: ${skillPath ? fs.existsSync(skillPath) : "n/a"}`);
 log(`Timestamp: ${timestamp}`);
@@ -280,15 +295,13 @@ function runAsync(cmd, cliArgs, options) {
           const event = JSON.parse(trimmed);
 
           if (event.type === "system" && event.subtype === "init") {
-            // Log session init info
             if (mdLogStream) {
-              mdLogStream.write(`**Model:** ${event.model || "unknown"}\n`);
-              mdLogStream.write(`**Skills:** ${(event.skills || []).join(", ") || "none"}\n`);
-              mdLogStream.write(`**CWD:** ${event.cwd || "unknown"}\n\n---\n\n`);
+              mdLogStream.write(fmt.formatSessionInit(event));
             }
           } else if (event.type === "assistant" && event.message) {
             turnNumber++;
             const content = event.message.content || [];
+            const usage = event.message.usage || {};
             const textParts = content
               .filter((c) => c.type === "text")
               .map((c) => c.text)
@@ -298,6 +311,7 @@ function runAsync(cmd, cliArgs, options) {
             if (textParts || toolUses.length) {
               if (mdLogStream) {
                 mdLogStream.write(`## Turn ${turnNumber} — Assistant\n\n`);
+                mdLogStream.write(fmt.formatTurnUsage(usage));
               }
             }
 
@@ -312,30 +326,18 @@ function runAsync(cmd, cliArgs, options) {
             for (const tu of toolUses) {
               process.stderr.write(`\n[tool: ${tu.name || "unknown"}]\n`);
               if (mdLogStream) {
-                mdLogStream.write(`**Tool call:** \`${tu.name}\`\n`);
-                mdLogStream.write("```json\n");
-                mdLogStream.write(JSON.stringify(tu.input, null, 2));
-                mdLogStream.write("\n```\n\n");
+                mdLogStream.write(fmt.formatToolCall(tu.name, tu.input));
               }
             }
           } else if (event.type === "tool_result") {
             const output = event.output || "";
+            const isError = event.is_error === true;
             const preview = output.substring(0, 200);
             if (preview) {
-              process.stderr.write(`[result: ${preview}${output.length > 200 ? "..." : ""}]\n`);
+              process.stderr.write(`[result${isError ? " ERROR" : ""}: ${preview}${output.length > 200 ? "..." : ""}]\n`);
             }
             if (mdLogStream) {
-              mdLogStream.write(`**Tool result:**\n`);
-              if (output.length > 500) {
-                mdLogStream.write("```\n");
-                mdLogStream.write(output.substring(0, 500));
-                mdLogStream.write(`\n... (${output.length} chars total)\n`);
-                mdLogStream.write("```\n\n");
-              } else if (output) {
-                mdLogStream.write("```\n");
-                mdLogStream.write(output);
-                mdLogStream.write("\n```\n\n");
-              }
+              mdLogStream.write(fmt.formatToolResult(output, isError));
             }
           } else if (event.type === "result") {
             if (event.subtype === "success" && event.result) {
@@ -344,6 +346,7 @@ function runAsync(cmd, cliArgs, options) {
             if (mdLogStream) {
               mdLogStream.write(`---\n\n`);
               mdLogStream.write(`**Result:** ${event.subtype || "unknown"}\n\n`);
+              mdLogStream.write(fmt.formatUsageSummary(event.usage || {}, event.total_cost_usd));
             }
           }
         } catch (_) {
@@ -477,17 +480,30 @@ async function main() {
       results: completedResults,
     });
 
-    // Create work directory from fixture
-    if (fixturePath && fs.existsSync(fixturePath)) {
-      copyDirSync(fixturePath, workspacePath);
-      log(`[${i + 1}/${testCases.length}] ${testId}: Fixture copied to ${workspacePath}`);
-    } else {
-      fs.mkdirSync(workspacePath, { recursive: true });
-      if (fixturePath) {
-        log(`[${i + 1}/${testCases.length}] ${testId}: WARNING — fixture path not found: ${fixturePath}`);
+    // Create work directory from fixtures (global first, then per-test layered on top)
+    fs.mkdirSync(workspacePath, { recursive: true });
+
+    if (globalFixturePath && fs.existsSync(globalFixturePath)) {
+      copyDirSync(globalFixturePath, workspacePath);
+      log(`[${i + 1}/${testCases.length}] ${testId}: Global fixture copied to ${workspacePath}`);
+    } else if (globalFixturePath) {
+      log(`[${i + 1}/${testCases.length}] ${testId}: WARNING — global fixture path not found: ${globalFixturePath}`);
+    }
+
+    // Layer per-test fixtures on top of global
+    const perTestFixtures = tc["fixture-paths"] || [];
+    for (const rawPath of perTestFixtures) {
+      const resolved = path.resolve(cwd, rawPath);
+      if (fs.existsSync(resolved)) {
+        copyDirSync(resolved, workspacePath);
+        log(`[${i + 1}/${testCases.length}] ${testId}: Per-test fixture layered: ${rawPath}`);
       } else {
-        log(`[${i + 1}/${testCases.length}] ${testId}: No fixture — empty workspace created`);
+        log(`[${i + 1}/${testCases.length}] ${testId}: WARNING — per-test fixture path not found: ${resolved}`);
       }
+    }
+
+    if (!globalFixturePath && perTestFixtures.length === 0) {
+      log(`[${i + 1}/${testCases.length}] ${testId}: No fixtures — empty workspace created`);
     }
 
     // Install skill under test as a plugin (sibling to work dir)

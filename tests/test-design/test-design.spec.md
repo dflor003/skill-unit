@@ -2,224 +2,82 @@
 name: test-design-tests
 skill: test-design
 tags: [slash-command, activation, fixtures]
-fixtures: ./fixtures/multi-skill-project
+global-fixtures: ./fixtures/csv-skill
 ---
 
-### TDD-1: slash-command-activation
+### TD-1: Generated Test Case Follows Quality Guidelines
+
+This verifies that when given a clear target behavior, the skill produces a test case with a natural prompt, behavioral expectations, and proper structure, not one that leaks implementation details or leads the agent.
 
 **Prompt:**
-> /test-design
+> There's a csv skill in this project but no tests yet. Write me a single test case that covers what happens when the input has no header row.
 
 **Expectations:**
-- Scans for available skills in the project
-- Presents a list of discovered skills or asks which skill to test
+- The generated prompt sounds natural and human, something a real user would say
+- The generated expectations describe observable outcomes
+- The generated test case includes a purpose statement explaining why the test exists
+- The generated test case title is human-readable Title Case
 
 **Negative Expectations:**
-- Does not begin generating test cases without identifying a target skill first
-
----
-
-### TDD-2: natural-language-activation
-
-**Prompt:**
-> I want to write some test cases for my skill
-
-**Expectations:**
-- Recognizes this as a test-design request
-- Scans for available skills or asks the user to identify the target skill
-
-**Negative Expectations:**
-- Does not start writing code or implementation instead of test cases
-- Does not ask what kind of tests (unit, integration, etc.) — this skill only writes spec files
+- Inside the generated test case, the **Prompt** section (the blockquote text that would be sent to the agent) does not contain skill internals like "Col1", "column indices", or the specific fallback behavior. Note: the Expectations section MAY reference these, only the Prompt must be free of them.
+- Inside the generated test case, the **Prompt** section does not describe the expected output format or hint at the correct answer
 
 ---
 
-### TDD-3: negative-activation-similar-request
+### TD-2: Detects Existing Spec and Offers Review
+
+When a spec file already exists for the target skill, the skill should find it and ask the user whether they want a gap review or have specific changes in mind. It should not silently create a new spec from scratch.
+
+**Fixtures:**
+- ./fixtures/csv-existing-spec
 
 **Prompt:**
-> where are my test results stored?
+> I'd like to work on the tests for the csv skill
 
 **Expectations:**
-- Responds with information about test result file locations or the results directory
-- Does not initiate a test-design workflow
+- Discovers the existing spec file for the csv skill
+- Tells the user an existing spec was found and shows its path
+- Asks whether the user wants a gap review or has specific changes
 
 **Negative Expectations:**
-- Does not ask the user to select a skill for test design
-- Does not begin generating test cases
+- Does not start generating a new spec from scratch
+- Does not skip straight to test case generation without acknowledging the existing spec
 
 ---
 
-### TDD-4: selects-skill-from-list
+### TD-3: Handles Malformed Skill Gracefully
+
+When the target skill has a SKILL.md with broken YAML frontmatter, the skill should detect the problem and inform the user rather than silently ignoring it or crashing.
+
+**Fixtures:**
+- ./fixtures/malformed-skill
 
 **Prompt:**
-> help me design some tests for alpha
+> Help me write tests for the inventory skill
 
 **Expectations:**
-- Discovers available skills in the project
-- Selects the alpha skill based on the name provided
-- Reads the alpha skill's SKILL.md
-- Presents a summary of the skill's purpose, activation, inputs, and outputs
-- Asks targeted questions before generating test cases
+- Finds the inventory skill's SKILL.md
+- Detects that the frontmatter is malformed or unparseable
+- Informs the user about the problem with the SKILL.md file
 
 **Negative Expectations:**
-- Does not skip directly to generating test cases without analyzing the skill first
+- Does not silently ignore the malformed content and generate test cases anyway
+- Does not crash or produce an unhandled error
 
 ---
 
-### TDD-5: generates-test-cases-incrementally
+### TD-4: Generated Fixtures Use Neutral Names and Content
+
+When the skill creates fixture files for a failure mode test, the fixture content must not leak test intent to the agent. File names, skill names, and content inside fixtures should be plausible and neutral, not telegraphing the defect being tested.
 
 **Prompt:**
-> /test-design alpha
+> There's a csv skill in this project. Write me a test case for what happens when the skill receives a malformed CSV file with mismatched column counts. Include a fixture for it.
 
 **Expectations:**
-- Reads the alpha skill's SKILL.md
-- Generates test cases organized by category (activation, happy path, failure mode, etc.)
-- Presents one category at a time and asks for feedback before moving to the next
-- Generated prompts sound natural and human — no skill names or tool names in prompts
+- Creates a fixture file or folder for the test case
+- The fixture file name does not contain words like "empty", "broken", "invalid", "bad", or "fail"
+- The fixture content does not include comments or text explaining the defect
 
 **Negative Expectations:**
-- Does not dump all test cases at once without pausing for feedback
-- Does not include skill or tool names in generated test prompts
-
----
-
-### TDD-6: writes-spec-file-to-disk
-
-**Prompt:**
-> /test-design alpha
-
-**Expectations:**
-- After all categories are approved, assembles a complete spec file with YAML frontmatter
-- Writes the file to the test directory using the correct path convention
-- Confirms the file location and test case count to the user
-
-**Negative Expectations:**
-- Does not write the spec file before the user has approved all categories
-
----
-
-### TDD-8: skill-name-no-match-close-alternative
-
-**Prompt:**
-> write tests for the alfa skill
-
-**Expectations:**
-- Searches for a skill matching "alfa"
-- Detects that no exact match exists but a close match ("alpha") is available
-- Asks the user if they meant "alpha"
-
-**Negative Expectations:**
-- Does not silently pick the closest match without confirming
-- Does not immediately enter TDD mode without checking for similar names first
-
----
-
-### TDD-9: skill-name-no-match-no-alternative
-
-**Prompt:**
-> design tests for the zephyr skill
-
-**Expectations:**
-- Searches for a skill matching "zephyr"
-- Informs the user no skill with that name was found
-- Asks if the user wants to design tests for the skill without an existing SKILL.md (TDD mode)
-
-**Negative Expectations:**
-- Does not fabricate a skill description
-- Does not silently proceed as if the skill exists
-
----
-
-### TDD-11: existing-spec-detected-gap-review
-
-**Prompt:**
-> can you review the tests I already have for alpha?
-
-**Expectations:**
-- Discovers the existing spec file for the alpha skill
-- Reads the spec file and compares coverage against the category checklist
-- Presents findings as a prioritized list of gaps or quality issues
-- Offers to work through improvements one at a time
-
-**Negative Expectations:**
-- Does not create a new spec file from scratch when one already exists
-- Does not overwrite the existing spec without user approval
-
----
-
-### TDD-12: existing-spec-user-directed-edit
-
-**Prompt:**
-> add a failure mode test to my alpha spec
-
-**Expectations:**
-- Finds the existing spec file for the alpha skill
-- Detects the existing ID prefix and next sequential number
-- Generates a new failure mode test case and presents it for approval
-- Writes the updated spec file only after approval
-
-**Negative Expectations:**
-- Does not regenerate the entire spec from scratch
-- Does not renumber existing test cases
-
----
-
-### TDD-13: asked-to-run-tests-not-design
-
-**Prompt:**
-> can you execute the test suite for alpha and tell me what passed?
-
-**Expectations:**
-- Recognizes this as a test execution request, not test design
-- Does not enter the test-design workflow
-- Directs the user toward running tests instead
-
-**Negative Expectations:**
-- Does not begin asking targeted questions about the skill
-- Does not generate test cases
-
----
-
-### TDD-14: asked-to-write-skill-not-tests
-
-**Prompt:**
-> I need a new skill that validates YAML files
-
-**Expectations:**
-- Recognizes this as a skill creation request, not test design
-- Does not enter the test-design workflow
-
-**Negative Expectations:**
-- Does not begin scanning for skills to test
-- Does not start generating spec file frontmatter
-
----
-
-### TDD-15: asks-one-question-at-a-time
-
-**Prompt:**
-> /test-design alpha
-
-**Expectations:**
-- After analyzing the skill, asks a single targeted question and waits for a response
-- Does not present multiple questions in the same message
-
-**Negative Expectations:**
-- Does not present a numbered list of questions all at once
-- Does not skip targeted questions entirely and jump to test generation
-
----
-
-### TDD-16: respects-approval-gates
-
-**Prompt:**
-> /test-design alpha
-
-**Expectations:**
-- Presents the frontmatter for approval before generating test cases
-- Presents each test category and asks for feedback before moving to the next
-- Offers options to refine, add, remove, or approve at each step
-
-**Negative Expectations:**
-- Does not generate all categories in a single response without pausing
-- Does not write the spec file without explicit approval
+- Does not name the fixture file something like "empty-file.csv", "bad-input.csv", or "invalid.csv"
+- Does not include comments in the fixture describing what is wrong with it

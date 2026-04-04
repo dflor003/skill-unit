@@ -21,7 +21,7 @@ Frontmatter is a YAML block delimited by `---` at the top of the file.
 | `skill` | No | string | Skill being tested. Informational — not used for filtering or execution. |
 | `tags` | No | list | Tags for filtering test runs (e.g., `[happy-path, slash-command]`). |
 | `timeout` | No | duration | Per-test timeout for this suite. Overrides the global default from `.skill-unit.yml`. Example: `90s`. |
-| `fixtures` | No | path | Path to a fixture folder. Copied into the working directory before tests run. Relative paths are resolved from the spec file's directory. |
+| `global-fixtures` | No | path | Path to a fixture folder copied into the working directory for every test case in this file. Relative paths are resolved from the spec file's directory. Per-test fixtures (see below) are layered on top. |
 | `setup` | No | filename | Script to run before the test cases in this file execute. Overrides the global default. |
 | `teardown` | No | filename | Script to run after all test cases in this file have run. Runs even if tests fail. |
 | `allowed-tools` | No | list | Fully replaces the resolved allowed tools list from global config. |
@@ -87,6 +87,19 @@ Each test case is introduced by a `###` heading and contains three parts: a prom
 - **ID** — everything before the colon. Used in results output and filtering. Convention: short uppercase prefix + number (e.g., `COM-1`, `BRN-3`).
 - **name** — everything after the colon (trimmed). A short descriptive label.
 
+### Fixtures (Per-Test)
+
+An optional list of fixture paths specific to this test case. These are copied into the workspace **after** the global fixtures from frontmatter, so per-test fixtures can add files or override files from the global fixture.
+
+```markdown
+**Fixtures:**
+- ./fixtures/existing-spec
+```
+
+Paths are resolved relative to the spec file's directory, same as `global-fixtures` in frontmatter.
+
+If a test case has no `**Fixtures:**` section, it uses only the global fixtures. If a test case has a `**Fixtures:**` section and there are no global fixtures, only the per-test fixtures are copied.
+
 ### Prompt
 
 The prompt is a blockquote directly below the `**Prompt:**` label:
@@ -137,6 +150,7 @@ All negative expectations must pass (i.e., none of the listed behaviors occurred
 
 - Test cases are delimited by `###` headings. Everything between two `###` headings belongs to the first heading's test case.
 - The ID is everything before the first colon in the heading text. The name is everything after (trimmed of whitespace).
+- Per-test fixtures are parsed as a bullet list immediately following `**Fixtures:**`. Each bullet is a relative path to a fixture folder. This section is optional.
 - The prompt is the content of the blockquote immediately following `**Prompt:**`. Leading `> ` markers are stripped.
 - Expectations are parsed as a bullet list immediately following `**Expectations:**`.
 - Negative expectations are parsed as a bullet list immediately following `**Negative Expectations:**`. This section is optional.
@@ -153,7 +167,7 @@ name: commit-skill-tests
 skill: commit
 tags: [slash-command, git]
 timeout: 60s
-fixtures: ./fixtures/basic-repo
+global-fixtures: ./fixtures/basic-repo
 setup: setup.sh
 teardown: teardown.sh
 ---

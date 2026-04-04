@@ -130,6 +130,16 @@ This ensures that when the workspace is created, the mock skills appear at `.cla
 
 **Keep mock SKILL.md files minimal.** Include only the frontmatter and sections the skill under test actually reads. A 10-line stub is better than a copy of a real skill.
 
+## Fixture Neutrality
+
+Fixture content must not leak test intent to the agent under test. The agent runs in an isolated workspace and sees only the fixture files. If those files contain clues about what the test is checking, the agent's behavior is contaminated.
+
+- **Names:** Do not use names like `broken`, `invalid`, `bad-input`, or `should-fail`. Use plausible, neutral names (e.g., `inventory` instead of `broken`, `config.yml` instead of `bad-config.yml`).
+- **Content:** Do not include comments or text that describe the defect (e.g., "This file has malformed YAML"). Write the content as if it were real, just with the structural issue present.
+- **Directory names:** Fixture folder names describe the state for the test author's benefit (e.g., `malformed-skill`), but file and directory names inside the fixture must be neutral since the agent sees those.
+
+The principle: if the agent could read a fixture file and guess what the test expects, the fixture is leaking intent.
+
 ## Cleanup Considerations
 
 The skill-unit evaluator copies fixtures to the repo root or a workspace directory and handles cleanup after tests run. When designing fixtures:

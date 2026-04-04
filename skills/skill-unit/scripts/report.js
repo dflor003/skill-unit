@@ -95,7 +95,7 @@ function parseResultsFile(filePath) {
 
 const resultsFiles = fs.readdirSync(resultsDir)
   .filter((f) => f.endsWith(".results.md"))
-  .sort();
+  .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
 if (resultsFiles.length === 0) {
   process.stderr.write(`No *.results.md files found in ${resultsDir}\n`);

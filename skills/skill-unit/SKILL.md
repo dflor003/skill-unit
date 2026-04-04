@@ -89,10 +89,11 @@ For each discovered spec file, in order:
 
 Read the spec file and parse it into:
 
-1. **Frontmatter:** Extract YAML frontmatter fields (name, skill, tags, timeout, fixtures, setup, teardown).
+1. **Frontmatter:** Extract YAML frontmatter fields (name, skill, tags, timeout, global-fixtures, setup, teardown).
 2. **Test cases:** Split on `###` headings. For each test case extract:
    - **ID:** Everything before the first colon in the heading.
    - **Name:** Everything after the first colon, trimmed.
+   - **Fixtures:** Bullet list under `**Fixtures:**` (may be absent). Each bullet is a relative path to a fixture folder.
    - **Prompt:** Content of the blockquote under `**Prompt:**`.
    - **Expectations:** Bullet list under `**Expectations:**`.
    - **Negative Expectations:** Bullet list under `**Negative Expectations:**` (may be absent).
@@ -120,7 +121,7 @@ Write `.workspace/runs/{timestamp}/manifests/{spec-name}.manifest.json` using th
 ```json
 {
   "spec-name": "{name from frontmatter}",
-  "fixture-path": "{resolved fixture path relative to repo root, or null}",
+  "global-fixture-path": "{resolved global-fixtures path relative to repo root, or null}",
   "skill-path": "{path to the skill directory being tested, or null}",
   "timestamp": "{timestamp from Step 1}",
   "timeout": "{timeout from spec frontmatter, or from config execution.timeout, e.g. '120s'}",
@@ -133,10 +134,12 @@ Write `.workspace/runs/{timestamp}/manifests/{spec-name}.manifest.json` using th
   },
   "test-cases": [
     {"id": "{test-id}", "prompt": "{prompt text from blockquote}"},
-    {"id": "{test-id}", "prompt": "{prompt text from blockquote}"}
+    {"id": "{test-id}", "prompt": "{prompt text from blockquote}", "fixture-paths": ["{resolved path}", "{resolved path}"]}
   ]
 }
 ```
+
+Per-test `fixture-paths` is an array of resolved paths (relative to repo root). It is only present when the test case has a `**Fixtures:**` section. These are layered on top of the global fixture in copy order: global first, then per-test fixtures in list order.
 
 **Resolving skill-path:** If the spec frontmatter has a `skill` field, search for the skill directory:
 1. Check `.claude/skills/{skill-name}/SKILL.md` (repo-level skills)

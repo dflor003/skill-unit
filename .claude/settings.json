@@ -8,8 +8,8 @@
       "Glob",
       "WebFetch",
       "WebSearch",
+      "Skill",
       "Read(skills/**/*)",
-      "Read(.skill-unit-lock)",
       "Bash(echo *)",
       "Bash(cat *)",
       "Bash(ls *)",
@@ -47,13 +47,8 @@
       "Bash(docker *)",
       "Bash(docker compose *)",
       "Bash(gh *)",
-      "Skill(skill-unit)",
-      "Skill(skill-unit *)",
-      "Skill(skill-unit:skill-unit)",
-      "Skill(skill-unit:skill-unit *)",
       "Bash(node -c *)",
-      "Bash(node */skill-unit/scripts/runner.js */.workspace/*)",
-      "Bash(node skills/skill-unit/scripts/report.js)"
+      "Bash(node */skill-unit/scripts/*)"
     ],
     "deny": [
       "Read(./.env)",

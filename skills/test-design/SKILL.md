@@ -1,6 +1,6 @@
 ---
 name: test-design
-description: This skill should be used when the user asks to "design tests", "write test cases", "create a spec file", "help me write tests for my skill", "add tests for a skill", "/test-design", or mentions test case design, spec file authoring, or test coverage for a skill. It guides incremental creation and refinement of *.spec.md test files for the skill-unit framework.
+description: ALWAYS use this skill when the user mentions writing, designing, creating, or adding test cases for any skill, even if they also describe specific behavior to test. Triggers on "write a test case", "write me a test case", "write test cases", "design tests", "create a spec file", "help me write tests", "add tests", "no tests yet", "/test-design", or any request that involves creating test cases, spec files, or test coverage for a skill. If the user says "write a test case for X that covers Y", this skill handles it, not the skill being tested.
 ---
 
 # Test Design — Spec File Authoring Skill
@@ -25,7 +25,7 @@ Use the Glob tool with patterns `skills/*/SKILL.md` and `.claude/skills/*/SKILL.
 
 - If exactly one match is found, select it.
 - If the skill exists in both locations, ask the user which one to use.
-- If no match is found, inform the user and list available skills.
+- If no match is found, enter the **Prompt-Driven Development Flow** (see below).
 
 ### If no skill name was provided
 
@@ -46,6 +46,39 @@ Wait for the user to pick one before proceeding.
 ### One skill at a time
 
 This skill operates on a single target skill per invocation. If the user wants to design tests for multiple skills, they invoke `/test-design` separately for each.
+
+### Prompt-Driven Development Flow
+
+This flow activates in two scenarios:
+
+1. **The named skill does not exist** — the user asked to design tests for a skill name that has no matching SKILL.md anywhere in the project.
+2. **The skill exists but the user describes functionality it doesn't have** — during Step 3 (Read & Analyze), if the user's request references capabilities, behaviors, or features that are not present in the skill's SKILL.md.
+
+In either case, the agent MUST:
+
+1. **Explicitly name what is happening.** Tell the user clearly:
+
+   > "The skill `{name}` doesn't exist yet (or: `{name}` doesn't currently have {described capability})."
+   > "I can help you use **prompt-driven development** — we'll define what the skill should do by writing test cases first, then you can build (or extend) the skill to pass them."
+
+2. **Ask discovery questions** to understand the intended behavior. These replace the targeted questions in Step 4. Ask one at a time:
+
+   - "What should this skill do? Describe it in a sentence or two."
+   - "How should users invoke it — slash command, natural language, or auto-activation?"
+   - "What inputs does it need from the user or environment?"
+   - "What should it produce — text output, file changes, git operations?"
+   - "What should it refuse to do or explicitly avoid?"
+   - Additional questions as needed based on answers.
+
+   Stop asking when you have enough context to write meaningful test cases. Do not ask questions whose answers would be obvious from what the user already said.
+
+3. **Proceed to Step 5** (ID Prefix) and continue through the normal generation flow. The test cases now define the *intended* behavior of a skill that doesn't exist yet (or intended new behavior for an existing skill).
+
+4. **After writing the spec file**, remind the user of the next step:
+
+   > "These test cases define the behavior for `{name}`. You can now build (or update) the skill to pass them, then run `/skill-unit {name}` to verify."
+
+**This flow is mandatory, not optional.** When either trigger condition is met, the agent must enter this flow rather than simply reporting "skill not found" or silently proceeding as if the feature exists. The goal is to make test-first development the natural path for new skills and new capabilities.
 
 ## Step 2: Detect Existing Specs
 
@@ -80,7 +113,16 @@ Proceed to **New Spec Creation**.
 
 ### Step 3: Read & Analyze Target Skill
 
-Read the target skill's SKILL.md using the Read tool. Extract and summarize:
+Read the target skill's SKILL.md using the Read tool.
+
+**Validate the frontmatter first.** Before extracting content, check that the YAML frontmatter between the `---` delimiters is valid:
+- Every key-value pair must have a colon separator (e.g., `name: my-skill`, not `name my-skill`)
+- Lists must have matching brackets (e.g., `tags: [a, b]`, not `tags: [a, b`)
+- Strings with special characters must be properly quoted
+
+If the frontmatter is malformed, **stop and inform the user.** Tell them what is wrong with the frontmatter and suggest how to fix it. Do not proceed with test case generation for a skill with invalid frontmatter.
+
+If the frontmatter is valid, extract and summarize:
 
 - **Purpose:** What the skill does in one sentence.
 - **Activation:** How it triggers — slash command, natural language patterns, auto-activation.
@@ -88,6 +130,8 @@ Read the target skill's SKILL.md using the Read tool. Extract and summarize:
 - **Inputs:** What the skill expects from the user or environment.
 - **Outputs:** What the skill produces (text response, file changes, git operations, etc.).
 - **Constraints:** Any explicit rules or restrictions the skill follows.
+
+**Check for prompt-driven development trigger:** Compare the user's original request against the skill's actual capabilities. If the user described functionality, behaviors, or features that are not present in the SKILL.md, enter the **Prompt-Driven Development Flow** (from Step 1). Do not silently proceed as if the capability exists — the user needs to know they are defining new behavior.
 
 If the skill uses Read, Write, Edit, Glob, or Grep on project files, or references specific file types or directory structures, or depends on git state — note that **fixtures will likely be needed**. Use the Read tool to load this skill's `references/fixture-design.md` (path: `skills/test-design/references/fixture-design.md` from repo root) for guidance on fixture design and incorporate fixture questions into the targeted questions below.
 
@@ -137,7 +181,7 @@ name: {skill-name}-tests
 skill: {skill-name}
 tags: [{inferred-tags}]
 # Include these only if applicable:
-# fixtures: ./fixtures/{fixture-folder-name}
+# global-fixtures: ./fixtures/{fixture-folder-name}
 # setup: setup.sh
 # teardown: teardown.sh
 ---
@@ -173,7 +217,12 @@ Generate test cases one category at a time, in this order:
 3. Present the test cases in the spec file format:
 
 ```markdown
-### {PREFIX}-{N}: {descriptive-name}
+### {PREFIX}-{N}: {Human-Readable Descriptive Title}
+
+{Plain-text purpose statement explaining why this test exists and what risk it guards against.}
+
+**Fixtures:**
+- {./path/to/fixture — only if this test needs fixtures beyond global-fixtures}
 
 **Prompt:**
 > {natural, human-sounding prompt}
@@ -185,6 +234,8 @@ Generate test cases one category at a time, in this order:
 **Negative Expectations:**
 - {specific prohibited behavior}
 ```
+
+The `**Fixtures:**` section is optional. Include it only when a test case needs additional fixture state beyond what `global-fixtures` provides. Per-test fixtures are layered on top of global fixtures.
 
 4. After presenting the category's test cases, ask:
 
@@ -258,6 +309,8 @@ Used when the user asks for a review without specific instructions.
 2. **Read the target skill's SKILL.md** using the Read tool.
 3. **Compare test cases against the coverage checklist** (see Inline Authoring Guide below):
    - Which categories are present? Which are missing or have fewer than the minimum?
+   - Are any test names in `lower-kebab-case` instead of human-readable Title Case?
+   - Are any test cases missing a purpose statement between the heading and the Prompt?
    - Are any prompts too leading, too specific, or using skill/tool names a real user wouldn't say?
    - Are any expectations testing implementation details rather than observable outcomes?
    - Are any expectations combining multiple checks into one bullet?
@@ -369,14 +422,21 @@ All generated spec files must follow this exact structure.
 | `skill` | No | string | Skill being tested (always emitted during generation; used for spec detection) |
 | `tags` | No | list | Tags for filtering test runs |
 | `timeout` | No | duration | Per-test timeout (e.g., `90s`) |
-| `fixtures` | No | path | Path to fixture folder, relative to spec file directory |
+| `global-fixtures` | No | path | Path to fixture folder copied for every test case, relative to spec file directory |
 | `setup` | No | filename | Script to run before tests |
 | `teardown` | No | filename | Script to run after tests |
 
 **Test case structure:**
 
 ```markdown
-### {ID}: {name}
+### {ID}: {Human-Readable Descriptive Title}
+
+{Purpose statement — a plain-text sentence or two explaining why this test exists
+and what risk or gap it guards against. This goes before the Prompt so the reader
+understands the test's intent before seeing the mechanics.}
+
+**Fixtures:**
+- {./path/to/fixture — optional, only when this test needs additional fixtures}
 
 **Prompt:**
 > {prompt text — multi-line prompts use continued blockquote lines}
@@ -392,8 +452,15 @@ All generated spec files must follow this exact structure.
 
 - Test cases are delimited by `###` headings.
 - ID is everything before the first colon in the heading; name is everything after (trimmed).
+- **Test names** use natural, human-readable titles in Title Case — not `lower-kebab-case`. The title should convey the test's purpose at a glance (e.g., "Asks the User Before Overwriting an Existing Spec" not `asks-before-overwriting`).
+- **Purpose statement** is required for every test case. It appears as plain text between the heading and the `**Prompt:**` label. It explains *why* the test exists — what behavior it validates, what failure it prevents, or what design intent it captures.
+- **Fixtures** section is optional per test case. It is a bullet list of fixture paths, layered on top of `global-fixtures` from frontmatter. Paths are relative to the spec file's directory.
 - Prompt is the blockquote content under `**Prompt:**`. Leading `> ` markers are stripped.
 - Expectations and Negative Expectations are bullet lists under their respective `**bold labels**`.
 - `---` horizontal rules between test cases are optional (cosmetic).
 - File extension is always `*.spec.md`.
 - Negative Expectations section is optional per test case.
+
+## Troubleshooting
+
+When a user's test cases are failing and they need help diagnosing the problem, load this skill's `references/troubleshooting.md` (path: `skills/test-design/references/troubleshooting.md` from repo root) for common failure modes and fixes.
