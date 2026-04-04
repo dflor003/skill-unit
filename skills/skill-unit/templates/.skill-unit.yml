@@ -5,13 +5,35 @@
 # Directory where test spec files (*.spec.md) are discovered recursively.
 test-dir: tests
 
-# Runner configuration — how test prompts are executed in isolated sessions.
-# Change this to match your AI agent harness (Claude, Copilot, Codex, etc.).
+# Runner configuration — controls how test prompts are executed.
+# The runner script handles all CLI parameters internally for proper isolation.
 runner:
-  # The CLI executable to invoke for each test prompt.
-  command: claude
-  # Default arguments passed to the CLI. The prompt is piped via stdin.
-  args: ["--print", "--output-format", "text", "--max-turns", "10"]
+  # The harness CLI to use. Supported: claude (more coming soon).
+  tool: claude
+  # Model to use for test execution (optional, uses harness default if omitted).
+  # model: sonnet
+  # Max conversation turns per test case.
+  max-turns: 10
+
+  # Tool permissions for test sessions. Controls what the harness agent can do.
+  # Built-in defaults allow: Read, Write, Edit, Bash, Glob, Grep, Agent, Skill
+  # Built-in defaults disallow: AskUserQuestion
+  #
+  # These lists fully REPLACE the built-in defaults when specified.
+  # Spec frontmatter can further override or extend via allowed-tools-extra
+  # and disallowed-tools-extra fields.
+  #
+  # allowed-tools:
+  #   - Read
+  #   - Write
+  #   - Edit
+  #   - Bash
+  #   - Glob
+  #   - Grep
+  #   - Agent
+  #   - Skill
+  # disallowed-tools:
+  #   - AskUserQuestion
 
 # Output settings
 output:
@@ -25,7 +47,7 @@ output:
 # Execution settings
 execution:
   # Default per-test timeout. Can be overridden per spec file via frontmatter.
-  timeout: 60s
+  timeout: 120s
 
 # Default setup and teardown scripts. Applied to all spec files that do not
 # declare their own setup/teardown in frontmatter.

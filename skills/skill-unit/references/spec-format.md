@@ -24,6 +24,53 @@ Frontmatter is a YAML block delimited by `---` at the top of the file.
 | `fixtures` | No | path | Path to a fixture folder. Copied into the working directory before tests run. Relative paths are resolved from the spec file's directory. |
 | `setup` | No | filename | Script to run before the test cases in this file execute. Overrides the global default. |
 | `teardown` | No | filename | Script to run after all test cases in this file have run. Runs even if tests fail. |
+| `allowed-tools` | No | list | Fully replaces the resolved allowed tools list from global config. |
+| `disallowed-tools` | No | list | Fully replaces the resolved disallowed tools list from global config. |
+| `allowed-tools-extra` | No | list | Adds entries to the resolved allowed tools list (union). Ignored if `allowed-tools` is also present. |
+| `disallowed-tools-extra` | No | list | Adds entries to the resolved disallowed tools list (union). Ignored if `disallowed-tools` is also present. |
+
+### Tool Permissions
+
+Test sessions run with `--permission-mode dontAsk` — only explicitly allowed tools work. The framework resolves tool lists through a three-level chain:
+
+1. **Built-in defaults:** `allowed = [Read, Write, Edit, Bash, Glob, Grep, Agent, Skill]`, `disallowed = [AskUserQuestion]`
+2. **`.skill-unit.yml`:** `runner.allowed-tools` and `runner.disallowed-tools` fully replace the built-in lists when present.
+3. **Spec frontmatter:** `allowed-tools` / `disallowed-tools` fully replace the resolved global lists. `allowed-tools-extra` / `disallowed-tools-extra` add to them instead. If both the full and `-extra` variant are present, the full variant wins.
+
+If a tool appears in both the final allowed and disallowed lists, **disallow wins**.
+
+File tools (`Read`, `Write`, `Edit`, `Glob`, `Grep`) are automatically scoped to the workspace directory at runtime — the test agent cannot access files outside its workspace.
+
+**Example — add Docker access for a specific suite:**
+
+```yaml
+---
+name: docker-skill-tests
+skill: docker-manager
+allowed-tools-extra:
+  - "Bash(docker *)"
+disallowed-tools-extra:
+  - "Bash(rm -rf *)"
+---
+```
+
+**Example — fully custom tool set:**
+
+```yaml
+---
+name: readonly-skill-tests
+skill: analyzer
+allowed-tools:
+  - Read
+  - Glob
+  - Grep
+disallowed-tools:
+  - AskUserQuestion
+  - Bash
+  - Write
+  - Edit
+---
+```
 
 ---
 

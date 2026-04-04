@@ -46,7 +46,12 @@
       "Bash(git cat-file *)",
       "Bash(docker *)",
       "Bash(docker compose *)",
-      "Bash(gh *)"
+      "Bash(gh *)",
+      "Skill(skill-unit)",
+      "Skill(skill-unit *)",
+      "Skill(skill-unit:skill-unit)",
+      "Skill(skill-unit:skill-unit *)",
+      "Bash(node -c skills/skill-unit/scripts/runner.js)"
     ],
     "deny": [
       "Read(./.env)",
@@ -94,8 +99,7 @@
       "Bash(git init *)"
     ],
     "defaultMode": "auto",
-    "additionalDirectories": [
-    ]
+    "additionalDirectories": []
   },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,
