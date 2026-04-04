@@ -51,8 +51,9 @@
       "Skill(skill-unit *)",
       "Skill(skill-unit:skill-unit)",
       "Skill(skill-unit:skill-unit *)",
-      "Bash(node -c skills/skill-unit/scripts/runner.js)",
-      "Bash(node */skill-unit/scripts/runner.js */.workspace/*)"
+      "Bash(node -c *)",
+      "Bash(node */skill-unit/scripts/runner.js */.workspace/*)",
+      "Bash(node skills/skill-unit/scripts/report.js)"
     ],
     "deny": [
       "Read(./.env)",

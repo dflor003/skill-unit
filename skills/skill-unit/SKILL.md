@@ -1,12 +1,12 @@
 ---
 name: skill-unit
 description: This skill should be used when the user asks to "test my skill", "run skill tests", "evaluate a skill", "run the test suite", "check skill quality", "/skill-unit", or mentions skill testing, skill evaluation, or running spec files. It provides a structured unit testing framework for AI agent skills with anti-bias evaluation.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/runner.js *) Bash(date *) Bash(mkdir -p .workspace/*)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/runner.js *) Bash(node ${CLAUDE_SKILL_DIR}/scripts/report.js *) Bash(date *) Bash(mkdir -p .workspace/*)
 ---
 
 # Skill Unit — Skill Testing Framework
 
-A structured, reproducible testing framework for AI agent skills. Discover test cases, delegate execution to an isolated CLI runner, grade results inline, and present a clear pass/fail summary.
+A structured, reproducible testing framework for AI agent skills. Discover test cases, delegate execution to an isolated CLI runner, dispatch grader agents for evaluation, and present a clear pass/fail report.
 
 ## Invocation
 
@@ -42,12 +42,15 @@ output:
   show-passing-details: false
 execution:
   timeout: 120s
+  grader-concurrency: 5
 defaults:
   setup: setup.sh
   teardown: teardown.sh
 ```
 
 The `runner` section configures test execution. The `tool` selects the harness CLI (claude, copilot, codex). The runner script controls all CLI parameters internally to ensure proper isolation — no external skills leak in, no MCPs, and tool permissions are explicitly allowlisted. Users configure the tool, model, max turns, and optionally which tools the test agent may use.
+
+The `execution.grader-concurrency` field controls how many grader agents run in parallel (default 5). Each test case is graded by a separate agent; this limits concurrent dispatches to manage API costs.
 
 #### Tool Permission Defaults
 
@@ -225,96 +228,74 @@ If the spec frontmatter includes a `setup` field, or if a default setup script e
 
 Note: setup scripts run before the runner CLI is invoked.
 
-#### 4d: Grade Results (Inline)
+#### 4d: Dispatch Grader Agents
 
-For each test case, read its response from the responses JSON and grade it against expectations.
+For each test case in this spec, dispatch a `grader` agent to evaluate the response against expectations. The grader reads the full conversation transcript and writes a per-test-case results file.
 
-**Grading process:**
+**Dispatch in batches** of up to `grader-concurrency` (from config, default 5). Wait for each batch to complete before dispatching the next.
 
-1. For each **Expectation**, determine if the response satisfies it:
-   - **MET** if the response clearly demonstrates the described behavior or outcome.
-   - **NOT MET** if the response does not demonstrate it or contradicts it.
-2. For each **Negative Expectation**, determine if the response violates it:
-   - **PASSES** if the described behavior did NOT occur.
-   - **FAILS** if the response demonstrates the prohibited behavior.
-3. A test case **PASSES** only if ALL expectations are met AND ALL negative expectations pass.
-
-**Grading standards:**
-- Be strict and literal. Do not give credit for partial matches.
-- Base evaluation only on what is observable in the response.
-- When an expectation is not met, note a brief, specific reason.
-
-#### 4e: Write Results File
-
-Once all test cases for this spec file have been graded:
-
-1. Determine the results file path: `.workspace/runs/{timestamp}/results/{spec-name}.results.md`
-2. Ensure the `results/` directory exists (create it if not).
-3. Write the results file using the Write tool in this format:
+For each test case, spawn the `grader` agent with the following prompt:
 
 ```
-# Results: {spec file name}
+Grade this test case.
 
-**Timestamp:** {timestamp}
-**Total:** {X passed}, {Y failed} of {Z total}
-
-## {Test ID}: {Test Name} — {PASS|FAIL}
+**Test ID:** {test-id}
+**Test Name:** {test-name}
 
 **Prompt:**
-> {the original prompt}
+> {the original prompt from the spec}
 
 **Expectations:**
-- ✓ {expectation text}
-- ✗ {expectation text}
-  → {brief reason for failure}
+{bullet list of expectations from the spec}
 
 **Negative Expectations:**
-- ✓ {negative expectation text}
-- ✗ {negative expectation text}
-  → {brief reason for failure}
+{bullet list of negative expectations from the spec, or "None" if absent}
 
----
+**Transcript path:** .workspace/runs/{timestamp}/results/{spec-name}.{test-id}.transcript.md
+**Output path:** .workspace/runs/{timestamp}/results/{spec-name}.{test-id}.results.md
 ```
 
-Include ALL test cases in the results, not just failures.
+**Dispatch rules:**
+- Use the Agent tool with `subagent_type` set to `grader`.
+- Pass all test metadata (ID, name, prompt, expectations) inline in the prompt — the grader agent's own instructions tell it how to read the transcript and write the results.
+- Do NOT include any information beyond what is listed above. The grader does not need spec-level metadata, other test cases, or configuration details.
+- Dispatch up to `grader-concurrency` agents in parallel by including multiple Agent tool calls in a single message.
+- After each batch completes, report progress to the user (e.g., "Graded 5/16 test cases...").
+- After all graders complete, proceed to Step 4e.
+
+#### 4e: Verify Grader Output
+
+After all grader agents for this spec have completed, verify that a `.results.md` file exists for each test case:
+
+```
+.workspace/runs/{timestamp}/results/{spec-name}.{test-id}.results.md
+```
+
+If any results file is missing, report the missing test case IDs to the user as a warning.
 
 #### 4f: Run Teardown (if configured)
 
 If the spec frontmatter includes a `teardown` field, execute it using the same runtime resolution as setup scripts.
 
-### Step 5: Present Summary
+### Step 5: Generate and Present Report
 
-After all spec files have been processed:
+After all spec files have been processed (all graders complete):
 
-1. Read all results files for this run from `.workspace/runs/{timestamp}/results/`.
-2. Aggregate pass/fail counts.
-3. Present the summary in the configured output format.
+1. Run the report generation script:
 
-**Interactive format (default):**
-
-```
-## Test Run: {YYYY-MM-DD HH:MM}
-⏱ {duration} | {passed} passed | {failed} failed
-
-📁 {test-dir}/{folder}/
-  📄 {spec-file}.spec.md ({X} passed, {Y} failed)
-    ✅ {ID}: {name} ({expectations-passed}/{expectations-total}, {negatives-passed}/{negatives-total})
-    ❌ {ID}: {name}
-       ✗ {failed expectation text}
-         → {reason for failure}
-       ✓ {passing expectation text}
+```bash
+node ${CLAUDE_SKILL_DIR}/scripts/report.js .workspace/runs/{timestamp}
 ```
 
-**Rules for the summary:**
-- Group results by directory path, then by spec file.
-- Passing tests show on one line with expectation counts.
-- Failing tests expand to show each expectation with ✓/✗ and failure reasons.
-- Include the folder path as a breadcrumb for tracing back to source files.
-- Show total duration, total passed, and total failed at the top.
+2. Read the generated report at `.workspace/runs/{timestamp}/results/report.md`.
+3. Present the report content to the user.
+
+The report groups results by spec, shows passing tests as single lines, and uses collapsible `<details>` blocks for failing tests with full expectation details and links to individual transcripts and grading files.
 
 ## Helper Scripts
 
 - **`scripts/runner.js`** — The test execution CLI. Reads a manifest JSON, creates isolated workspaces, invokes the configured CLI runner per prompt, captures responses, writes a responses JSON file. Usage: `node ${CLAUDE_SKILL_DIR}/runner.js <manifest-path> [--keep-workspaces]`
+- **`scripts/report.js`** — Generates a consolidated `report.md` from individual grader results files. Deterministic — no AI involved. Usage: `node ${CLAUDE_SKILL_DIR}/scripts/report.js <run-dir>`
 - **`${CLAUDE_SKILL_DIR}/scripts/setup-tests.sh [skill-name]`** — Scaffolds a test directory structure in a user's project.
 
 ## Reference Material

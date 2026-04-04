@@ -48,6 +48,9 @@ output:
 execution:
   # Default per-test timeout. Can be overridden per spec file via frontmatter.
   timeout: 120s
+  # Maximum number of grader agents to run in parallel. Each test case is
+  # graded by a separate agent; this limits how many run concurrently.
+  grader-concurrency: 5
 
 # Default setup and teardown scripts. Applied to all spec files that do not
 # declare their own setup/teardown in frontmatter.
