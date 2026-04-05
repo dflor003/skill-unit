@@ -79,7 +79,7 @@ const TOOL_PROFILES = {
 
 // -- Workspace path scoping for file tools ----------------------------------
 
-const FILE_TOOLS = new Set(["Read", "Write", "Edit", "Glob", "Grep"]);
+const FILE_TOOLS = new Set(["Read", "Edit", "Glob", "Grep"]);
 
 // Rewrite bare file tool names to include workspace path restrictions.
 // Tools with existing path patterns (e.g., "Read(/some/path/**)") pass through unchanged.

@@ -1,10 +1,9 @@
 ---
 name: skill-unit
 description: This skill should be used when the user asks to "test my skill", "run skill tests", "evaluate a skill", "run the test suite", "check skill quality", "/skill-unit", or mentions skill testing, skill evaluation, or running spec files. It provides a structured unit testing framework for AI agent skills with anti-bias evaluation.
-allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/runner.js *) Bash(node ${CLAUDE_SKILL_DIR}/scripts/report.js *) Bash(date *) Bash(mkdir -p .workspace/*)
 ---
 
-# Skill Unit — Skill Testing Framework
+# Skill Unit - Skill Testing Framework
 
 A structured, reproducible testing framework for AI agent skills. Discover test cases, delegate execution to an isolated CLI runner, dispatch grader agents for evaluation, and present a clear pass/fail report.
 
@@ -37,6 +36,7 @@ runner:
   tool: claude        # The harness CLI to use (claude, copilot, codex)
   model: sonnet       # Model to use for test execution (optional)
   max-turns: 10       # Max turns per test case
+  runner-concurrency: 5  # Max spec files to run in parallel
 output:
   format: interactive
   show-passing-details: false
@@ -48,7 +48,9 @@ defaults:
   teardown: teardown.sh
 ```
 
-The `runner` section configures test execution. The `tool` selects the harness CLI (claude, copilot, codex). The runner script controls all CLI parameters internally to ensure proper isolation — no external skills leak in, no MCPs, and tool permissions are explicitly allowlisted. Users configure the tool, model, max turns, and optionally which tools the test agent may use.
+The `runner` section configures test execution. The `tool` selects the harness CLI (claude, copilot, codex). The runner script controls all CLI parameters internally to ensure proper isolation: no external skills leak in, no MCPs, and tool permissions are explicitly allowlisted. Users configure the tool, model, max turns, and optionally which tools the test agent may use.
+
+The `runner.runner-concurrency` field controls how many spec files run their test runners in parallel (default 5). Each spec file launches its own runner process.
 
 The `execution.grader-concurrency` field controls how many grader agents run in parallel (default 5). Each test case is graded by a separate agent; this limits concurrent dispatches to manage API costs.
 
@@ -81,9 +83,11 @@ Use the Glob tool to find all `*.spec.md` files under the configured test direct
 - If no spec files are found, inform the user and suggest running the setup script.
 - Sort discovered files by directory path for consistent ordering.
 
-### Step 4: Process Each Spec File (Sequential)
+### Step 4: Process Spec Files
 
-For each discovered spec file, in order:
+Parse all spec files and write their manifests sequentially (Steps 4a–4b). Then launch all runners in parallel, up to `runner-concurrency` at a time (default 5). Poll all running progress files concurrently using parallel `sleep && cat` calls. As runners complete, dispatch graders for their test cases. If there are more spec files than `runner-concurrency`, wait for a runner to finish before launching the next.
+
+For each spec file:
 
 #### 4a: Parse the Spec File
 
@@ -146,7 +150,7 @@ Per-test `fixture-paths` is an array of resolved paths (relative to repo root). 
 2. Check `skills/{skill-name}/SKILL.md` (plugin skills)
 3. If found, use the directory path (e.g., `.claude/skills/report-card`). If not found, set to null.
 
-The runner installs the skill as a plugin in a sibling directory alongside each workspace's work directory. The agent cannot see the plugin files — only the harness loads them via `--plugin-dir`.
+The runner installs the skill as a plugin in a sibling directory alongside each workspace's work directory. The agent cannot see the plugin files. Only the harness loads them via `--plugin-dir`.
 
 Ensure the run directory exists:
 
@@ -172,7 +176,18 @@ node ${CLAUDE_SKILL_DIR}/scripts/runner.js .workspace/runs/{timestamp}/manifests
 
 While the runner executes in the background, poll the progress file to provide real-time feedback. The progress file is at `.workspace/runs/{timestamp}/manifests/{spec-name}.progress.json`.
 
-Read it periodically using the Read tool. It contains:
+**How to poll:** Use the Bash tool with `sleep` and `cat` to wait, then read the progress file in one call. This avoids redundant Read tool calls when the file hasn't changed:
+
+```bash
+sleep 45 && cat .workspace/runs/{timestamp}/manifests/{spec-name}.progress.json
+```
+
+**Timing guidance:**
+- **First poll:** Wait ~45-55 seconds. Test cases typically take 15-60s each, and the runner needs startup time.
+- **Subsequent polls:** Wait ~30-40 seconds between checks.
+- **After a test completes:** If more tests remain, the next one is already running. Keep polling.
+
+**Progress file format:**
 
 ```json
 {
@@ -188,16 +203,22 @@ Read it periodically using the Read tool. It contains:
 }
 ```
 
-Report progress to the user as test cases complete:
+**How to report progress:** On each poll, present the full in-progress run status showing all test cases, including completed, current, and pending:
 
 ```
-Running report-card-tests (4 test cases)...
-  ✓ RC-1: OK (5.2s)
-  ✓ RC-2: OK (3.1s)
-  ⏳ RC-3: running...
+Running **report-card-tests** (4 test cases)...
+
+- ✅ RC-1: OK (5.2s)
+- ✅ RC-2: OK (3.1s)
+- ⏳ RC-3: running...
+- 🔜 RC-4: pending
 ```
 
-When `status` changes to `"complete"`, the progress file includes the `responses-path` field.
+Use `✅` for OK, `⏱️` for FAIL with timeout (exit 124), `❌` for other failures, `⏳` for the currently running test, and `🔜` for tests that haven't started yet.
+
+Show the full list on every poll cycle so the user always sees the complete picture at a glance, not just incremental updates.
+
+**Completion:** When `status` changes to `"complete"`, the progress file includes the `responses-path` field. Stop polling and proceed to Step 4.
 
 **Step 4: Read the responses file.**
 
@@ -214,9 +235,9 @@ Once the runner completes, read the responses JSON file at the path indicated in
 ```
 
 **Critical anti-bias notes:**
-- The manifest contains ONLY test IDs and prompts — no expectations or test metadata.
+- The manifest contains ONLY test IDs and prompts, no expectations or test metadata.
 - Each test case runs in a completely isolated CLI session from its own workspace.
-- The workspace contains only fixture files — no spec files, no results, no test metadata.
+- The workspace contains only fixture files, no spec files, no results, no test metadata.
 
 #### 4c: Run Setup Script (if configured)
 
@@ -260,7 +281,7 @@ Grade this test case.
 
 **Dispatch rules:**
 - Use the Agent tool with `subagent_type` set to `grader`.
-- Pass all test metadata (ID, name, prompt, expectations) inline in the prompt — the grader agent's own instructions tell it how to read the transcript and write the results.
+- Pass all test metadata (ID, name, prompt, expectations) inline in the prompt. The grader agent's own instructions tell it how to read the transcript and write the results.
 - Do NOT include any information beyond what is listed above. The grader does not need spec-level metadata, other test cases, or configuration details.
 - Dispatch up to `grader-concurrency` agents in parallel by including multiple Agent tool calls in a single message.
 - After each batch completes, report progress to the user (e.g., "Graded 5/16 test cases...").
@@ -291,22 +312,37 @@ node ${CLAUDE_SKILL_DIR}/scripts/report.js .workspace/runs/{timestamp}
 ```
 
 2. Read the generated report at `.workspace/runs/{timestamp}/results/report.md`.
-3. Present the report content to the user.
+3. Present the report content to the user, followed by a run summary.
 
 The report groups results by spec, shows passing tests as single lines, and uses collapsible `<details>` blocks for failing tests with full expectation details and links to individual transcripts and grading files.
 
+**After presenting the report, add a run summary** in this format:
+
+```
+## Results: {spec-name}
+
+**{N} passed** | **{N} failed** | {N} total
+
+- ✅ **{ID}: {Name}** ({score}) - {duration}
+- ❌ **{ID}: {Name}** ({score}) - {brief failure reason}
+
+Full report: [report.md](.workspace/runs/{timestamp}/results/report.md)
+```
+
+For multiple spec files, group results under each spec name. Include a brief failure reason for failing tests (one phrase summarizing why it failed). Link to the report file and optionally to individual transcripts and grading files for failures.
+
 ## Helper Scripts
 
-- **`scripts/runner.js`** — The test execution CLI. Reads a manifest JSON, creates isolated workspaces, invokes the configured CLI runner per prompt, captures responses, writes a responses JSON file. Usage: `node ${CLAUDE_SKILL_DIR}/runner.js <manifest-path> [--keep-workspaces]`
-- **`scripts/report.js`** — Generates a consolidated `report.md` from individual grader results files. Deterministic — no AI involved. Usage: `node ${CLAUDE_SKILL_DIR}/scripts/report.js <run-dir>`
-- **`${CLAUDE_SKILL_DIR}/scripts/setup-tests.sh [skill-name]`** — Scaffolds a test directory structure in a user's project.
+- **`scripts/runner.js`** - The test execution CLI. Reads a manifest JSON, creates isolated workspaces, invokes the configured CLI runner per prompt, captures responses, writes a responses JSON file. Usage: `node ${CLAUDE_SKILL_DIR}/runner.js <manifest-path> [--keep-workspaces]`
+- **`scripts/report.js`** - Generates a consolidated `report.md` from individual grader results files. Deterministic, no AI involved. Usage: `node ${CLAUDE_SKILL_DIR}/scripts/report.js <run-dir>`
+- **`${CLAUDE_SKILL_DIR}/scripts/setup-tests.sh [skill-name]`** - Scaffolds a test directory structure in a user's project.
 
 ## Reference Material
 
 For detailed documentation, consult these files as needed:
 
-- **`references/spec-format.md`** — Complete spec file format reference with examples
-- **`references/testing-guidelines.md`** — Best practices for writing test cases
+- **`references/spec-format.md`** - Complete spec file format reference with examples
+- **`references/testing-guidelines.md`** - Best practices for writing test cases
 
 ## Configuration
 

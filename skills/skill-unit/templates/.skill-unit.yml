@@ -14,6 +14,9 @@ runner:
   # model: sonnet
   # Max conversation turns per test case.
   max-turns: 50
+  # Maximum number of spec files to run their test runners in parallel.
+  # Each spec file launches its own runner process; this limits concurrency.
+  runner-concurrency: 5
 
   # Tool permissions for test sessions. Controls what the harness agent can do.
   # Built-in defaults allow: Read, Write, Edit, Bash, Glob, Grep, Agent, Skill
