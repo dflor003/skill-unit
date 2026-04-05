@@ -18,7 +18,7 @@ Skill Unit lets you write test specs for AI agent skills using a familiar unit-t
 ## Quick start
 
 1. Install the plugin in your project
-2. Create a `tests/` directory with `*.spec.md` files (see `skills/skill-unit/templates/example.spec.md`)
+2. Create a `skill-tests/` directory with `*.spec.md` files (see `skills/skill-unit/templates/example.spec.md`)
 3. Run `/skill-unit` or ask your agent to "run skill tests"
 
 ## Status

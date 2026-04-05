@@ -138,7 +138,7 @@ Append after the skill discovery section:
 ```markdown
 ## Step 2: Detect Existing Specs
 
-Read `.skill-unit.yml` from the repo root (if it exists) to determine the test directory. Default to `tests/` if not configured.
+Read `.skill-unit.yml` from the repo root (if it exists) to determine the test directory. Default to `skill-tests/` if not configured.
 
 Use the Glob tool to search recursively for `**/*.spec.md` under the test directory. For each found spec file, read its YAML frontmatter and check if the `skill` field matches the selected skill name.
 
@@ -402,7 +402,7 @@ Once all categories have been approved:
 
 1. Assemble the full spec file: frontmatter block + all approved test cases separated by `---` horizontal rules.
 2. Determine the output path: `{test-dir}/{skill-name}/{skill-name}.spec.md`
-   - `{test-dir}` comes from `.skill-unit.yml` or defaults to `tests/`.
+   - `{test-dir}` comes from `.skill-unit.yml` or defaults to `skill-tests/`.
    - `{skill-name}` is the directory name of the target skill.
 3. Create the directory if it does not exist. Also create a `results/` subfolder inside it.
 4. If fixtures are needed, create the fixture folder at the path specified in frontmatter and populate it with the minimal file tree discussed during targeted questions.
@@ -673,7 +673,7 @@ fixtures: ./fixtures/basic-project
 The folder contains the exact file tree that will be copied into the working directory before tests run. Example:
 
 ```
-tests/
+skill-tests/
   commit/
     commit-basics.spec.md
     fixtures/
@@ -748,7 +748,7 @@ Common git states to script:
 When multiple spec files test the same skill and share the same base state, place the shared fixture in a parent directory:
 
 ```
-tests/
+skill-tests/
   commit/
     fixtures/
       basic-repo/          # shared by both spec files

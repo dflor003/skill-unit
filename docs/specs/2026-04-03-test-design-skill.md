@@ -53,7 +53,7 @@ The skill operates on one target skill at a time.
 
 ### Existing Spec Detection
 
-After selecting a skill, search the configured test directory (from `.skill-unit.yml` or default `tests/`) recursively for any `*.spec.md` files whose frontmatter `skill` field matches the selected skill name. Test directories can have arbitrarily nested folder structures — do not assume a flat `{test-dir}/{skill-name}/` layout.
+After selecting a skill, search the configured test directory (from `.skill-unit.yml` or default `skill-tests/`) recursively for any `*.spec.md` files whose frontmatter `skill` field matches the selected skill name. Test directories can have arbitrarily nested folder structures — do not assume a flat `{test-dir}/{skill-name}/` layout.
 
 - If one spec found: "I found an existing spec at `{path}`. Want me to review it for gaps, or are you looking to add something specific?"
 - If multiple specs found: present the list and ask which one to work with, or offer to run gap analysis across all of them.
@@ -259,7 +259,7 @@ During Step 6 (Write to Disk), the skill creates the fixture folder alongside th
 
 ## Configuration
 
-The skill reads `.skill-unit.yml` (if present) for the `test-dir` setting. Defaults to `tests/` if not configured. No additional configuration specific to test-design is needed.
+The skill reads `.skill-unit.yml` (if present) for the `test-dir` setting. Defaults to `skill-tests/` if not configured. No additional configuration specific to test-design is needed.
 
 ## Future Integration
 

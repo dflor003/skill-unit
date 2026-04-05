@@ -47,9 +47,9 @@ The runner script (`skills/skill-unit/scripts/runner.js`) manages the full works
 
 ### Why a single `.workspace/` at the repo root?
 
-Earlier designs placed a `.workspaces/` directory inside each spec's directory (e.g., `tests/test-design/.workspaces/`). This had problems:
+Earlier designs placed a `.workspaces/` directory inside each spec's directory (e.g., `skill-tests/test-design/.workspaces/`). This had problems:
 
-- **Path leakage** — The workspace path included the spec directory name and test ID (e.g., `tests/test-design/.workspaces/2026-04-03-22-11-16-TDD-7/`), telling the agent what was being tested.
+- **Path leakage** — The workspace path included the spec directory name and test ID (e.g., `skill-tests/test-design/.workspaces/2026-04-03-22-11-16-TDD-7/`), telling the agent what was being tested.
 - **Multiple gitignore entries** — Each spec directory needed its own `.gitignore` entry for `.workspaces/`.
 - **Scattered artifacts** — Results, logs, and progress files were spread across multiple directories.
 

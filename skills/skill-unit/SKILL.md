@@ -31,7 +31,7 @@ All results files from this run share this timestamp.
 Read `.skill-unit.yml` from the repository root if it exists. Apply these defaults for any missing fields:
 
 ```yaml
-test-dir: tests
+test-dir: skill-tests
 runner:
   tool: claude        # The harness CLI to use (claude, copilot, codex)
   model: sonnet       # Model to use for test execution (optional)

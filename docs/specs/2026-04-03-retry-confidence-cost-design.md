@@ -189,7 +189,7 @@ Key formatting rules:
 ## Test Run: 2026-04-03 14:30
 ⏱ 92s | 8 passed | 1 failed | 1 low-confidence
 
-📁 tests/commit/
+📁 skill-tests/commit/
   📄 commit-basics.spec.md (5 passed, 1 failed)
     ✅ COM-1: basic-commit (3/3, 2/2) — $0.36
     ✅ COM-2: vague-commit-request (3/3, 1/1) — $0.28

@@ -28,7 +28,7 @@ Here's a few things we need to incorporate into this framework:
 Here's a proposed folder structure for the skill unit testing framework:
 
 ```
-/tests/
+/skill-tests/
   /.setup/
     setup.sh
     teardown.sh

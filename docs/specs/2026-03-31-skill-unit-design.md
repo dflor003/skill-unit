@@ -232,7 +232,7 @@ Scripts run before (setup) and after (teardown) all test cases in a spec file. A
 Results are written alongside test cases in a `results/` subfolder, with the suite start timestamp prefixed:
 
 ```
-tests/
+skill-tests/
   commit/
     commit-basics.spec.md
     commit-amend.spec.md
@@ -251,7 +251,7 @@ All results from the same run share a timestamp. Results are checked into the re
 ## Test Run: 2026-03-31 14:30
 ⏱ 92s | 48 passed | 3 failed
 
-📁 tests/commit/
+📁 skill-tests/commit/
   📄 commit-basics.spec.md (5 passed, 1 failed)
     ✅ COM-1: basic-commit (3/3, 2/2)
     ✅ COM-2: vague-commit-request (3/3, 1/1)
@@ -263,7 +263,7 @@ All results from the same run share a timestamp. Results are checked into the re
     ✅ COM-4: multifile-commit (4/4, 1/1)
     ✅ COM-5: merge-conflict-staged (2/2, 2/2)
 
-📁 tests/brainstorming/
+📁 skill-tests/brainstorming/
   📄 brainstorming-activation.spec.md (2 passed, 2 failed)
     ✅ BRN-1: triggers-on-feature-request (2/2, 0/0)
     ❌ BRN-2: triggers-on-build-me (2/2, 1/1)
@@ -285,7 +285,7 @@ Placed at repo root. All fields optional — sensible defaults built in.
 # .skill-unit.yml
 
 # Where test spec files live
-test-dir: tests
+test-dir: skill-tests
 
 # Runner configuration — how test prompts are executed in isolated sessions.
 # Change this to match your AI agent harness.
@@ -323,13 +323,13 @@ Skill Unit tests itself using a dummy **report-card skill** — a simple, determ
 The self-test structure:
 
 ```
-tests/skill-unit/
+skill-tests/skill-unit/
   spec-parsing.spec.md                  # Self-tests exercising skill-unit's behavior
   fixtures/
     report-card/                        # Fixture: a self-contained project
       .claude/skills/report-card/
         SKILL.md                        # Dummy skill — reads students.json, outputs grades
-      tests/report-card/
+      skill-tests/report-card/
         report-card.spec.md             # Spec targeting the report-card skill
         fixtures/basic-class/
           students.json                 # Test data (3 students with known grades)

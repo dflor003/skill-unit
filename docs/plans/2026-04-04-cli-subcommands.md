@@ -51,7 +51,7 @@ No-command shorthand:
 node cli.js run
 
 # Run a specific spec file
-node cli.js run tests/test-design/test-design.spec.md
+node cli.js run skill-tests/test-design/test-design.spec.md
 
 # Run by suite name
 node cli.js run --name test-design-tests
@@ -60,7 +60,7 @@ node cli.js run --name test-design-tests
 node cli.js run --tag smoke
 
 # Run specific test cases from a spec
-node cli.js run tests/test-design/test-design.spec.md --test TD-1,TD-3
+node cli.js run skill-tests/test-design/test-design.spec.md --test TD-1,TD-3
 
 # Override model for this run
 node cli.js run --model opus
@@ -87,14 +87,14 @@ node cli.js report --run-dir .workspace/runs/2026-04-04-15-30-00
 ### `ls` Output Format
 
 ```
-test-design-tests (tests/test-design/test-design.spec.md)
+test-design-tests (skill-tests/test-design/test-design.spec.md)
   tags: slash-command, activation, fixtures
   TD-1: Generated Test Case Follows Quality Guidelines
   TD-2: Detects Existing Spec and Offers Review
   TD-3: Handles Malformed Skill Gracefully
   TD-4: Generated Fixtures Use Neutral Names and Content
 
-commit-skill-tests (tests/commit/commit.spec.md)
+commit-skill-tests (skill-tests/commit/commit.spec.md)
   tags: slash-command, git
   COM-1: basic-commit
   COM-2: nothing-to-commit
