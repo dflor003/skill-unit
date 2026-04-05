@@ -104,5 +104,13 @@
     "claude-md-management@claude-plugins-official": true,
     "superpowers@claude-plugins-official": true,
     "skill-unit@skill-unit": true
+  },
+  "extraKnownMarketplaces": {
+    "skill-unit": {
+      "source": {
+        "source": "directory",
+        "path": "./"
+      }
+    }
   }
 }

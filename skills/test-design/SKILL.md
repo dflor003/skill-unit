@@ -257,6 +257,7 @@ The `**Fixtures:**` section is optional. Include it only when a test case needs 
 - NEVER describe the expected output format.
 - NEVER include hints about what the correct answer is.
 - Vary formality, specificity, and intent framing across test cases.
+- For single-turn tests, front-load project context so the agent can skip discovery steps. Instead of "write tests for csv", write "There's a csv skill in this project but no tests yet. Write me a test case that covers X." This prevents the agent from burning turns exploring the codebase.
 
 Good: "commit my changes", "how are the students doing?", "this test keeps failing, can you help?"
 Bad: "use the commit skill", "generate a report card using the report-card skill", "run git commit on staged files"
@@ -267,6 +268,8 @@ Bad: "use the commit skill", "generate a report card using the report-card skill
 - Each expectation is independently verifiable — one check per bullet.
 - Prefer behavioral assertions over tool-call assertions.
 - Negative expectations name specific prohibited behaviors.
+- When an expectation checks a specific section of the output (e.g., only the Prompt, not the Expectations), say so explicitly. The grader sees the full transcript, so "does not mention X" is ambiguous if X appears in one section but not another. Write: "Inside the generated test case, the **Prompt** section does not mention X."
+- Skill internals (specific values, fallback behaviors, config names) are fine to reference in expectations, since that is how you verify correct behavior. They must NOT appear in prompts, since that leaks the answer to the agent under test.
 
 Good: "Commit message references the nature of the changes"
 Bad: "Ran `git commit -m 'fix: auth bug'`"
@@ -383,6 +386,11 @@ Minimum coverage requirements by category. Use this during gap analysis to ident
 - Include hints about what the correct answer is
 - Use technical jargon a real user wouldn't use for this request
 
+**Single-turn prompts** — when tests run as a single prompt/response, front-load project context so the agent skips discovery:
+
+- Good: "There's a csv skill in this project but no tests yet. Write me a test case that covers X."
+- Bad: "write tests for csv" (agent wastes turns exploring the codebase)
+
 **Prompt variation** — across test cases in the same spec, vary:
 
 - Formality level ("fix this" vs. "could you please address this issue")
@@ -403,6 +411,13 @@ Minimum coverage requirements by category. Use this during gap analysis to ident
 - "Ran `git commit -m 'fix: auth bug'`" (too specific to implementation)
 - "Produced correct output and formatted it properly" (compound — split into two)
 - "Handled the error well" (vague — what does 'well' mean observably?)
+
+**Scope precision** — when an expectation applies to a specific part of the output, say so:
+
+- Good: "Inside the generated test case, the **Prompt** section does not mention Col1"
+- Bad: "Does not mention Col1" (ambiguous if Col1 appears in expectations but not the prompt)
+
+**Prompts vs. expectations boundary** — skill internals (specific values, fallback behaviors, config names) are allowed in expectations because that is how you verify correct behavior. They must NOT appear in prompts because that leaks the answer to the agent under test.
 
 **Negative expectations** — specific prohibited behaviors:
 
