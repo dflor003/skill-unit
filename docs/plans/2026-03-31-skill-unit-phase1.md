@@ -40,12 +40,12 @@ skill-unit/
 │   ├── hooks.json                           # Hook configuration
 │   └── scripts/
 │       └── block-test-access.sh             # Conditional PreToolUse hook (marker-file)
-└── tests/
+└── skill-tests/
     └── skill-unit/
         ├── spec-parsing.spec.md             # Self-tests using report-card fixture
         ├── fixtures/
         │   └── report-card/                 # Fixture: fake project with tests
-        │       └── tests/report-card/
+        │       └── skill-tests/report-card/
         │           ├── report-card.spec.md  # Spec targeting report-card skill
         │           └── fixtures/basic-class/
         │               └── students.json    # Test data (3 students)
@@ -161,11 +161,11 @@ if echo "$file_path" | grep -qiE '\.results\.md$'; then
   exit 2
 fi
 
-# Block access to the tests directory
+# Block access to the skill-tests directory
 # Normalize path separators to forward slashes for consistent matching
 normalized_path=$(echo "$file_path" | sed 's|\\|/|g')
-if echo "$normalized_path" | grep -qiE '(^|/)tests(/|$)'; then
-  echo '{"hookSpecificOutput":{"permissionDecision":"deny"},"systemMessage":"Access to the tests directory is not permitted."}' >&2
+if echo "$normalized_path" | grep -qiE '(^|/)skill-tests(/|$)'; then
+  echo '{"hookSpecificOutput":{"permissionDecision":"deny"},"systemMessage":"Access to the skill-tests directory is not permitted."}' >&2
   exit 2
 fi
 
@@ -182,7 +182,7 @@ Run: `chmod +x hooks/scripts/block-test-access.sh`
 Test that it blocks a spec file path:
 
 ```bash
-echo '{"tool_name":"Read","tool_input":{"file_path":"tests/commit/commit-basics.spec.md"}}' | bash hooks/scripts/block-test-access.sh
+echo '{"tool_name":"Read","tool_input":{"file_path":"skill-tests/commit/commit-basics.spec.md"}}' | bash hooks/scripts/block-test-access.sh
 echo "Exit code: $?"
 ```
 
@@ -197,10 +197,10 @@ echo "Exit code: $?"
 
 Expected: Exit code `0`, no output
 
-Test that it blocks the tests directory:
+Test that it blocks the skill-tests directory:
 
 ```bash
-echo '{"tool_name":"Glob","tool_input":{"path":"tests/commit/"}}' | bash hooks/scripts/block-test-access.sh
+echo '{"tool_name":"Glob","tool_input":{"path":"skill-tests/commit/"}}' | bash hooks/scripts/block-test-access.sh
 echo "Exit code: $?"
 ```
 
@@ -209,7 +209,7 @@ Expected: Exit code `2`
 Test with backslash paths (Windows):
 
 ```bash
-echo '{"tool_name":"Read","tool_input":{"file_path":"tests\\commit\\basics.spec.md"}}' | bash hooks/scripts/block-test-access.sh
+echo '{"tool_name":"Read","tool_input":{"file_path":"skill-tests\\commit\\basics.spec.md"}}' | bash hooks/scripts/block-test-access.sh
 echo "Exit code: $?"
 ```
 
@@ -615,7 +615,7 @@ For skills invokable via slash command:
 
 - Group test cases by skill or skill mode in a single `*.spec.md` file.
 - Use consistent ID prefixes within a spec file (e.g., `COM-` for commit, `BRN-` for brainstorming).
-- Place spec files in `tests/{skill-name}/` directories.
+- Place spec files in `skill-tests/{skill-name}/` directories.
 - Use fixtures for filesystem state; use setup scripts for dynamic state.
 
 ## Minimum Coverage Requirements
@@ -708,7 +708,7 @@ Create `skills/skill-unit/templates/.skill-unit.yml`:
 # All fields are optional — sensible defaults are built in.
 
 # Where test spec files live (relative to repo root)
-test-dir: tests
+test-dir: skill-tests
 
 # Output settings
 output:
@@ -761,7 +761,7 @@ set -euo pipefail
 # Otherwise, creates the base test directory structure.
 
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-$(cd "$(dirname "$0")/.." && pwd)}"
-TEST_DIR="tests"
+TEST_DIR="skill-tests"
 SKILL_NAME="${1:-}"
 
 # Read test-dir from .skill-unit.yml if it exists
@@ -860,7 +860,7 @@ Record the current time as the suite start timestamp in `YYYY-MM-DD-HH-MM-SS` fo
 Read `.skill-unit.yml` from the repository root if it exists. Apply these defaults for any missing fields:
 
 ```yaml
-test-dir: tests
+test-dir: skill-tests
 output:
   format: interactive
   show-passing-details: false
@@ -1026,14 +1026,14 @@ git commit -m "feat: add SKILL.md evaluator/orchestrator — core of the plugin"
 ### Task 9: Self-Test Spec Files
 
 **Files:**
-- Create: `tests/skill-unit/spec-parsing.spec.md`
-- Create: `tests/skill-unit/results/` (directory)
+- Create: `skill-tests/skill-unit/spec-parsing.spec.md`
+- Create: `skill-tests/skill-unit/results/` (directory)
 
 Skill Unit tests itself. These spec files exercise the plugin's own test discovery and execution flow.
 
 - [ ] **Step 1: Create the spec-parsing self-test**
 
-Create `tests/skill-unit/spec-parsing.spec.md`:
+Create `skill-tests/skill-unit/spec-parsing.spec.md`:
 
 ```markdown
 ---
@@ -1100,16 +1100,16 @@ tags: [self-test, parsing]
 
 - [ ] **Step 2: Create the results directory**
 
-Run: `mkdir -p tests/skill-unit/results`
+Run: `mkdir -p skill-tests/skill-unit/results`
 
 Create a `.gitkeep` file to ensure the directory is tracked:
 
-Run: `touch tests/skill-unit/results/.gitkeep`
+Run: `touch skill-tests/skill-unit/results/.gitkeep`
 
 - [ ] **Step 3: Commit**
 
 ```bash
-git add tests/
+git add skill-tests/
 git commit -m "feat: add self-test spec files for skill-unit"
 ```
 
@@ -1227,7 +1227,7 @@ In the Claude Code session, type:
 /skill-unit
 ```
 
-Expected: The skill activates, discovers `tests/skill-unit/spec-parsing.spec.md`, and attempts to run the test cases.
+Expected: The skill activates, discovers `skill-tests/skill-unit/spec-parsing.spec.md`, and attempts to run the test cases.
 
 - [ ] **Step 3: Test natural language activation**
 
@@ -1241,14 +1241,14 @@ Expected: The skill-unit skill activates.
 
 - [ ] **Step 4: Verify anti-bias hook**
 
-While a test-executor subagent is running, check that it cannot read spec files. The hook should block any attempt to access `*.spec.md` files or the `tests/` directory.
+While a test-executor subagent is running, check that it cannot read spec files. The hook should block any attempt to access `*.spec.md` files or the `skill-tests/` directory.
 
 - [ ] **Step 5: Verify grader writes results**
 
 After a test run completes, check that:
 
 ```bash
-ls tests/skill-unit/results/
+ls skill-tests/skill-unit/results/
 ```
 
 Expected: A timestamped results file exists (e.g., `2026-03-31-15-00-00.spec-parsing.results.md`).
@@ -1273,7 +1273,7 @@ The ultimate validation — use skill-unit to run its self-tests against the rep
 /skill-unit
 ```
 
-Expected: Skill-unit discovers `tests/skill-unit/spec-parsing.spec.md`, copies the report-card fixture, executes prompts via the CLI runner against the report-card skill, grades results inline, writes a timestamped results file, and presents a summary.
+Expected: Skill-unit discovers `skill-tests/skill-unit/spec-parsing.spec.md`, copies the report-card fixture, executes prompts via the CLI runner against the report-card skill, grades results inline, writes a timestamped results file, and presents a summary.
 
 - [ ] **Step 9: Document any issues found**
 

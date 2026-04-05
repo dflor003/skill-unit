@@ -24,7 +24,7 @@ fixtures: ./fixtures/basic-project
 The folder contains the exact file tree that will be copied into the working directory before tests run. Example:
 
 ```
-tests/
+skill-tests/
   commit/
     commit-basics.spec.md
     fixtures/
@@ -99,7 +99,7 @@ Common git states to script:
 When multiple spec files test the same skill and share the same base state, place the shared fixture in a parent directory:
 
 ```
-tests/
+skill-tests/
   commit/
     fixtures/
       basic-repo/          # shared by both spec files

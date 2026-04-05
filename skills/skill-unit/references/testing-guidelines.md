@@ -143,7 +143,7 @@ Cover the contexts that are most likely to surface bugs or inconsistent behavior
 
 ## Test Suite Organization
 
-**Group by skill.** Place all spec files for a skill in a subdirectory named after the skill (e.g., `tests/commit/`). This keeps related tests together and makes targeted runs easier.
+**Group by skill.** Place all spec files for a skill in a subdirectory named after the skill (e.g., `skill-tests/commit/`). This keeps related tests together and makes targeted runs easier.
 
 **Use consistent ID prefixes.** All test cases in a spec file should share a prefix derived from the skill or file name. This makes results output scannable and prevents ID collisions across suites.
 

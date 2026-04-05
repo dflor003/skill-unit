@@ -53,10 +53,10 @@ The manifest JSON was updated to support this:
 
 ```json
 {
-  "global-fixture-path": "tests/my-skill/fixtures/base-project",
+  "global-fixture-path": "skill-tests/my-skill/fixtures/base-project",
   "test-cases": [
     {"id": "TC-1", "prompt": "..."},
-    {"id": "TC-2", "prompt": "...", "fixture-paths": ["tests/my-skill/fixtures/existing-config"]}
+    {"id": "TC-2", "prompt": "...", "fixture-paths": ["skill-tests/my-skill/fixtures/existing-config"]}
   ]
 }
 ```

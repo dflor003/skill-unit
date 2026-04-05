@@ -6,6 +6,9 @@ const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
 const fmt = require("./transcript-formatter");
+const logger = require("./logger");
+const log = logger("runner");
+const { MdStream } = logger;
 
 // ---------------------------------------------------------------------------
 // skill-unit runner — executes test prompts in isolated workspaces
@@ -37,11 +40,6 @@ const fmt = require("./transcript-formatter");
 //
 // Progress is written to a progress file for real-time status updates.
 // ---------------------------------------------------------------------------
-
-function log(msg) {
-  const ts = new Date().toISOString().replace("T", " ").replace(/\.\d+Z$/, "");
-  process.stderr.write(`[skill-unit ${ts}] ${msg}\n`);
-}
 
 // -- CLI argument profiles per harness tool ---------------------------------
 
@@ -105,13 +103,13 @@ if (!manifestPath) {
 
 // -- Read manifest ----------------------------------------------------------
 
-log(`Reading manifest: ${manifestPath}`);
+log.info(`Reading manifest: ${manifestPath}`);
 
 let manifest;
 try {
   manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
 } catch (err) {
-  log(`ERROR: Failed to read manifest: ${err.message}`);
+  log.error(`Failed to read manifest: ${err.message}`);
   process.exit(1);
 }
 
@@ -134,7 +132,7 @@ const globalFixturePath = rawFixturePath ? path.resolve(cwd, rawFixturePath) : n
 const skillPath = rawSkillPath ? path.resolve(cwd, rawSkillPath) : null;
 
 if (!specName || !timestamp || !runner || !testCases) {
-  log("ERROR: Invalid manifest — missing required fields (spec-name, timestamp, runner, test-cases)");
+  log.error("Invalid manifest: missing required fields (spec-name, timestamp, runner, test-cases)");
   process.exit(1);
 }
 
@@ -145,19 +143,16 @@ const maxTurns = runner["max-turns"] || 10;
 
 const buildArgs = TOOL_PROFILES[tool];
 if (!buildArgs) {
-  log(`ERROR: Unsupported runner tool: "${tool}". Supported: ${Object.keys(TOOL_PROFILES).join(", ")}`);
+  log.error(`Unsupported runner tool: "${tool}". Supported: ${Object.keys(TOOL_PROFILES).join(", ")}`);
   process.exit(1);
 }
 
-log(`Spec: ${specName}`);
-log(`Test cases: ${testCases.length}`);
-log(`Tool: ${tool}${model ? ` (model: ${model})` : ""}`);
-log(`CWD: ${cwd}`);
-log(`Global fixture path (resolved): ${globalFixturePath || "(none)"}`);
-log(`Global fixture exists: ${globalFixturePath ? fs.existsSync(globalFixturePath) : "n/a"}`);
-log(`Skill path (resolved): ${skillPath || "(none)"}`);
-log(`Skill exists: ${skillPath ? fs.existsSync(skillPath) : "n/a"}`);
-log(`Timestamp: ${timestamp}`);
+log.info(`Spec: ${specName} (${testCases.length} test cases)`);
+log.verbose(`Tool: ${tool}${model ? ` (model: ${model})` : ""}`);
+log.verbose(`CWD: ${cwd}`);
+log.verbose(`Global fixture: ${globalFixturePath || "(none)"}${globalFixturePath ? ` [${fs.existsSync(globalFixturePath) ? "exists" : "missing"}]` : ""}`);
+log.verbose(`Skill path: ${skillPath || "(none)"}${skillPath ? ` [${fs.existsSync(skillPath) ? "exists" : "missing"}]` : ""}`);
+log.verbose(`Timestamp: ${timestamp}`);
 
 // Parse timeout string (e.g., "120s", "5m") into milliseconds
 function parseTimeout(str) {
@@ -170,12 +165,12 @@ function parseTimeout(str) {
 }
 
 const timeoutMs = parseTimeout(timeoutStr);
-log(`Timeout per test: ${timeoutMs}ms`);
+log.verbose(`Timeout per test: ${timeoutMs}ms`);
 
 const allowedTools = runner["allowed-tools"] || [];
 const disallowedTools = runner["disallowed-tools"] || [];
-log(`Allowed tools: ${allowedTools.length ? allowedTools.join(", ") : "(none)"}`);
-log(`Disallowed tools: ${disallowedTools.length ? disallowedTools.join(", ") : "(none)"}`);
+log.verbose(`Allowed tools: ${allowedTools.length ? allowedTools.join(", ") : "(none)"}`);
+log.verbose(`Disallowed tools: ${disallowedTools.length ? disallowedTools.join(", ") : "(none)"}`);
 
 // -- Helpers ----------------------------------------------------------------
 
@@ -218,7 +213,7 @@ function uuid() {
 // Returns the plugin dir path to pass via --plugin-dir.
 function installSkillPlugin(skillSrcPath, pluginPath) {
   if (!skillSrcPath || !fs.existsSync(skillSrcPath)) {
-    log(`  WARNING: Skill path not found: ${skillSrcPath}`);
+    log.warn(`Skill path not found: ${skillSrcPath}`);
     return null;
   }
 
@@ -270,6 +265,9 @@ function runAsync(cmd, cliArgs, options) {
       mdLogStream.write(`---\n\n`);
     }
 
+    // Streaming markdown formatter for terminal output
+    const mdOut = new MdStream(process.stderr);
+
     let turnNumber = 0;
     let rawStdout = "";
     let lastAssistantText = "";
@@ -317,14 +315,16 @@ function runAsync(cmd, cliArgs, options) {
 
             if (textParts) {
               lastAssistantText = textParts;
-              process.stderr.write(textParts);
+              mdOut.write(textParts);
               if (mdLogStream) {
                 mdLogStream.write(`${textParts}\n\n`);
               }
             }
 
             for (const tu of toolUses) {
-              process.stderr.write(`\n[tool: ${tu.name || "unknown"}]\n`);
+              mdOut.end(); // flush any buffered text before tool output
+              mdOut.write(fmt.formatToolCall(tu.name, tu.input));
+              mdOut.end();
               if (mdLogStream) {
                 mdLogStream.write(fmt.formatToolCall(tu.name, tu.input));
               }
@@ -334,7 +334,8 @@ function runAsync(cmd, cliArgs, options) {
             const isError = event.is_error === true;
             const preview = output.substring(0, 200);
             if (preview) {
-              process.stderr.write(`[result${isError ? " ERROR" : ""}: ${preview}${output.length > 200 ? "..." : ""}]\n`);
+              mdOut.write(fmt.formatToolResult(preview + (output.length > 200 ? "..." : ""), isError));
+              mdOut.end();
             }
             if (mdLogStream) {
               mdLogStream.write(fmt.formatToolResult(output, isError));
@@ -374,7 +375,8 @@ function runAsync(cmd, cliArgs, options) {
     proc.on("close", (code) => {
       clearTimeout(timer);
 
-      // Write any remaining buffer to log
+      // Flush streaming formatter and write any remaining buffer to log
+      mdOut.end();
       if (logStream && buffer) logStream.write(buffer);
       if (logStream) logStream.end();
       if (mdLogStream) mdLogStream.end();
@@ -390,6 +392,10 @@ function runAsync(cmd, cliArgs, options) {
           // ignore
         }
       }
+
+      // Ensure streamed agent output ends with a newline so the next
+      // log line starts on its own line.
+      process.stderr.write("\n");
 
       const response = lastAssistantText || rawStdout.trim();
 
@@ -430,8 +436,8 @@ fs.mkdirSync(resultsDir, { recursive: true });
 fs.mkdirSync(responsesDir, { recursive: true });
 fs.mkdirSync(workspacesDir, { recursive: true });
 
-log(`Workspace root: ${workspaceRoot}`);
-log(`Run dir: ${runDir}`);
+log.verbose(`Workspace root: ${workspaceRoot}`);
+log.verbose(`Run dir: ${runDir}`);
 
 // -- Progress tracking ------------------------------------------------------
 
@@ -457,19 +463,20 @@ async function main() {
     results: [],
   });
 
-  log("--- Starting test execution ---");
+  log.info("Starting test execution");
 
   for (let i = 0; i < testCases.length; i++) {
     const tc = testCases[i];
     const testId = tc.id;
     const prompt = tc.prompt;
+    const p = `[${i + 1}/${testCases.length}] ${testId}`;
     const workspaceId = uuid();
     const workspaceBase = path.join(workspacesDir, workspaceId);
     const workspacePath = path.join(workspaceBase, "work");
     const pluginPath = path.join(workspaceBase, "plugin");
     workspacePaths.push(workspaceBase);
 
-    log(`[${i + 1}/${testCases.length}] ${testId}: Creating workspace ${workspaceId}...`);
+    log.verbose(`${p}: Creating workspace ${workspaceId}`);
 
     writeProgress({
       status: "running",
@@ -485,9 +492,9 @@ async function main() {
 
     if (globalFixturePath && fs.existsSync(globalFixturePath)) {
       copyDirSync(globalFixturePath, workspacePath);
-      log(`[${i + 1}/${testCases.length}] ${testId}: Global fixture copied to ${workspacePath}`);
+      log.debug(`${p}: Global fixture copied`);
     } else if (globalFixturePath) {
-      log(`[${i + 1}/${testCases.length}] ${testId}: WARNING — global fixture path not found: ${globalFixturePath}`);
+      log.warn(`${p}: Global fixture path not found: ${globalFixturePath}`);
     }
 
     // Layer per-test fixtures on top of global
@@ -496,14 +503,14 @@ async function main() {
       const resolved = path.resolve(cwd, rawPath);
       if (fs.existsSync(resolved)) {
         copyDirSync(resolved, workspacePath);
-        log(`[${i + 1}/${testCases.length}] ${testId}: Per-test fixture layered: ${rawPath}`);
+        log.debug(`${p}: Per-test fixture layered: ${rawPath}`);
       } else {
-        log(`[${i + 1}/${testCases.length}] ${testId}: WARNING — per-test fixture path not found: ${resolved}`);
+        log.warn(`${p}: Per-test fixture path not found: ${resolved}`);
       }
     }
 
     if (!globalFixturePath && perTestFixtures.length === 0) {
-      log(`[${i + 1}/${testCases.length}] ${testId}: No fixtures — empty workspace created`);
+      log.debug(`${p}: No fixtures, empty workspace`);
     }
 
     // Install skill under test as a plugin (sibling to work dir)
@@ -512,17 +519,16 @@ async function main() {
     // Scope file tools to this test case's workspace path
     const scopedAllowed = scopeToolsToWorkspace(allowedTools, workspacePath);
     const cmdArgs = buildArgs(model, maxTurns, pluginDir, scopedAllowed, disallowedTools, workspacePath);
-    log(`[${i + 1}/${testCases.length}] ${testId}: CLI args: ${tool} ${cmdArgs.join(" ")}`);
+    log.debug(`${p}: CLI args: ${tool} ${cmdArgs.join(" ")}`);
 
     // Log files
     const logPath = path.join(logsDir, `${specName}.${testId}.log.jsonl`);
     const mdLogPath = path.join(resultsDir, `${specName}.${testId}.transcript.md`);
 
-    log(`[${i + 1}/${testCases.length}] ${testId}: Executing prompt via ${tool}...`);
-    log(`[${i + 1}/${testCases.length}] ${testId}: Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`);
-    log(`[${i + 1}/${testCases.length}] ${testId}: Raw log: ${logPath}`);
-    log(`[${i + 1}/${testCases.length}] ${testId}: Formatted log: ${mdLogPath}`);
-    log(`[${i + 1}/${testCases.length}] ${testId}: --- agent output start ---`);
+    log.info(`${p}: Executing prompt via ${tool}`);
+    log.verbose(`${p}: Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? "..." : ""}"`);
+    log.debug(`${p}: Raw log: ${logPath}`);
+    log.debug(`${p}: Transcript: ${mdLogPath}`);
 
     const startTime = Date.now();
     let response = "";
@@ -542,18 +548,16 @@ async function main() {
       exitCode = result.exitCode;
 
       if (result.timedOut) {
-        log(`[${i + 1}/${testCases.length}] ${testId}: TIMED OUT after ${timeoutMs}ms`);
+        log.error(`${p}: Timed out after ${timeoutMs}ms`);
         response = response || `Error: Test timed out after ${timeoutMs}ms`;
       }
     } catch (err) {
-      log(`[${i + 1}/${testCases.length}] ${testId}: EXCEPTION: ${err.message}`);
+      log.error(`${p}: ${err.message}`);
       response = `Error: ${err.message}`;
       exitCode = 1;
     }
 
     const durationMs = Date.now() - startTime;
-
-    log(`\n[${i + 1}/${testCases.length}] ${testId}: --- agent output end ---`);
 
     responses[testId] = {
       response,
@@ -568,7 +572,11 @@ async function main() {
       "duration-ms": durationMs,
     });
 
-    log(`[${i + 1}/${testCases.length}] ${testId}: ${status} (${(durationMs / 1000).toFixed(1)}s) — response: ${response.length} chars`);
+    if (exitCode === 0) {
+      log.success(`${p}: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
+    } else {
+      log.error(`${p}: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
+    }
 
     writeProgress({
       status: "running",
@@ -580,26 +588,26 @@ async function main() {
     });
   }
 
-  log("--- Test execution complete ---");
+  log.success("Test execution complete");
 
   // -- Write responses file -------------------------------------------------
 
   const responsesFilename = `${specName}.responses.json`;
   const responsesPath = path.join(responsesDir, responsesFilename);
   fs.writeFileSync(responsesPath, JSON.stringify(responses, null, 2), "utf-8");
-  log(`Responses written to: ${responsesPath}`);
+  log.verbose(`Responses written to: ${responsesPath}`);
 
   // -- Cleanup workspaces ---------------------------------------------------
 
   if (!keepWorkspaces) {
-    log("Cleaning up workspaces...");
+    log.verbose("Cleaning up workspaces...");
     for (const wp of workspacePaths) {
-      log(`  Removing: ${wp}`);
+      log.debug(`  Removing: ${wp}`);
       rmSync(wp);
     }
-    log("Workspaces cleaned up");
+    log.verbose("Workspaces cleaned up");
   } else {
-    log(`Workspaces kept at: ${workspacesDir}`);
+    log.info(`Workspaces kept at: ${workspacesDir}`);
   }
 
   // -- Final progress -------------------------------------------------------
@@ -614,11 +622,10 @@ async function main() {
     results: completedResults,
   });
 
-  log("Done.");
   process.stdout.write(responsesPath + "\n");
 }
 
 main().catch((err) => {
-  log(`FATAL: ${err.message}`);
+  log.error(`Fatal: ${err.message}`);
   process.exit(1);
 });

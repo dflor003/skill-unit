@@ -3,7 +3,7 @@
 # All fields are optional — skill-unit has sensible built-in defaults.
 
 # Directory where test spec files (*.spec.md) are discovered recursively.
-test-dir: tests
+test-dir: skill-tests
 
 # Runner configuration — controls how test prompts are executed.
 # The runner script handles all CLI parameters internally for proper isolation.
@@ -46,6 +46,10 @@ output:
   # When false, passing tests are collapsed to a single summary line.
   # Set to true to show full expectation details for passing tests as well.
   show-passing-details: false
+
+  # Logging verbosity. Options: debug, verbose, info, success, warn, error.
+  # The LOG_LEVEL environment variable takes precedence over this setting.
+  log-level: info
 
 # Execution settings
 execution:

@@ -12,7 +12,7 @@ skills/           # Plugin skills (each has a SKILL.md entrypoint)
   test-design/    # The test case designer skill
 agents/           # Subagent definitions (markdown with YAML frontmatter)
   grader.md       # Grading agent for evaluating test results
-tests/            # Test suites as *.spec.md files
+skill-tests/      # Test suites as *.spec.md files
 docs/
   architecture/   # Architecture decision records
   specs/          # Specifications
@@ -23,7 +23,7 @@ docs/
 
 - **Running tests**: Run `/skill-unit` or ask to "run skill tests." The skill handles execution, isolation, and reporting.
 - **Designing test cases**: Run `/test-design` or ask to "design test cases." The skill guides you through writing spec files.
-- Test cases live in the `tests/` directory as `*.spec.md` files.
+- Test cases live in the `skill-tests/` directory as `*.spec.md` files.
 - Both skills are registered in `.claude/settings.json`.
 
 ## Architecture Documentation

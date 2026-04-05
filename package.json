@@ -1,0 +1,13 @@
+{
+  "name": "skill-unit",
+  "version": "0.1.0",
+  "bin": {
+    "skill-unit": "./skills/skill-unit/scripts/cli.js"
+  },
+  "scripts": {
+    "clean": "skill-unit clean",
+    "test": "node --test tests/**/*.spec.js",
+    "test:skills": "skill-unit test --all",
+    "su": "skill-unit"
+  }
+}

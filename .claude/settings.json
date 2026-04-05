@@ -9,7 +9,6 @@
       "WebFetch",
       "WebSearch",
       "Skill",
-      "Read(skills/**/*)",
       "Bash(echo *)",
       "Bash(cat *)",
       "Bash(ls *)",
@@ -48,14 +47,16 @@
       "Bash(docker compose *)",
       "Bash(gh *)",
       "Bash(node -c *)",
-      "Bash(node */skill-unit/scripts/*)"
+      "Bash(node */skill-unit/scripts/*)",
+      "Bash(node --test *)",
+      "Bash(npm.cmd test *)",
+      "Bash(npm.cmd run *)",
+      "Bash(npm test *)",
+      "Bash(npm run *)"
     ],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",
-      "Read(environment-files/.env)",
-      "Read(environment-files/.env.*)",
-      "Read(environment-files/*.env)",
       "Read(**/secrets/**)",
       "Bash(wget *)",
       "Bash(git push *)",

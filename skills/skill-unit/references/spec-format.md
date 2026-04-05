@@ -7,7 +7,7 @@ A `*.spec.md` file defines a test suite for a skill. Each file contains:
 - A YAML frontmatter block with shared configuration for the suite
 - One or more test cases defined by `###` headings
 
-The file extension is always `.spec.md` — it is not configurable. Test files are discovered recursively under the configured test directory (default: `tests/`).
+The file extension is always `.spec.md` — it is not configurable. Test files are discovered recursively under the configured test directory (default: `skill-tests/`).
 
 ---
 
