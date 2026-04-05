@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run-skill-tests:
+        description: "Run skill-unit tests (uses API credits)"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Validate JS syntax
+        run: |
+          find skills/skill-unit/scripts -name '*.js' -exec node -c {} +
+          find tests -name '*.js' -exec node -c {} +
+
+      - name: Run unit tests
+        run: npm test
+
+  skill-tests:
+    name: Skill-Unit Tests
+    runs-on: ubuntu-latest
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.run-skill-tests == true) ||
+      (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-skill-tests'))
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+
+      - name: Install Claude CLI
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.claude/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Claude CLI
+        run: claude --version
+
+      - name: Run skill-unit tests
+        run: npm run test:skills
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-unit-results
+          path: .workspace/runs/
+          retention-days: 14
+          if-no-files-found: ignore
