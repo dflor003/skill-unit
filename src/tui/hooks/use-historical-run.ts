@@ -1,30 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { TestStatus, StatsIndex } from '../../types/run.js';
+import type { TestRunEntry, TestRunState } from './use-test-run.js';
 
 type RunEntry = StatsIndex['runs'][number];
 
-export interface HistoricalTestEntry {
-  id: string;
-  name: string;
-  specName: string;
-  status: TestStatus;
-  durationMs: number;
-  transcript: string[];
-  gradeTranscript: string[];
-  activity: string;
-}
-
-export interface HistoricalRunData {
-  tests: HistoricalTestEntry[];
-  activeTestId: string | null;
-  elapsed: number;
-  status: 'complete';
-}
-
-export function loadHistoricalRun(runDir: string, runEntry: RunEntry): HistoricalRunData {
+export function loadHistoricalRun(runDir: string, runEntry: RunEntry): TestRunState {
   const resultsDir = path.join(runDir, 'results');
-  const tests: HistoricalTestEntry[] = [];
+  const tests: TestRunEntry[] = [];
 
   if (!fs.existsSync(resultsDir)) {
     return { tests: [], activeTestId: null, elapsed: runEntry.duration, status: 'complete' };

@@ -9,7 +9,8 @@
 // reads the transcript, evaluates against expectations, and writes a results
 // file.
 //
-// Concurrency is controlled by config.execution["grader-concurrency"].
+// Concurrency is controlled by config.runner.concurrency (shared pool).
+// gradeSpecs() is the CLI batch path; gradeTest() is the TUI per-test path.
 // ---------------------------------------------------------------------------
 
 import fs from 'node:fs';
