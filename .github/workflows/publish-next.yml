@@ -1,0 +1,42 @@
+name: Publish Pre-release
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish-next:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Set pre-release version
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          CURRENT=$(node -p "require('./package.json').version")
+          BASE=$(echo $CURRENT | sed 's/-.*//')
+          npm version "${BASE}-next.${SHORT_SHA}" --no-git-tag-version
+
+      - name: Publish to npm (next tag)
+        run: npm publish --tag next --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
