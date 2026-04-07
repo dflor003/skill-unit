@@ -27,7 +27,17 @@ const main = defineCommand({
       const { render } = await import('ink');
       const React = await import('react');
       const { App } = await import('../tui/app.js');
-      render(React.createElement(App));
+
+      // Enter alternate screen buffer (full-screen mode)
+      process.stdout.write('\x1b[?1049h');
+      process.stdout.write('\x1b[H');
+
+      const instance = render(React.createElement(App));
+
+      // Restore main screen buffer on exit
+      instance.waitUntilExit().then(() => {
+        process.stdout.write('\x1b[?1049l');
+      });
       return;
     } else {
       // Non-interactive: show help

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import type { TestStatus } from '../../types/run.js';
+import { Markdown } from './markdown.js';
 
 interface SessionPanelProps {
   testId: string | null;
@@ -65,13 +66,11 @@ export function SessionPanel({ testId, testName, status, transcript, elapsed }: 
         <Text color={color}>[{label}]</Text>
         <Text color="gray"> {formatElapsed(elapsed)}</Text>
       </Box>
-      <Box flexDirection="column" paddingX={1} flexGrow={1}>
+      <Box flexDirection="column" paddingX={1} flexGrow={1} overflow="hidden">
         {transcript.length === 0 ? (
           <Text color="gray">Waiting for output...</Text>
         ) : (
-          transcript.map((line, idx) => (
-            <Text key={idx} wrap="truncate">{line}</Text>
-          ))
+          <Markdown content={transcript.join('\n')} />
         )}
       </Box>
     </Box>

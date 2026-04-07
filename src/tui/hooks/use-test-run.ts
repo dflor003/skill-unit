@@ -188,7 +188,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
 
           updateTest(testCase.id, { status: 'running', activity: 'Starting...' });
 
-          const handle = runTest(manifest, testCase, config);
+          const handle = runTest(manifest, testCase, config, { silent: true });
 
           handle.on('output', (chunk: string) => {
             // Buffer transcript lines to avoid excessive re-renders
@@ -258,7 +258,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
 
         // Grade
         try {
-          await gradeSpecs(specs, config, timestamp);
+          await gradeSpecs(specs, config, timestamp, { silent: true });
         } catch {
           // Non-fatal: grading may fail if CLI harness is unavailable
         }

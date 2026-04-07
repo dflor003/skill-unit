@@ -208,23 +208,34 @@ async function runBatch<T>(tasks: Array<() => Promise<T>>, concurrency: number):
 
 // -- Main grading function ----------------------------------------------------
 
+export interface GradeSpecsOptions {
+  /** When true, suppresses all logger output (TUI mode). */
+  silent?: boolean;
+}
+
 export async function gradeSpecs(
   specs: Spec[],
   config: SkillUnitConfig,
   timestamp: string,
+  options?: GradeSpecsOptions,
 ): Promise<void> {
+  const silent = options?.silent ?? false;
+  const gradeLog = silent
+    ? { debug: () => {}, verbose: () => {}, info: () => {}, success: () => {}, warn: () => {}, error: () => {} }
+    : log;
+
   const tool = config.runner.tool || 'claude';
   const concurrency = (config.execution && config.execution['grader-concurrency']) || 5;
 
   const buildArgs = GRADER_PROFILES[tool];
   if (!buildArgs) {
-    log.error(`Unsupported tool for grading: "${tool}". Supported: ${Object.keys(GRADER_PROFILES).join(', ')}`);
+    gradeLog.error(`Unsupported tool for grading: "${tool}". Supported: ${Object.keys(GRADER_PROFILES).join(', ')}`);
     return;
   }
 
   const agentPath = resolveAgentPath();
   if (!agentPath) {
-    log.error('Could not find agents/grader.md in the repository root.');
+    gradeLog.error('Could not find agents/grader.md in the repository root.');
     return;
   }
 
@@ -250,7 +261,7 @@ export async function gradeSpecs(
 
       // Skip if no transcript (test may have been filtered or failed to run)
       if (!fs.existsSync(transcriptPath)) {
-        log.warn(`Skipping ${tc.id}: no transcript at ${transcriptPath}`);
+        gradeLog.warn(`Skipping ${tc.id}: no transcript at ${transcriptPath}`);
         continue;
       }
 
@@ -265,11 +276,11 @@ export async function gradeSpecs(
   }
 
   if (tasks.length === 0) {
-    log.info('No test cases to grade.');
+    gradeLog.info('No test cases to grade.');
     return;
   }
 
-  log.info(`Grading ${tasks.length} test case(s) with concurrency ${concurrency}`);
+  gradeLog.info(`Grading ${tasks.length} test case(s) with concurrency ${concurrency}`);
 
   // Execute in batches
   const totalBatches = Math.ceil(tasks.length / concurrency);
@@ -282,18 +293,18 @@ export async function gradeSpecs(
       if (globalIdx % concurrency === 0) {
         const batchEnd = Math.min(batchStart + concurrency, tasks.length);
         const batchIds = tasks.slice(batchStart, batchEnd).map((t) => t.testId).join(', ');
-        log.info(`Batch ${batchNum}/${totalBatches}: ${batchIds}`);
+        gradeLog.info(`Batch ${batchNum}/${totalBatches}: ${batchIds}`);
       }
 
       const result = await task.run();
 
       if (result.exitCode === 0) {
-        log.success(`  ${task.testId}: OK`);
+        gradeLog.success(`  ${task.testId}: OK`);
       } else {
-        log.error(`  ${task.testId}: FAIL(${result.exitCode})`);
+        gradeLog.error(`  ${task.testId}: FAIL(${result.exitCode})`);
         if (result.stderr) {
           const preview = result.stderr.substring(0, 500);
-          log.debug(`  ${task.testId} stderr: ${preview}${result.stderr.length > 500 ? '...' : ''}`);
+          gradeLog.debug(`  ${task.testId} stderr: ${preview}${result.stderr.length > 500 ? '...' : ''}`);
         }
       }
 
@@ -302,7 +313,7 @@ export async function gradeSpecs(
     concurrency,
   );
 
-  log.info(`Graded ${tasks.length}/${tasks.length} test cases`);
+  gradeLog.info(`Graded ${tasks.length}/${tasks.length} test cases`);
 
   // Verify results files exist
   const resultsDir = path.join('.workspace', 'runs', timestamp, 'results');
@@ -310,14 +321,14 @@ export async function gradeSpecs(
   for (const task of tasks) {
     const resultsPath = path.join(resultsDir, `${task.specName}.${task.testId}.results.md`);
     if (!fs.existsSync(resultsPath)) {
-      log.warn(`Missing results file for ${task.testId}: ${resultsPath}`);
+      gradeLog.warn(`Missing results file for ${task.testId}: ${resultsPath}`);
       missing++;
     }
   }
 
   if (missing > 0) {
-    log.warn(`${missing} result file(s) missing`);
+    gradeLog.warn(`${missing} result file(s) missing`);
   } else {
-    log.success('All result files written');
+    gradeLog.success('All result files written');
   }
 }

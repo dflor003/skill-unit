@@ -29,7 +29,7 @@ export function BottomBar({ activeScreen }: BottomBarProps) {
           </Box>
         ))}
       </Box>
-      <Text color="gray">skill-unit v0.0.1</Text>
+      <Text color="gray">Tab: next  [Q]uit  skill-unit v0.0.1</Text>
     </Box>
   );
 }
