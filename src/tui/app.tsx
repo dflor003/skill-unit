@@ -4,6 +4,7 @@ import { BottomBar, type Screen } from './components/bottom-bar.js';
 import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';
 import { RunManager } from './screens/runs.js';
+import { Statistics } from './screens/stats.js';
 import { useTestRun } from './hooks/use-test-run.js';
 import { loadConfig } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
@@ -98,7 +99,7 @@ export function App() {
             onDeleteRun={handleDeleteRun}
           />
         )}
-        {screen === 'stats' && <Text>Statistics (coming soon)</Text>}
+        {screen === 'stats' && <Statistics index={statsIndex} />}
         {screen === 'options' && <Text>Options (coming soon)</Text>}
         {screen === 'runner' && (
           <Runner runState={runState} onSelectTest={selectTest} />
