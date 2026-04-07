@@ -3,15 +3,27 @@ import { Box, Text, useInput } from 'ink';
 import { BottomBar, type Screen } from './components/bottom-bar.js';
 import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';
+import { RunManager } from './screens/runs.js';
 import { useTestRun } from './hooks/use-test-run.js';
 import { loadConfig } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
 import { parseSpecFile } from '../core/compiler.js';
+import { loadIndex, cleanupRuns } from '../core/stats.js';
 import type { Spec } from '../types/spec.js';
+import type { StatsIndex } from '../types/run.js';
+
+const STATS_BASE_DIR = '.skill-unit';
 
 export function App() {
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [specs, setSpecs] = useState<Spec[]>([]);
+  const [statsIndex, setStatsIndex] = useState<StatsIndex>(() => ({
+    version: 1,
+    lastUpdated: new Date().toISOString(),
+    aggregate: { totalRuns: 0, totalTests: 0, passRate: 0, totalCost: 0, totalTokens: 0 },
+    tests: {},
+    runs: [],
+  }));
   const [runState, { startRun, selectTest }] = useTestRun();
 
   useEffect(() => {
@@ -23,7 +35,35 @@ export function App() {
     } catch {
       // Non-fatal: leave specs empty if loading fails
     }
+
+    try {
+      const index = loadIndex(STATS_BASE_DIR);
+      setStatsIndex(index);
+    } catch {
+      // Non-fatal: leave stats index empty if loading fails
+    }
   }, []);
+
+  function handleCleanup() {
+    try {
+      cleanupRuns(STATS_BASE_DIR, 10);
+      const index = loadIndex(STATS_BASE_DIR);
+      setStatsIndex(index);
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  function handleDeleteRun(id: string) {
+    try {
+      // Remove the run from the index by keeping only runs that don't match the id
+      const index = loadIndex(STATS_BASE_DIR);
+      index.runs = index.runs.filter(r => r.id !== id);
+      setStatsIndex({ ...index });
+    } catch {
+      // Non-fatal
+    }
+  }
 
   useInput((input, key) => {
     if (input === 'd' || input === 'D') setScreen('dashboard');
@@ -51,7 +91,13 @@ export function App() {
             }}
           />
         )}
-        {screen === 'runs' && <Text>Run Manager (coming soon)</Text>}
+        {screen === 'runs' && (
+          <RunManager
+            runs={statsIndex.runs}
+            onCleanup={handleCleanup}
+            onDeleteRun={handleDeleteRun}
+          />
+        )}
         {screen === 'stats' && <Text>Statistics (coming soon)</Text>}
         {screen === 'options' && <Text>Options (coming soon)</Text>}
         {screen === 'runner' && (
