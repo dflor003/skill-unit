@@ -1,14 +1,20 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React, { useRef, useState, useEffect } from 'react';
+import { Box, Text, type DOMElement, measureElement } from 'ink';
 import type { TestStatus } from '../../types/run.js';
 import { Markdown } from './markdown.js';
+
+export type TranscriptViewMode = 'execution' | 'grading';
 
 interface SessionPanelProps {
   testId: string | null;
   testName: string;
   status: TestStatus | 'idle';
   transcript: string[];
+  gradeTranscript: string[];
   elapsed: number;
+  viewMode: TranscriptViewMode;
+  scrollOffset?: number;
+  following?: boolean;
 }
 
 function statusLabel(status: TestStatus | 'idle'): { label: string; color: string } {
@@ -39,7 +45,27 @@ function formatElapsed(ms: number): string {
   return `${s}s`;
 }
 
-export function SessionPanel({ testId, testName, status, transcript, elapsed }: SessionPanelProps) {
+export function SessionPanel({
+  testId,
+  testName,
+  status,
+  transcript,
+  gradeTranscript,
+  elapsed,
+  viewMode,
+  scrollOffset = 0,
+  following = true,
+}: SessionPanelProps) {
+  const ref = useRef<DOMElement>(null);
+  const [panelHeight, setPanelHeight] = useState(24);
+
+  useEffect(() => {
+    if (ref.current) {
+      const { height } = measureElement(ref.current);
+      if (height > 0) setPanelHeight(height);
+    }
+  });
+
   if (!testId) {
     return (
       <Box flexDirection="column" flexGrow={1} padding={1}>
@@ -49,9 +75,24 @@ export function SessionPanel({ testId, testName, status, transcript, elapsed }: 
   }
 
   const { label, color } = statusLabel(status);
+  const activeTranscript = viewMode === 'grading' ? gradeTranscript : transcript;
+  const allLines = activeTranscript.join('\n').split('\n');
+
+  // Reserve ~4 lines for header + view mode indicator + follow indicator
+  const visibleLines = Math.max(1, panelHeight - 4);
+
+  let slicedLines: string[];
+  if (scrollOffset === 0) {
+    slicedLines = allLines.slice(-visibleLines);
+  } else {
+    const startLine = Math.max(0, allLines.length - visibleLines - scrollOffset);
+    slicedLines = allLines.slice(startLine, startLine + visibleLines);
+  }
+
+  const showFollowIndicator = !following && scrollOffset > 0;
 
   return (
-    <Box flexDirection="column" flexGrow={1}>
+    <Box ref={ref} flexDirection="column" flexGrow={1}>
       <Box
         borderStyle="single"
         borderBottom
@@ -59,20 +100,38 @@ export function SessionPanel({ testId, testName, status, transcript, elapsed }: 
         borderLeft={false}
         borderRight={false}
         paddingX={1}
-        marginBottom={1}
       >
         <Text bold>{testName}</Text>
         <Text> </Text>
         <Text color={color}>[{label}]</Text>
         <Text color="gray"> {formatElapsed(elapsed)}</Text>
       </Box>
+      <Box paddingX={1}>
+        {viewMode === 'execution' ? (
+          <Text>
+            <Text bold color="cyan">[Execution]</Text>
+            <Text color="gray"> | Grading</Text>
+          </Text>
+        ) : (
+          <Text>
+            <Text color="gray">Execution | </Text>
+            <Text bold color="cyan">[Grading]</Text>
+          </Text>
+        )}
+        <Text color="gray">  [t] toggle</Text>
+      </Box>
       <Box flexDirection="column" paddingX={1} flexGrow={1} overflow="hidden">
-        {transcript.length === 0 ? (
+        {activeTranscript.length === 0 ? (
           <Text color="gray">Waiting for output...</Text>
         ) : (
-          <Markdown content={transcript.join('\n')} />
+          <Markdown content={slicedLines.join('\n')} />
         )}
       </Box>
+      {showFollowIndicator && (
+        <Box paddingX={1}>
+          <Text color="yellow">[f] follow</Text>
+        </Box>
+      )}
     </Box>
   );
 }
