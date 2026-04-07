@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { Spec, TestCase } from '../../types/spec.js';
 import { SearchBox } from '../components/search-box.js';
+import { loadSelection, saveSelection } from '../../core/selection.js';
 
 interface FlatTestCase {
   specName: string;
@@ -48,13 +49,22 @@ function filterTests(tests: FlatTestCase[], query: string): FlatTestCase[] {
   );
 }
 
+const SELECTION_DIR = '.skill-unit';
+
 export function Dashboard({ specs, onRunTests }: DashboardProps) {
   const allTests = flattenSpecs(specs);
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [selected, setSelected] = useState<Set<string>>(() => {
+    const persisted = loadSelection(SELECTION_DIR);
+    return persisted.selectedTests;
+  });
 
   const visible = filterTests(allTests, query);
+
+  useEffect(() => {
+    saveSelection({ selectedTests: selected, viewMode: 'primary' }, SELECTION_DIR);
+  }, [selected]);
 
   useInput((input, key) => {
     if (key.upArrow) {
