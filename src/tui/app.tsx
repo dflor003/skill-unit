@@ -9,7 +9,7 @@ import { Options } from './screens/options.js';
 import { useTestRun } from './hooks/use-test-run.js';
 import { loadConfig } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
-import { parseSpecFile } from '../core/compiler.js';
+import { parseSpecFile, buildManifest, formatTimestamp } from '../core/compiler.js';
 import { loadIndex, cleanupRuns } from '../core/stats.js';
 import type { Spec } from '../types/spec.js';
 import type { StatsIndex } from '../types/run.js';
@@ -36,7 +36,7 @@ export function App() {
     tests: {},
     runs: [],
   }));
-  const [runState, { startRun, selectTest }] = useTestRun();
+  const [runState, { startRun, executeRun, selectTest }] = useTestRun();
 
   useEffect(() => {
     try {
@@ -93,6 +93,7 @@ export function App() {
           <Dashboard
             specs={specs}
             onRunTests={tests => {
+              // Initialize run state in the hook (sets up timer, entries)
               startRun(
                 tests.map(t => ({
                   id: t.testCase.id,
@@ -101,6 +102,27 @@ export function App() {
                 })),
               );
               setScreen('runner');
+
+              // Build manifests and kick off actual execution
+              const timestamp = formatTimestamp(new Date());
+
+              // Collect unique specs from the selected tests
+              const specPathSet = new Set(tests.map(t => t.specPath));
+              const selectedSpecs = specs.filter(s => specPathSet.has(s.path));
+
+              // Build manifests, filtering test cases to only those selected
+              const selectedTestIds = new Set(tests.map(t => t.testCase.id));
+              const manifests = selectedSpecs.map(spec => {
+                const manifest = buildManifest(spec, appConfig, { timestamp });
+                // Filter test cases to only the ones the user selected
+                manifest['test-cases'] = manifest['test-cases'].filter(tc =>
+                  selectedTestIds.has(tc.id),
+                );
+                return manifest;
+              }).filter(m => m['test-cases'].length > 0);
+
+              // Execute the run asynchronously
+              executeRun(manifests, selectedSpecs, appConfig, timestamp);
             }}
           />
         )}
