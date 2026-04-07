@@ -22,3 +22,6 @@ Desktop.ini
 
 # AI
 .claude/settings.local.json
+
+# Superpowers brainstorm sessions
+.superpowers/
