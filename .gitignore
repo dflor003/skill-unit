@@ -25,3 +25,9 @@ Desktop.ini
 
 # Superpowers brainstorm sessions
 .superpowers/
+
+# Build output
+dist/
+
+# Skill Unit persistent data
+.skill-unit/
