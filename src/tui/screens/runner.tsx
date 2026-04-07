@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { ProgressTree } from '../components/progress-tree.js';
 import { Ticker } from '../components/ticker.js';
 import { SessionPanel } from '../components/session-panel.js';
 import { SplitPanes } from '../components/split-panes.js';
 import type { TestRunState } from '../hooks/use-test-run.js';
+import type { TranscriptViewMode } from '../components/session-panel.js';
 
 interface RunnerProps {
   runState: TestRunState;
@@ -18,6 +19,12 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('primary');
   const [splitFocusedId, setSplitFocusedId] = useState<string | null>(null);
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
+  // Scroll state per test: { [testId]: { offset, following } }
+  const [scrollState, setScrollState] = useState<Record<string, { offset: number; following: boolean }>>({});
+  // View mode per test (execution or grading)
+  const [viewModes, setViewModes] = useState<Record<string, TranscriptViewMode>>({});
+  // Track which tests the user has manually toggled (prevents auto-switch)
+  const [manualToggled, setManualToggled] = useState<Set<string>>(new Set());
 
   useInput((input, key) => {
     if (tests.length === 0) return;
@@ -29,6 +36,48 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
     }
 
     if (viewMode === 'primary') {
+      // Scroll up
+      if (key.upArrow) {
+        if (activeTestId) {
+          setScrollState(prev => {
+            const curr = prev[activeTestId] ?? { offset: 0, following: true };
+            return { ...prev, [activeTestId]: { offset: curr.offset + 3, following: false } };
+          });
+        }
+        return;
+      }
+
+      // Scroll down
+      if (key.downArrow) {
+        if (activeTestId) {
+          setScrollState(prev => {
+            const curr = prev[activeTestId] ?? { offset: 0, following: true };
+            return { ...prev, [activeTestId]: { offset: Math.max(0, curr.offset - 3), following: curr.offset - 3 <= 0 } };
+          });
+        }
+        return;
+      }
+
+      // Follow mode
+      if (input === 'f') {
+        if (activeTestId) {
+          setScrollState(prev => ({ ...prev, [activeTestId]: { offset: 0, following: true } }));
+        }
+        return;
+      }
+
+      // Toggle execution/grading transcript
+      if (input === 't') {
+        if (activeTestId) {
+          setViewModes(prev => {
+            const curr = prev[activeTestId] ?? 'execution';
+            return { ...prev, [activeTestId]: curr === 'execution' ? 'grading' : 'execution' };
+          });
+          setManualToggled(prev => new Set(prev).add(activeTestId));
+        }
+        return;
+      }
+
       const currentIdx = tests.findIndex(t => t.id === activeTestId);
 
       if (key.leftArrow) {
@@ -57,6 +106,19 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
       }
     }
   });
+
+  useEffect(() => {
+    for (const test of tests) {
+      if (test.status === 'grading' && !manualToggled.has(test.id)) {
+        setViewModes(prev => {
+          if (prev[test.id] !== 'grading') {
+            return { ...prev, [test.id]: 'grading' };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [tests, manualToggled]);
 
   const activeTest = tests.find(t => t.id === activeTestId) ?? null;
 
@@ -109,7 +171,11 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
                   testName={activeTest.name}
                   status={activeTest.status}
                   transcript={activeTest.transcript}
+                  gradeTranscript={activeTest.gradeTranscript}
                   elapsed={elapsed}
+                  viewMode={viewModes[activeTest.id] ?? 'execution'}
+                  scrollOffset={scrollState[activeTest.id]?.offset ?? 0}
+                  following={scrollState[activeTest.id]?.following ?? true}
                 />
               ) : (
                 <Box padding={1}>
@@ -158,7 +224,7 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
           {status === 'complete'
             ? 'Run complete. Press [D] to return to dashboard.'
             : viewMode === 'primary'
-              ? '← → switch sessions  [v] split view'
+              ? '← → sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split view'
               : '[1-9] focus pane  [m] maximize  [v] primary view'}
         </Text>
       </Box>
