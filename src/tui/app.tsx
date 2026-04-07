@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import path from 'node:path';
 import { Box, useInput, useStdout } from 'ink';
 import { BottomBar, type Screen } from './components/bottom-bar.js';
 import { Dashboard } from './screens/dashboard.js';
@@ -6,7 +7,8 @@ import { Runner } from './screens/runner.js';
 import { RunManager } from './screens/runs.js';
 import { Statistics } from './screens/stats.js';
 import { Options } from './screens/options.js';
-import { useTestRun } from './hooks/use-test-run.js';
+import { useTestRun, type TestRunState } from './hooks/use-test-run.js';
+import { loadHistoricalRun, type HistoricalRunData } from './hooks/use-historical-run.js';
 import { loadConfig } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
 import { parseSpecFile, buildManifest, formatTimestamp } from '../core/compiler.js';
@@ -37,6 +39,8 @@ export function App() {
     runs: [],
   }));
   const [runState, { startRun, executeRun, selectTest }] = useTestRun();
+  const [historicalRun, setHistoricalRun] = useState<HistoricalRunData | null>(null);
+  const [historicalActiveTestId, setHistoricalActiveTestId] = useState<string | null>(null);
   const { stdout } = useStdout();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
 
@@ -76,6 +80,14 @@ export function App() {
     }
   }
 
+  function handleViewRun(run: StatsIndex['runs'][number]) {
+    const runDir = path.join('.workspace', 'runs', run.id);
+    const data = loadHistoricalRun(runDir, run);
+    setHistoricalRun(data);
+    setHistoricalActiveTestId(data.activeTestId);
+    setScreen('runner');
+  }
+
   function handleDeleteRun(id: string) {
     try {
       // Remove the run from the index by keeping only runs that don't match the id
@@ -110,6 +122,7 @@ export function App() {
           <Dashboard
             specs={specs}
             onRunTests={tests => {
+              setHistoricalRun(null);
               // Initialize run state in the hook (sets up timer, entries)
               startRun(
                 tests.map(t => ({
@@ -148,6 +161,7 @@ export function App() {
             runs={statsIndex.runs}
             onCleanup={handleCleanup}
             onDeleteRun={handleDeleteRun}
+            onViewRun={handleViewRun}
           />
         )}
         {screen === 'stats' && <Statistics index={statsIndex} />}
@@ -155,7 +169,14 @@ export function App() {
           <Options config={appConfig} onSave={setAppConfig} />
         )}
         {screen === 'runner' && (
-          <Runner runState={runState} onSelectTest={selectTest} />
+          <Runner
+            runState={
+              historicalRun
+                ? ({ ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId } as unknown as TestRunState)
+                : runState
+            }
+            onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
+          />
         )}
       </Box>
       <BottomBar activeScreen={screen} />

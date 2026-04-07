@@ -9,6 +9,7 @@ interface RunManagerProps {
   runs: RunEntry[];
   onCleanup: () => void;
   onDeleteRun: (id: string) => void;
+  onViewRun: (run: RunEntry) => void;
 }
 
 function formatDuration(ms: number): string {
@@ -23,7 +24,7 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(3)}`;
 }
 
-export function RunManager({ runs, onCleanup, onDeleteRun }: RunManagerProps) {
+export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManagerProps) {
   const [cursor, setCursor] = useState(0);
 
   useInput((input, key) => {
@@ -38,6 +39,9 @@ export function RunManager({ runs, onCleanup, onDeleteRun }: RunManagerProps) {
       if (run) onDeleteRun(run.id);
     } else if (input === 'c' || input === 'C') {
       onCleanup();
+    } else if (key.return) {
+      const run = runs[cursor];
+      if (run) onViewRun(run);
     }
   });
 
@@ -112,7 +116,7 @@ export function RunManager({ runs, onCleanup, onDeleteRun }: RunManagerProps) {
 
       {/* Footer help */}
       <Box marginTop={1}>
-        <Text color="gray">up/down navigate  [d] delete selected  [c] cleanup old runs</Text>
+        <Text color="gray">up/down navigate  [Enter] view run  [d] delete selected  [c] cleanup old runs</Text>
       </Box>
     </Box>
   );
