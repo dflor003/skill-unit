@@ -10,15 +10,18 @@ import type { TranscriptViewMode } from '../components/session-panel.js';
 interface RunnerProps {
   runState: TestRunState;
   onSelectTest: (id: string) => void;
+  onRerunTests?: (testIds: string[]) => void;
 }
 
 type ViewMode = 'primary' | 'split';
 
-export function Runner({ runState, onSelectTest }: RunnerProps) {
+export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
   const { tests, activeTestId, elapsed, status } = runState;
   const [viewMode, setViewMode] = useState<ViewMode>('primary');
   const [splitFocusedId, setSplitFocusedId] = useState<string | null>(null);
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
+  const [selectedTests, setSelectedTests] = useState<Set<string>>(new Set());
+  const [selectionInitialized, setSelectionInitialized] = useState(false);
   // Scroll state per test: { [testId]: { offset, following } }
   const [scrollState, setScrollState] = useState<Record<string, { offset: number; following: boolean }>>({});
   // View mode per test (execution or grading)
@@ -36,6 +39,28 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
     }
 
     if (viewMode === 'primary') {
+      // Selection toggle (only when run is complete)
+      if (input === ' ' && status === 'complete') {
+        if (activeTestId) {
+          setSelectedTests(prev => {
+            const next = new Set(prev);
+            if (next.has(activeTestId)) {
+              next.delete(activeTestId);
+            } else {
+              next.add(activeTestId);
+            }
+            return next;
+          });
+        }
+        return;
+      }
+
+      // Re-run selected tests
+      if (key.return && status === 'complete' && selectedTests.size > 0) {
+        if (onRerunTests) onRerunTests(Array.from(selectedTests));
+        return;
+      }
+
       // Scroll up
       if (key.upArrow) {
         if (activeTestId) {
@@ -120,6 +145,23 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
     }
   }, [tests, manualToggled]);
 
+  useEffect(() => {
+    if (status === 'complete' && !selectionInitialized) {
+      const failedIds = tests
+        .filter(t => t.status === 'failed' || t.status === 'error' || t.status === 'timedout')
+        .map(t => t.id);
+      setSelectedTests(new Set(failedIds));
+      setSelectionInitialized(true);
+    }
+  }, [status, tests, selectionInitialized]);
+
+  useEffect(() => {
+    if (status === 'running') {
+      setSelectedTests(new Set());
+      setSelectionInitialized(false);
+    }
+  }, [status]);
+
   const activeTest = tests.find(t => t.id === activeTestId) ?? null;
 
   const tickerSessions = tests.map(t => ({
@@ -160,7 +202,12 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
               paddingRight={1}
               marginRight={1}
             >
-              <ProgressTree tests={tests} elapsed={elapsed} />
+              <ProgressTree
+                tests={tests}
+                elapsed={elapsed}
+                selectable={status === 'complete'}
+                selected={selectedTests}
+              />
             </Box>
 
             {/* Main panel: session transcript */}
@@ -204,7 +251,12 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
             paddingRight={1}
             marginRight={1}
           >
-            <ProgressTree tests={tests} elapsed={elapsed} />
+            <ProgressTree
+              tests={tests}
+              elapsed={elapsed}
+              selectable={status === 'complete'}
+              selected={selectedTests}
+            />
           </Box>
 
           {/* Split panes main area */}
@@ -222,7 +274,7 @@ export function Runner({ runState, onSelectTest }: RunnerProps) {
       <Box>
         <Text color="gray">
           {status === 'complete'
-            ? 'Run complete. Press [D] to return to dashboard.'
+            ? '[Space] select  [Enter] re-run  ← → sessions  [D] dashboard'
             : viewMode === 'primary'
               ? '← → sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split view'
               : '[1-9] focus pane  [m] maximize  [v] primary view'}
