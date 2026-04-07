@@ -9,7 +9,7 @@
     "declaration": true,
     "sourceMap": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "ink",
+    "jsxImportSource": "react",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
