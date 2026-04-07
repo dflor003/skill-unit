@@ -2,7 +2,7 @@ export interface RunnerConfig {
   tool: string;
   model: string | null;
   'max-turns': number;
-  'runner-concurrency': number;
+  concurrency: number;
   'allowed-tools'?: string[];
   'disallowed-tools'?: string[];
 }
@@ -15,7 +15,6 @@ export interface OutputConfig {
 
 export interface ExecutionConfig {
   timeout: string;
-  'grader-concurrency': number;
 }
 
 export interface DefaultsConfig {

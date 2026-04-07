@@ -225,7 +225,7 @@ export async function gradeSpecs(
     : log;
 
   const tool = config.runner.tool || 'claude';
-  const concurrency = (config.execution && config.execution['grader-concurrency']) || 5;
+  const concurrency = config.runner.concurrency || 5;
 
   const buildArgs = GRADER_PROFILES[tool];
   if (!buildArgs) {

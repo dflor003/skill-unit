@@ -179,7 +179,7 @@ export const testCommand = defineCommand({
 
     // -- Phase 1: Run all tests with concurrency control -----------------------
 
-    const concurrency = config.runner['runner-concurrency'] || 5;
+    const concurrency = config.runner.concurrency || 5;
     const semaphore = new Semaphore(concurrency);
     const runStartTime = Date.now();
 

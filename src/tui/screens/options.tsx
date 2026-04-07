@@ -18,12 +18,11 @@ function configToFields(config: SkillUnitConfig): Field[] {
     { section: 'Runner', label: 'tool', value: config.runner.tool },
     { section: 'Runner', label: 'model', value: config.runner.model ?? '(none)' },
     { section: 'Runner', label: 'max-turns', value: String(config.runner['max-turns']) },
-    { section: 'Runner', label: 'runner-concurrency', value: String(config.runner['runner-concurrency']) },
+    { section: 'Runner', label: 'concurrency', value: String(config.runner.concurrency) },
     { section: 'Output', label: 'format', value: config.output.format },
     { section: 'Output', label: 'show-passing-details', value: String(config.output['show-passing-details']) },
     { section: 'Output', label: 'log-level', value: config.output['log-level'] },
     { section: 'Execution', label: 'timeout', value: config.execution.timeout },
-    { section: 'Execution', label: 'grader-concurrency', value: String(config.execution['grader-concurrency']) },
     { section: 'Defaults', label: 'setup', value: config.defaults.setup },
     { section: 'Defaults', label: 'teardown', value: config.defaults.teardown },
   ];

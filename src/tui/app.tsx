@@ -19,9 +19,9 @@ const STATS_BASE_DIR = '.skill-unit';
 
 const DEFAULT_CONFIG: SkillUnitConfig = {
   'test-dir': 'skill-tests',
-  runner: { tool: 'claude', model: null, 'max-turns': 10, 'runner-concurrency': 5 },
+  runner: { tool: 'claude', model: null, 'max-turns': 10, concurrency: 5 },
   output: { format: 'interactive', 'show-passing-details': false, 'log-level': 'info' },
-  execution: { timeout: '120s', 'grader-concurrency': 5 },
+  execution: { timeout: '120s' },
   defaults: { setup: 'setup.sh', teardown: 'teardown.sh' },
 };
 

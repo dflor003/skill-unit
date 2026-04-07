@@ -9,7 +9,7 @@ export const CONFIG_DEFAULTS: SkillUnitConfig = {
     tool: 'claude',
     model: null,
     'max-turns': 10,
-    'runner-concurrency': 5,
+    concurrency: 5,
   },
   output: {
     format: 'interactive',
@@ -18,7 +18,6 @@ export const CONFIG_DEFAULTS: SkillUnitConfig = {
   },
   execution: {
     timeout: '120s',
-    'grader-concurrency': 5,
   },
   defaults: {
     setup: 'setup.sh',
@@ -194,7 +193,15 @@ export function loadConfig(configPath: string): SkillUnitConfig {
   const raw = fs.readFileSync(configPath, 'utf-8');
   const parsed = parseYaml(raw) as Partial<SkillUnitConfig> & Record<string, unknown>;
 
-  return deepMerge(defaults, parsed);
+  const merged = deepMerge(defaults, parsed);
+
+  // Backward compat: if the YAML used the old `runner-concurrency` key, copy it to `concurrency`
+  const runnerRaw = parsed.runner as Record<string, unknown> | undefined;
+  if (runnerRaw && 'runner-concurrency' in runnerRaw && !('concurrency' in runnerRaw)) {
+    merged.runner.concurrency = runnerRaw['runner-concurrency'] as number;
+  }
+
+  return merged;
 }
 
 // Deep merge source into target. Arrays are replaced, objects are merged recursively.
