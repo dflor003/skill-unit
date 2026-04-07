@@ -8,7 +8,7 @@ import { RunManager } from './screens/runs.js';
 import { Statistics } from './screens/stats.js';
 import { Options } from './screens/options.js';
 import { useTestRun, type TestRunState } from './hooks/use-test-run.js';
-import { loadHistoricalRun, type HistoricalRunData } from './hooks/use-historical-run.js';
+import { loadHistoricalRun } from './hooks/use-historical-run.js';
 import { loadConfig } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
 import { parseSpecFile, buildManifest, formatTimestamp } from '../core/compiler.js';
@@ -39,7 +39,7 @@ export function App() {
     runs: [],
   }));
   const [runState, { startRun, executeRun, selectTest }] = useTestRun();
-  const [historicalRun, setHistoricalRun] = useState<HistoricalRunData | null>(null);
+  const [historicalRun, setHistoricalRun] = useState<TestRunState | null>(null);
   const [historicalActiveTestId, setHistoricalActiveTestId] = useState<string | null>(null);
   const { stdout } = useStdout();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
@@ -207,7 +207,7 @@ export function App() {
           <Runner
             runState={
               historicalRun
-                ? ({ ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId } as unknown as TestRunState)
+                ? { ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId }
                 : runState
             }
             onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
