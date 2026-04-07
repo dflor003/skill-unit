@@ -16,7 +16,7 @@ const main = defineCommand({
     test: testCommand,
     report: reportCommand,
   },
-  run({ rawArgs }) {
+  async run({ rawArgs }) {
     // Only handle the no-subcommand case; if a subcommand was provided it runs separately
     const knownSubCommands = ['ls', 'compile', 'test', 'report'];
     const hasSubCommand = rawArgs.some((a) => knownSubCommands.includes(a));
@@ -24,8 +24,11 @@ const main = defineCommand({
 
     // When invoked with no subcommand, detect TTY and either start TUI or show help
     if (process.stdout.isTTY) {
-      console.log('TUI mode not yet implemented');
-      // TODO (Task 14): Start interactive TUI here
+      const { render } = await import('ink');
+      const React = await import('react');
+      const { App } = await import('../tui/app.js');
+      render(React.createElement(App));
+      return;
     } else {
       // Non-interactive: show help
       console.log('Usage: skill-unit <command> [options]');
