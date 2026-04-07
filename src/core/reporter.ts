@@ -227,9 +227,6 @@ export function generateReport(runDir: string): GenerateReportResult {
   termLines.push('');
 
   for (const [specName, specResults] of Object.entries(grouped)) {
-    const specPassed = specResults.filter((r) => r.passed).length;
-    const specFailed = specResults.filter((r) => !r.passed).length;
-
     termLines.push(`## ${specName}`);
     termLines.push('');
 

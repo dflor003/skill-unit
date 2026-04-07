@@ -268,7 +268,6 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
     const mdOut = new MdStream(process.stderr);
 
     let turnNumber = 0;
-    let lastAssistantText = '';
     let buffer = '';
 
     proc.stdout.on('data', (data: Buffer) => {
@@ -311,7 +310,6 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
             }
 
             if (textParts) {
-              lastAssistantText = textParts;
               handle.emit('output', textParts);
               mdOut.write(textParts);
               if (mdLogStream) {
@@ -342,16 +340,13 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
               mdLogStream.write(formatToolResult(output, isError));
             }
           } else if (event.type === 'result') {
-            if (event.subtype === 'success' && event.result) {
-              lastAssistantText = event.result;
-            }
             if (mdLogStream) {
               mdLogStream.write(`---\n\n`);
               mdLogStream.write(`**Result:** ${event.subtype || 'unknown'}\n\n`);
               mdLogStream.write(formatUsageSummary(event.usage, event.total_cost_usd));
             }
           }
-        } catch (_) {
+        } catch {
           // Not valid JSON -- log as-is
           process.stderr.write(trimmed + '\n');
         }
@@ -385,11 +380,8 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
       // Process any remaining buffer
       if (buffer.trim()) {
         try {
-          const event = JSON.parse(buffer.trim()) as StreamEvent;
-          if (event.type === 'result' && event.result) {
-            lastAssistantText = event.result;
-          }
-        } catch (_) {
+          JSON.parse(buffer.trim());
+        } catch {
           // ignore
         }
       }
@@ -544,9 +536,9 @@ async function _runTestAsync(
 
   const keepWorkspaces = false; // controlled by config in the future
 
-  let exitCode = 0;
+  let exitCode: number;
   let timedOut = false;
-  let durationMs = 0;
+  let durationMs: number;
 
   try {
     const result = await runAsync(tool, cmdArgs, {
