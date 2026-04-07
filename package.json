@@ -6,7 +6,9 @@
   "bin": {
     "skill-unit": "./dist/cli/index.js"
   },
-  "files": ["dist/"],
+  "files": [
+    "dist/"
+  ],
   "engines": {
     "node": ">=18"
   },
@@ -30,6 +32,7 @@
     "react": "^19.2.4"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.14",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
@@ -38,6 +41,7 @@
     "ink-testing-library": "^4.0.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
+    "typescript-eslint": "^8.58.0",
     "vitest": "^4.1.2"
   }
 }
