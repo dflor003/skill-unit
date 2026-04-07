@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { StatsIndex } from '../../types/run.js';
+import { formatTimestamp } from '../format.js';
 
 type RunEntry = StatsIndex['runs'][number];
 
@@ -8,14 +9,6 @@ interface RunManagerProps {
   runs: RunEntry[];
   onCleanup: () => void;
   onDeleteRun: (id: string) => void;
-}
-
-function formatTimestamp(ts: string): string {
-  // ISO string -> "YYYY-MM-DD HH:MM"
-  const d = new Date(ts);
-  const date = d.toISOString().slice(0, 10);
-  const time = d.toISOString().slice(11, 16);
-  return `${date} ${time}`;
 }
 
 function formatDuration(ms: number): string {

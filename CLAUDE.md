@@ -7,7 +7,21 @@ Skill Unit is a plugin that brings structured, reproducible unit testing to AI a
 ## Project Structure
 
 ```
-skills/           # Plugin skills (each has a SKILL.md entrypoint)
+src/              # TypeScript source (strict mode)
+  cli/            # CLI entry point and Citty command definitions
+    commands/     # test, compile, ls, report commands
+  tui/            # Ink TUI application
+    screens/      # Dashboard, Runner, Runs, Stats, Options
+    components/   # Shared UI components (bottom-bar, progress-tree, etc.)
+    hooks/        # React hooks (use-test-run)
+  core/           # Business logic (no UI dependencies)
+  config/         # Config loader and YAML parser
+  types/          # Shared TypeScript type definitions
+tests/            # Vitest unit and component tests
+  core/           # Core logic tests
+  cli/            # CLI command tests
+  tui/            # Ink component tests
+skills/           # Plugin skills (companion role, not in npm package)
   skill-unit/     # The test runner skill
   test-design/    # The test case designer skill
 agents/           # Subagent definitions (markdown with YAML frontmatter)
@@ -35,6 +49,7 @@ Current docs. You MUST update this list any time you add, delete, or rename arch
 - `docs/architecture/per-test-fixtures.md` -- per-test fixture isolation strategy
 - `docs/architecture/test-design.md` -- test design skill architecture
 - `docs/architecture/test-execution.md` -- test execution pipeline
+- `docs/architecture/tui-design.md` -- TUI/CLI architecture, screens, data flow, keyboard navigation
 - `docs/architecture/workspaces.md` -- workspace isolation
 
 ## Rules Files
@@ -55,9 +70,35 @@ paths:
 
 IDE schema validation will flag the correct format as an error. Ignore it.
 
+## Git Commands
+
+Never use `git -C <path>`. Always use relative paths so that the auto-approve rules in `settings.json` match correctly.
+
+## Build, Lint, and Test Commands
+
+Always use `npm run` (or `npm.cmd run` in Git Bash) to run project commands. Do NOT call the underlying tools directly (e.g., do not run `npx vitest`, `npx tsc`, or `npx eslint`). The npm scripts are whitelisted for auto-approval; direct tool invocations are not.
+
+To pass additional arguments to any npm script, use `--` to forward them. For example: `npm run su -- ls --tag e2e`.
+
+When introducing a new build, lint, or test tool, add an npm script for it in `package.json` rather than calling the tool directly. This keeps the auto-approval whitelist working and gives all agents a consistent interface.
+
+Available scripts:
+
+| Command | Description |
+|---|---|
+| `npm run su` | Run the skill-unit CLI via tsx (e.g., `npm run su -- ls`) |
+| `npm run dev` | Alias for `npm run su` |
+| `npm run build` | Compile TypeScript to `dist/` via tsc |
+| `npm run test` | Run unit tests via Vitest |
+| `npm run test:watch` | Run Vitest in watch mode |
+| `npm run test:coverage` | Run tests with V8 coverage report |
+| `npm run test:skills` | Run skill-unit spec tests (requires CLI harness, costs tokens) |
+| `npm run lint` | Lint `src/` with ESLint |
+| `npm run typecheck` | Type-check without emitting (tsc --noEmit) |
+
 ## Validation Commands
 
-After editing any `.js` file, validate syntax with `node -c <relative-path>`. Always use relative paths so auto-approve rules match.
+After editing any `.js` file, validate syntax with `node -c <relative-path>`. Always use relative paths so auto-approve rules match. For `.ts` and `.tsx` files, use `npm run typecheck` instead.
 
 ## Writing Style
 

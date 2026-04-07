@@ -15,6 +15,7 @@ describe('RunManager', () => {
     ];
     const { lastFrame } = render(<RunManager runs={runs} onCleanup={() => {}} onDeleteRun={() => {}} />);
     const output = lastFrame()!;
-    expect(output).toContain('2026-04-07');
+    // Locale-formatted date should contain the year
+    expect(output).toContain('2026');
   });
 });

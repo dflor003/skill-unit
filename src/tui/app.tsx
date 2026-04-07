@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, useInput } from 'ink';
+import { Box, useInput, useStdout } from 'ink';
 import { BottomBar, type Screen } from './components/bottom-bar.js';
 import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';
@@ -37,6 +37,15 @@ export function App() {
     runs: [],
   }));
   const [runState, { startRun, executeRun, selectTest }] = useTestRun();
+  const { stdout } = useStdout();
+  const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
+
+  useEffect(() => {
+    if (!stdout) return;
+    const onResize = () => setTermHeight(stdout.rows);
+    stdout.on('resize', onResize);
+    return () => { stdout.off('resize', onResize); };
+  }, [stdout]);
 
   useEffect(() => {
     try {
@@ -78,17 +87,25 @@ export function App() {
     }
   }
 
+  const NAV_SCREENS: Screen[] = ['dashboard', 'runs', 'stats', 'options'];
+
   useInput((input, key) => {
     if (input === 'd' || input === 'D') setScreen('dashboard');
     if (input === 'r' || input === 'R') setScreen('runs');
     if (input === 's' || input === 'S') setScreen('stats');
     if (input === 'o' || input === 'O') setScreen('options');
+    if (key.tab) {
+      setScreen(prev => {
+        const idx = NAV_SCREENS.indexOf(prev);
+        return NAV_SCREENS[(idx + 1) % NAV_SCREENS.length];
+      });
+    }
     if (input === 'q' || (key.ctrl && input === 'c')) process.exit(0);
   });
 
   return (
-    <Box flexDirection="column" height="100%">
-      <Box flexGrow={1} flexDirection="column" padding={1}>
+    <Box flexDirection="column" height={termHeight}>
+      <Box flexGrow={1} flexDirection="column" paddingX={1}>
         {screen === 'dashboard' && (
           <Dashboard
             specs={specs}

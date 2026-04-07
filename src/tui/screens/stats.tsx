@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { StatsIndex, TestStats } from '../../types/run.js';
+import { formatDate } from '../format.js';
 
 type SortField = 'name' | 'runCount' | 'passRate' | 'duration' | 'cost' | 'lastRun';
 
@@ -33,12 +34,6 @@ function formatDuration(ms: number): string {
   const mins = Math.floor(secs / 60);
   const rem = secs % 60;
   return `${mins}m${rem}s`;
-}
-
-function formatDate(ts: string): string {
-  if (!ts) return '-';
-  const d = new Date(ts);
-  return d.toISOString().slice(0, 10);
 }
 
 function sortTests(tests: Array<[string, TestStats]>, field: SortField): Array<[string, TestStats]> {

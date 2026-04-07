@@ -205,6 +205,8 @@ interface RunOptions {
   testId: string;
   prompt: string;
   handle: RunHandle;
+  /** When true, suppresses all direct writes to stderr/stdout (TUI mode). */
+  silent: boolean;
 }
 
 // -- Stream-json event parsing ----------------------------------------------
@@ -264,8 +266,11 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
       mdLogStream.write(`---\n\n`);
     }
 
-    // Streaming markdown formatter for terminal output
-    const mdOut = new MdStream(process.stderr);
+    // Streaming markdown formatter for terminal output (disabled in TUI mode)
+    const mdOut = options.silent ? null : new MdStream(process.stderr);
+
+    // Emit the prompt as the first transcript entry
+    handle.emit('output', `**Prompt:**\n> ${options.prompt || 'n/a'}\n\n---\n`);
 
     let turnNumber = 0;
     let buffer = '';
@@ -289,8 +294,10 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
           const event = JSON.parse(trimmed) as StreamEvent;
 
           if (event.type === 'system' && event.subtype === 'init') {
+            const initText = formatSessionInit(event);
+            handle.emit('output', initText);
             if (mdLogStream) {
-              mdLogStream.write(formatSessionInit(event));
+              mdLogStream.write(initText);
             }
           } else if (event.type === 'assistant' && event.message) {
             turnNumber++;
@@ -303,6 +310,8 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
             const toolUses = content.filter((c) => c.type === 'tool_use');
 
             if (textParts || toolUses.length) {
+              const turnHeader = `## Turn ${turnNumber}\n${formatTurnUsage(usage)}`;
+              handle.emit('output', turnHeader);
               if (mdLogStream) {
                 mdLogStream.write(`## Turn ${turnNumber} -- Assistant\n\n`);
                 mdLogStream.write(formatTurnUsage(usage));
@@ -311,7 +320,7 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
 
             if (textParts) {
               handle.emit('output', textParts);
-              mdOut.write(textParts);
+              if (mdOut) mdOut.write(textParts);
               if (mdLogStream) {
                 mdLogStream.write(`${textParts}\n\n`);
               }
@@ -320,26 +329,37 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
             for (const tu of toolUses) {
               const toolName = tu.name ?? '';
               const toolInput = tu.input ?? {};
+              const toolText = formatToolCall(toolName, toolInput as Record<string, unknown>);
+              handle.emit('output', toolText);
               handle.emit('tool-use', toolName, toolInput);
-              mdOut.end();
-              mdOut.write(formatToolCall(toolName, toolInput as Record<string, unknown>));
-              mdOut.end();
+              if (mdOut) {
+                mdOut.end();
+                mdOut.write(toolText);
+                mdOut.end();
+              }
               if (mdLogStream) {
-                mdLogStream.write(formatToolCall(toolName, toolInput as Record<string, unknown>));
+                mdLogStream.write(toolText);
               }
             }
           } else if (event.type === 'tool_result') {
             const output = event.output || '';
             const isError = event.is_error === true;
             const preview = output.substring(0, 200);
-            if (preview) {
-              mdOut.write(formatToolResult(preview + (output.length > 200 ? '...' : ''), isError));
+            const resultText = formatToolResult(
+              preview + (output.length > 200 ? '...' : ''),
+              isError,
+            );
+            handle.emit('output', resultText);
+            if (mdOut) {
+              mdOut.write(resultText);
               mdOut.end();
             }
             if (mdLogStream) {
               mdLogStream.write(formatToolResult(output, isError));
             }
           } else if (event.type === 'result') {
+            const summaryText = `---\n**Result:** ${event.subtype || 'unknown'}\n${formatUsageSummary(event.usage, event.total_cost_usd)}`;
+            handle.emit('output', summaryText);
             if (mdLogStream) {
               mdLogStream.write(`---\n\n`);
               mdLogStream.write(`**Result:** ${event.subtype || 'unknown'}\n\n`);
@@ -347,14 +367,14 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
             }
           }
         } catch {
-          // Not valid JSON -- log as-is
-          process.stderr.write(trimmed + '\n');
+          // Not valid JSON -- log as-is (only in CLI mode)
+          if (!options.silent) process.stderr.write(trimmed + '\n');
         }
       }
     });
 
     proc.stderr.on('data', (data: Buffer) => {
-      process.stderr.write(data);
+      if (!options.silent) process.stderr.write(data);
     });
 
     if (options.input) {
@@ -372,7 +392,7 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
       clearTimeout(timer);
 
       // Flush streaming formatter and write any remaining buffer to log
-      mdOut.end();
+      if (mdOut) mdOut.end();
       if (logStream && buffer) logStream.write(buffer);
       if (logStream) logStream.end();
       if (mdLogStream) mdLogStream.end();
@@ -388,7 +408,7 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
 
       // Ensure streamed agent output ends with a newline so the next
       // log line starts on its own line.
-      process.stderr.write('\n');
+      if (!options.silent) process.stderr.write('\n');
 
       const durationMs = Date.now() - startTime;
       const exitCode = timedOut ? 124 : (code || 0);
@@ -407,6 +427,11 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
 
 // -- Public API -------------------------------------------------------------
 
+export interface RunTestOptions {
+  /** When true, suppresses all direct writes to stderr/stdout (TUI mode). */
+  silent?: boolean;
+}
+
 /**
  * Run a single test case in an isolated workspace.
  * Returns a RunHandle (EventEmitter) that emits progress events.
@@ -415,12 +440,14 @@ export function runTest(
   manifest: Manifest,
   testCase: ManifestTestCase,
   config: SkillUnitConfig,
+  options?: RunTestOptions,
 ): RunHandle {
   const handle = new EventEmitter() as RunHandle;
+  const silent = options?.silent ?? false;
 
   // Run asynchronously so callers can attach listeners before events fire
   setImmediate(() => {
-    _runTestAsync(manifest, testCase, config, handle).catch((err: Error) => {
+    _runTestAsync(manifest, testCase, config, handle, silent).catch((err: Error) => {
       handle.emit('error', err);
     });
   });
@@ -433,8 +460,14 @@ async function _runTestAsync(
   testCase: ManifestTestCase,
   config: SkillUnitConfig,
   handle: RunHandle,
+  silent: boolean,
 ): Promise<void> {
   const cwd = process.cwd();
+
+  // In silent/TUI mode, create a no-op logger to prevent stderr writes
+  const runLog = silent
+    ? { debug: () => {}, verbose: () => {}, info: () => {}, success: () => {}, warn: () => {}, error: () => {} }
+    : log;
 
   const specName = manifest['spec-name'];
   const rawGlobalFixturePath = manifest['global-fixture-path'];
@@ -482,7 +515,7 @@ async function _runTestAsync(
   const workspacePath = path.join(workspaceBase, 'work');
   const pluginPath = path.join(workspaceBase, 'plugin');
 
-  log.verbose(`[${testId}]: Creating workspace ${workspaceId}`);
+  runLog.verbose(`[${testId}]: Creating workspace ${workspaceId}`);
 
   // Emit initial progress
   handle.emit('progress', {
@@ -499,9 +532,9 @@ async function _runTestAsync(
 
   if (globalFixturePath && fs.existsSync(globalFixturePath)) {
     copyDirSync(globalFixturePath, workspacePath);
-    log.debug(`[${testId}]: Global fixture copied`);
+    runLog.debug(`[${testId}]: Global fixture copied`);
   } else if (globalFixturePath) {
-    log.warn(`[${testId}]: Global fixture path not found: ${globalFixturePath}`);
+    runLog.warn(`[${testId}]: Global fixture path not found: ${globalFixturePath}`);
   }
 
   // Layer per-test fixtures on top of global
@@ -510,14 +543,14 @@ async function _runTestAsync(
     const resolved = path.resolve(cwd, rawFixPath);
     if (fs.existsSync(resolved)) {
       copyDirSync(resolved, workspacePath);
-      log.debug(`[${testId}]: Per-test fixture layered: ${rawFixPath}`);
+      runLog.debug(`[${testId}]: Per-test fixture layered: ${rawFixPath}`);
     } else {
-      log.warn(`[${testId}]: Per-test fixture path not found: ${resolved}`);
+      runLog.warn(`[${testId}]: Per-test fixture path not found: ${resolved}`);
     }
   }
 
   if (!globalFixturePath && perTestFixtures.length === 0) {
-    log.debug(`[${testId}]: No fixtures, empty workspace`);
+    runLog.debug(`[${testId}]: No fixtures, empty workspace`);
   }
 
   // Install skill under test as a plugin (sibling to work dir)
@@ -527,8 +560,8 @@ async function _runTestAsync(
   const scopedAllowed = scopeToolsToWorkspace(allowedTools, workspacePath);
   const cmdArgs = buildArgs(model, maxTurns, pluginDir, scopedAllowed, disallowedTools, workspacePath);
 
-  log.info(`[${testId}]: Executing prompt via ${tool}`);
-  log.verbose(`[${testId}]: Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`);
+  runLog.info(`[${testId}]: Executing prompt via ${tool}`);
+  runLog.verbose(`[${testId}]: Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`);
 
   // Log files
   const logPath = path.join(logsDir, `${specName}.${testId}.log.jsonl`);
@@ -550,6 +583,7 @@ async function _runTestAsync(
       testId,
       prompt,
       handle,
+      silent,
     });
 
     exitCode = result.exitCode;
@@ -557,26 +591,26 @@ async function _runTestAsync(
     durationMs = result.durationMs;
 
     if (timedOut) {
-      log.error(`[${testId}]: Timed out after ${timeoutMs}ms`);
+      runLog.error(`[${testId}]: Timed out after ${timeoutMs}ms`);
     }
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    log.error(`[${testId}]: ${error.message}`);
+    runLog.error(`[${testId}]: ${error.message}`);
     exitCode = 1;
     durationMs = 0;
   }
 
   // Cleanup workspace unless keepWorkspaces is set
   if (!keepWorkspaces) {
-    log.verbose(`[${testId}]: Cleaning up workspace`);
+    runLog.verbose(`[${testId}]: Cleaning up workspace`);
     rmSync(workspaceBase);
   }
 
   const status = exitCode === 0 ? 'OK' : `FAIL(${exitCode})`;
   if (exitCode === 0) {
-    log.success(`[${testId}]: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
+    runLog.success(`[${testId}]: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
   } else {
-    log.error(`[${testId}]: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
+    runLog.error(`[${testId}]: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
   }
 
   // Emit final progress
