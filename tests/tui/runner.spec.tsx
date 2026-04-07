@@ -17,6 +17,27 @@ describe('ProgressTree', () => {
     expect(output).toContain('error');
     expect(output).toContain('pending');
   });
+
+  it('when selectable should show checkboxes', () => {
+    // Arrange
+    const tests = [
+      { id: 'TEST-1', name: 'basic', status: 'passed' as const, durationMs: 1200 },
+      { id: 'TEST-2', name: 'error', status: 'failed' as const, durationMs: 3000 },
+    ];
+    const selected = new Set(['TEST-2']);
+
+    // Act
+    const { lastFrame } = render(
+      <ProgressTree tests={tests} elapsed={5000} selectable selected={selected} />,
+    );
+    const output = lastFrame()!;
+
+    // Assert
+    expect(output).toContain('[x]');
+    expect(output).toContain('[ ]');
+    expect(output).toContain('basic');
+    expect(output).toContain('error');
+  });
 });
 
 describe('Ticker', () => {

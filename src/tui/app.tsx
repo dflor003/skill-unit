@@ -80,6 +80,41 @@ export function App() {
     }
   }
 
+  function handleRerunTests(testIds: string[]) {
+    const currentTests = historicalRun?.tests ?? runState.tests;
+    const testsToRerun = currentTests.filter(t => testIds.includes(t.id));
+    if (testsToRerun.length === 0) return;
+
+    setHistoricalRun(null);
+
+    const selectedTestIds = new Set(testIds);
+    const timestamp = formatTimestamp(new Date());
+
+    const matchedSpecNames = new Set(testsToRerun.map(t => t.specName));
+    const selectedSpecs = specs.filter(s => {
+      const specName = s.frontmatter.name || path.basename(s.path, '.spec.md');
+      return matchedSpecNames.has(specName);
+    });
+
+    const manifests = selectedSpecs.map(spec => {
+      const manifest = buildManifest(spec, appConfig, { timestamp });
+      manifest['test-cases'] = manifest['test-cases'].filter(tc =>
+        selectedTestIds.has(tc.id),
+      );
+      return manifest;
+    }).filter(m => m['test-cases'].length > 0);
+
+    startRun(
+      testsToRerun.map(t => ({
+        id: t.id,
+        name: t.name,
+        specName: t.specName,
+      })),
+    );
+
+    executeRun(manifests, selectedSpecs, appConfig, timestamp);
+  }
+
   function handleViewRun(run: StatsIndex['runs'][number]) {
     const runDir = path.join('.workspace', 'runs', run.id);
     const data = loadHistoricalRun(runDir, run);
@@ -176,6 +211,7 @@ export function App() {
                 : runState
             }
             onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
+            onRerunTests={handleRerunTests}
           />
         )}
       </Box>
