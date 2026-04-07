@@ -22,7 +22,7 @@ export function BottomBar({ activeScreen }: BottomBarProps) {
           <Box key={item.key} marginRight={2}>
             <Text
               bold={activeScreen === item.screen}
-              color={activeScreen === item.screen ? 'blue' : 'gray'}
+              color={activeScreen === item.screen ? 'white' : 'gray'}
             >
               [{item.key}]{item.label.slice(1)}
             </Text>
