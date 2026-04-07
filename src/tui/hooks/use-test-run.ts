@@ -165,7 +165,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       config: SkillUnitConfig,
       timestamp: string,
     ) => {
-      const concurrency = config.runner['runner-concurrency'] || 5;
+      const concurrency = config.runner.concurrency || 5;
 
       // Build flat task list
       const allTasks: Array<{ manifest: Manifest; testCase: ManifestTestCase }> = [];

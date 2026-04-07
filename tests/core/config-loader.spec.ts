@@ -71,8 +71,41 @@ describe('CONFIG_DEFAULTS', () => {
     expect(CONFIG_DEFAULTS.runner.tool).toBe('claude');
     expect(CONFIG_DEFAULTS.runner.model).toBeNull();
     expect(CONFIG_DEFAULTS.runner['max-turns']).toBe(10);
-    expect(CONFIG_DEFAULTS.runner['runner-concurrency']).toBe(5);
-    expect(CONFIG_DEFAULTS.execution['grader-concurrency']).toBe(5);
     expect(CONFIG_DEFAULTS.output.format).toBe('interactive');
+  });
+
+  it('uses concurrency (not runner-concurrency) in runner defaults', () => {
+    expect(CONFIG_DEFAULTS.runner.concurrency).toBe(5);
+    expect((CONFIG_DEFAULTS.runner as Record<string, unknown>)['runner-concurrency']).toBeUndefined();
+  });
+
+  it('does not have grader-concurrency in execution defaults', () => {
+    expect((CONFIG_DEFAULTS.execution as Record<string, unknown>)['grader-concurrency']).toBeUndefined();
+  });
+});
+
+describe('loadConfig backward compat', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('maps runner-concurrency to concurrency when loading old YAML', () => {
+    const yaml = 'runner:\n  runner-concurrency: 3';
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    vi.spyOn(fs, 'readFileSync').mockReturnValue(yaml);
+
+    const config = loadConfig('/mock/.skill-unit.yml');
+
+    expect(config.runner.concurrency).toBe(3);
+  });
+
+  it('does not override explicit concurrency with runner-concurrency', () => {
+    const yaml = 'runner:\n  runner-concurrency: 3\n  concurrency: 7';
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true);
+    vi.spyOn(fs, 'readFileSync').mockReturnValue(yaml);
+
+    const config = loadConfig('/mock/.skill-unit.yml');
+
+    expect(config.runner.concurrency).toBe(7);
   });
 });
