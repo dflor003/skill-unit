@@ -17,6 +17,7 @@ export interface TestRunEntry {
   status: TestStatus;
   durationMs: number;
   transcript: string[];
+  gradeTranscript: string[];
   activity: string;
 }
 
@@ -132,6 +133,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
         status: 'pending',
         durationMs: 0,
         transcript: [],
+        gradeTranscript: [],
         activity: '',
       }));
 
