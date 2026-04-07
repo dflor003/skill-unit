@@ -5,6 +5,7 @@ import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';
 import { RunManager } from './screens/runs.js';
 import { Statistics } from './screens/stats.js';
+import { Options } from './screens/options.js';
 import { useTestRun } from './hooks/use-test-run.js';
 import { loadConfig } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
@@ -12,12 +13,22 @@ import { parseSpecFile } from '../core/compiler.js';
 import { loadIndex, cleanupRuns } from '../core/stats.js';
 import type { Spec } from '../types/spec.js';
 import type { StatsIndex } from '../types/run.js';
+import type { SkillUnitConfig } from '../types/config.js';
 
 const STATS_BASE_DIR = '.skill-unit';
+
+const DEFAULT_CONFIG: SkillUnitConfig = {
+  'test-dir': 'skill-tests',
+  runner: { tool: 'claude', model: null, 'max-turns': 10, 'runner-concurrency': 5 },
+  output: { format: 'interactive', 'show-passing-details': false, 'log-level': 'info' },
+  execution: { timeout: '120s', 'grader-concurrency': 5 },
+  defaults: { setup: 'setup.sh', teardown: 'teardown.sh' },
+};
 
 export function App() {
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [specs, setSpecs] = useState<Spec[]>([]);
+  const [appConfig, setAppConfig] = useState<SkillUnitConfig>(DEFAULT_CONFIG);
   const [statsIndex, setStatsIndex] = useState<StatsIndex>(() => ({
     version: 1,
     lastUpdated: new Date().toISOString(),
@@ -30,6 +41,7 @@ export function App() {
   useEffect(() => {
     try {
       const config = loadConfig('.skill-unit.yml');
+      setAppConfig(config);
       const paths = discoverSpecPaths(config['test-dir']);
       const loaded = paths.map(p => parseSpecFile(p));
       setSpecs(loaded);
@@ -100,7 +112,9 @@ export function App() {
           />
         )}
         {screen === 'stats' && <Statistics index={statsIndex} />}
-        {screen === 'options' && <Text>Options (coming soon)</Text>}
+        {screen === 'options' && (
+          <Options config={appConfig} onSave={setAppConfig} />
+        )}
         {screen === 'runner' && (
           <Runner runState={runState} onSelectTest={selectTest} />
         )}
