@@ -41,7 +41,7 @@ src/core/      Business logic, no UI dependencies
 When running under the TUI, the core modules must not write to stdout or stderr. Direct writes corrupt Ink's terminal rendering. This is enforced via a `silent` option:
 
 - **`runTest(manifest, testCase, config, { silent: true })`** -- Suppresses the streaming markdown formatter, child process stderr piping, logger output, and raw JSON parse errors. All data flows through EventEmitter events instead.
-- **`gradeSpecs(specs, config, timestamp, { silent: true })`** -- Suppresses all logger output during grading.
+- **`gradeTest(testCase, transcriptPath, config, specName, timestamp, { silent: true })`** -- Suppresses all logger output during grading. In TUI mode, grading uses per-test `gradeTest()` with an EventEmitter interface, allowing grading output to stream directly to the session panel as each test completes, rather than using batch `gradeSpecs()`.
 
 In CLI mode, `silent` defaults to `false` and output streams to stderr as usual.
 
@@ -63,11 +63,11 @@ Pinned to the bottom of every screen. Shows navigation hotkeys: `[D]ashboard [R]
 
 **Dashboard (`dashboard.tsx`)** -- Landing screen. Scrollable list of all test cases with an auto-focused search box. Supports `tag:` prefix filtering and substring matching. Space toggles selection, `a` selects all, Enter runs selected tests. Selections persist to `.skill-unit/selection.json`.
 
-**Test Runner (`runner.tsx`)** -- Shown during test execution. Two view modes toggled with `[v]`:
+**Test Runner (`runner.tsx`)** -- Shown during test execution and historical run viewing. Session panel supports scrolling with Up/Down arrow keys to disable auto-follow mode, `[f]` to snap back to the bottom and re-enable auto-follow. `[t]` toggles between execution and grading transcript views. Auto-switches to grading view when a test starts grading. When a run completes, the progress tree shows selection checkboxes; `[Space]` toggles selection for re-run, and `[Enter]` launches a new run with selected tests. Failed tests are pre-selected by default. Two view modes toggled with `[v]`:
 - *Primary + Ticker* -- Progress tree sidebar on the left, ticker strip at top showing active session tabs, primary panel showing the selected session's full transcript rendered as markdown.
 - *Split Panes* -- Grid layout of all active sessions. `[1-9]` focuses a pane, `[m]` maximizes/restores.
 
-**Run Manager (`runs.tsx`)** -- Lists past runs from `.skill-unit/runs/`. Shows locale-formatted timestamps, test counts, pass/fail, duration, and cost. `[d]` deletes a run, `[c]` cleans up old runs (keeps last 10).
+**Run Manager (`runs.tsx`)** -- Lists past runs from `.skill-unit/runs/`. Shows locale-formatted timestamps, test counts, pass/fail, duration, and cost. `[d]` deletes a run, `[c]` cleans up old runs (keeps last 10). `[Enter]` opens a historical run in the Runner view, loading transcripts and grading results from disk.
 
 **Statistics (`stats.tsx`)** -- Aggregate metrics (total runs, pass rate, cost, tokens) and a per-test table sortable by name, run count, success rate, duration, cost, or last run date. `[s]` cycles the sort field.
 
@@ -98,19 +98,23 @@ Dashboard: user selects tests, presses Enter
   -> screen switches to Runner
 
 useTestRun hook:
+  -> shared concurrency pool (config.runner.concurrency)
   -> for each test case (with concurrency control):
        runTest(manifest, tc, config, { silent: true })
        'output' events -> buffered into transcript[] (flushed every 200ms)
        'tool-use' events -> update activity string
-       'complete' events -> update status, manage concurrency
-  -> all tests done:
-       gradeSpecs(specs, config, timestamp, { silent: true })
+       'complete' events -> release slot, acquire slot for grading
+  -> per-test grading (immediate, shares concurrency pool):
+       gradeTest(tc, transcriptPath, config, specName, timestamp)
+       'output' events -> buffered into gradeTranscript[]
+       'complete' events -> update status to passed/failed
+  -> all tests graded:
        generateReport()
        recordRun()
        completeRun() stops timer
 ```
 
-The `useTestRun` hook buffers transcript lines and flushes every 200ms to avoid excessive React re-renders.
+The `useTestRun` hook buffers transcript lines and flushes every 200ms to avoid excessive React re-renders. Execution and grading happen concurrently, with each task consuming one slot from the shared concurrency pool.
 
 ## Component Hierarchy
 
@@ -139,6 +143,10 @@ App
 | `.skill-unit/runs/<timestamp>/` | Per-run artifacts (results, transcripts, reports) |
 | `.workspace/` | Ephemeral test execution sandboxes (anti-bias isolation layer, unchanged) |
 
+## Concurrency Configuration
+
+The concurrency model has been unified into a single pool configured via `config.runner.concurrency` (default 5). This pool is shared between execution and grading tasks; each task consumes one slot. When a test finishes execution, it releases its slot (freeing it for another test to start). When its grader kicks off, it immediately acquires a new slot from the same pool. The legacy config keys `runner-concurrency` and `grader-concurrency` have been consolidated into the unified `concurrency` value.
+
 ## Keyboard Navigation
 
 | Key | Context | Action |
@@ -150,10 +158,16 @@ App
 | a | Dashboard | Select/deselect all |
 | Enter | Dashboard | Run selected tests |
 | Left/Right | Runner (Primary) | Switch active session in ticker |
+| Up/Down | Runner (Primary) | Scroll transcript, disable auto-follow |
+| f | Runner (Primary) | Snap to bottom, re-enable auto-follow |
+| t | Runner (Primary) | Toggle execution/grading transcript |
 | v | Runner | Toggle Primary+Ticker / Split Panes view |
 | 1-9 | Runner (Split) | Focus pane by number |
 | m | Runner (Split) | Maximize/restore focused pane |
+| Space | Runner (complete) | Toggle test selection for re-run |
+| Enter | Runner (complete) | Re-run selected tests |
 | s | Stats | Cycle sort field |
 | d | Run Manager | Delete selected run |
 | c | Run Manager | Clean up old runs (keep last 10) |
+| Enter | Run Manager | View historical run details |
 | s | Options | Save config changes |
