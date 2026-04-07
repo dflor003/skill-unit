@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, useInput } from 'ink';
 import { BottomBar, type Screen } from './components/bottom-bar.js';
 import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';

@@ -18,7 +18,7 @@ import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
 import { createLogger } from './logger.js';
-import type { TestCase, Spec } from '../types/spec.js';
+import type { Spec } from '../types/spec.js';
 import type { SkillUnitConfig } from '../types/config.js';
 
 const log = createLogger('grader');

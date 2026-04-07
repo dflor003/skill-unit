@@ -29,5 +29,8 @@ Desktop.ini
 # Build output
 dist/
 
+# Test coverage
+coverage/
+
 # Skill Unit persistent data
 .skill-unit/

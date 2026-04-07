@@ -4,7 +4,7 @@ import { ProgressTree } from '../components/progress-tree.js';
 import { Ticker } from '../components/ticker.js';
 import { SessionPanel } from '../components/session-panel.js';
 import { SplitPanes } from '../components/split-panes.js';
-import type { TestRunState, TestRunActions } from '../hooks/use-test-run.js';
+import type { TestRunState } from '../hooks/use-test-run.js';
 
 interface RunnerProps {
   runState: TestRunState;

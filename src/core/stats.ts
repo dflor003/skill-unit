@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { RunResult, StatsIndex, TestStats, AggregateStats } from '../types/run.js';
+import type { RunResult, StatsIndex } from '../types/run.js';
 
 export function createEmptyIndex(): StatsIndex {
   return {
