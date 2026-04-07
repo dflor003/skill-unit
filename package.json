@@ -1,13 +1,43 @@
 {
   "name": "skill-unit",
-  "version": "0.1.0",
+  "version": "0.0.1",
+  "description": "Structured, reproducible unit testing for AI agent skills",
+  "type": "module",
   "bin": {
-    "skill-unit": "./skills/skill-unit/scripts/cli.js"
+    "skill-unit": "./dist/cli/index.js"
+  },
+  "files": ["dist/"],
+  "engines": {
+    "node": ">=18"
   },
   "scripts": {
-    "clean": "skill-unit clean",
-    "test": "node --test tests/**/*.spec.js",
-    "test:skills": "skill-unit test --all",
-    "su": "skill-unit"
+    "dev": "tsx src/cli/index.ts",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:skills": "node dist/cli/index.js test --all",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit",
+    "su": "tsx src/cli/index.ts"
+  },
+  "dependencies": {
+    "@inkjs/ui": "^2.0.0",
+    "citty": "^0.2.2",
+    "ink": "^6.8.0",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
+    "react": "^19.2.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@typescript-eslint/eslint-plugin": "^8.58.0",
+    "@typescript-eslint/parser": "^8.58.0",
+    "@vitest/coverage-v8": "^4.1.2",
+    "eslint": "^10.2.0",
+    "ink-testing-library": "^4.0.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
   }
 }
