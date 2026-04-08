@@ -7,6 +7,7 @@ import {
   type RunViewMode,
 } from './components/bottom-bar.js';
 import { ConfirmDialog } from './components/confirm-dialog.js';
+import { CleanupDialog } from './components/cleanup-dialog.js';
 import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';
 import { RunManager } from './screens/runs.js';
@@ -65,6 +66,8 @@ export function App() {
     string | null
   >(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [isEditingField, setIsEditingField] = useState(false);
   const [runnerViewMode, setRunnerViewMode] = useState<RunViewMode>('primary');
   const { stdout } = useStdout();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
@@ -98,13 +101,22 @@ export function App() {
   }, []);
 
   function handleCleanup() {
+    setShowCleanupDialog(true);
+  }
+
+  function handleCleanupConfirm(keepCount: number) {
+    setShowCleanupDialog(false);
     try {
-      cleanupRuns(STATS_BASE_DIR, 10);
+      cleanupRuns(STATS_BASE_DIR, keepCount);
       const index = loadIndex(STATS_BASE_DIR);
       setStatsIndex(index);
     } catch {
       // Non-fatal
     }
+  }
+
+  function handleCleanupDismiss() {
+    setShowCleanupDialog(false);
   }
 
   function handleRerunTests(testIds: string[]) {
@@ -175,8 +187,8 @@ export function App() {
   const NAV_SCREENS: Screen[] = ['dashboard', 'runs', 'stats', 'options'];
 
   useInput((input, key) => {
-    // Cancel dialog is modal -- absorb all input
-    if (showCancelDialog) return;
+    // Modal dialogs and text editors absorb all input
+    if (showCancelDialog || showCleanupDialog || isEditingField) return;
 
     const isRunnerActive = screen === 'runner' && runState.status === 'running';
 
@@ -224,6 +236,12 @@ export function App() {
           message="Cancel the run?"
           onConfirm={handleCancelConfirm}
           onDismiss={handleCancelDismiss}
+        />
+      ) : showCleanupDialog ? (
+        <CleanupDialog
+          totalRuns={statsIndex.runs.length}
+          onConfirm={handleCleanupConfirm}
+          onDismiss={handleCleanupDismiss}
         />
       ) : (
         <Box flexGrow={1} flexDirection="column" paddingX={1}>
@@ -276,7 +294,7 @@ export function App() {
           )}
           {screen === 'stats' && <Statistics index={statsIndex} />}
           {screen === 'options' && (
-            <Options config={appConfig} onSave={setAppConfig} />
+            <Options config={appConfig} onSave={setAppConfig} onEditingChange={setIsEditingField} />
           )}
           {screen === 'runner' && (
             <Runner

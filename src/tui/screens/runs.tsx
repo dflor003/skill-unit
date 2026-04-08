@@ -39,7 +39,7 @@ export function RunManager({
       setCursor((c) => Math.max(0, c - 1));
     } else if (key.downArrow) {
       setCursor((c) => Math.min(runs.length - 1, c + 1));
-    } else if (input === 'd' || input === 'D') {
+    } else if (key.delete) {
       const run = runs[cursor];
       if (run) onDeleteRun(run.id);
     } else if (input === 'c' || input === 'C') {
@@ -158,8 +158,7 @@ export function RunManager({
       {/* Footer help */}
       <Box marginTop={1}>
         <Text color="gray">
-          up/down navigate [Enter] view run [d] delete selected [c] cleanup old
-          runs
+          up/down navigate  [Enter] view run  [Del] delete selected  [c] cleanup
         </Text>
       </Box>
     </Box>
