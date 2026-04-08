@@ -48,7 +48,7 @@ function runTestAsync(
   testCase: ManifestTestCase,
   config: import('../../types/config.js').SkillUnitConfig,
   noStream: boolean,
-): Promise<{ exitCode: number; timedOut: boolean; durationMs: number }> {
+): Promise<{ exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }> {
   return new Promise((resolve, reject) => {
     const handle = runTest(manifest, testCase, config);
 
@@ -189,6 +189,9 @@ export const testCommand = defineCommand({
       exitCode: number;
       timedOut: boolean;
       durationMs: number;
+      costUsd: number;
+      inputTokens: number;
+      outputTokens: number;
     }
 
     // Build a flat list of all (manifest, testCase) pairs
@@ -209,7 +212,7 @@ export const testCommand = defineCommand({
           return { manifest, testCase, ...result };
         } catch (err) {
           log.error(`[${testCase.id}]: ${err instanceof Error ? err.message : String(err)}`);
-          return { manifest, testCase, exitCode: 1, timedOut: false, durationMs: 0 };
+          return { manifest, testCase, exitCode: 1, timedOut: false, durationMs: 0, costUsd: 0, inputTokens: 0, outputTokens: 0 };
         } finally {
           semaphore.release();
         }
@@ -283,8 +286,8 @@ export const testCommand = defineCommand({
       passed: totalPassed,
       failed: totalFailed,
       durationMs: runDurationMs,
-      cost: 0,
-      tokens: 0,
+      cost: testRunResults.reduce((sum, r) => sum + (r.costUsd ?? 0), 0),
+      tokens: testRunResults.reduce((sum, r) => sum + (r.inputTokens ?? 0) + (r.outputTokens ?? 0), 0),
       tests: testResults,
       reportPath: reportResult.reportPath,
     };

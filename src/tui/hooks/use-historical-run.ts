@@ -32,10 +32,10 @@ export function loadHistoricalRun(runDir: string, runEntry: RunEntry): TestRunSt
     let passed = false;
     if (fs.existsSync(resultsPath)) {
       gradeContent = fs.readFileSync(resultsPath, 'utf-8');
-      passed = /\*\*Verdict:\*\*\s*PASS/i.test(gradeContent);
+      passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(gradeContent);
     }
 
-    const headingMatch = gradeContent.match(/^# Results:\s*(.+?):\s*(.+)$/m);
+    const headingMatch = gradeContent.match(/^#\s+(?:Results|Test Result):\s*(\S+?)(?:\s*:\s*|\s+—\s*|\s+--\s+)(.+)$/m);
     const testName = headingMatch ? headingMatch[2].trim() : testId;
 
     const status: TestStatus = passed ? 'passed' : 'failed';

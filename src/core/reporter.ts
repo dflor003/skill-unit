@@ -29,13 +29,21 @@ export interface ParsedResult {
 // -- Parse a single results file content -------------------------------------
 
 export function parseResultsFile(content: string): ParsedResult {
-  // Extract test ID and name from heading: # Results: {ID}: {Name}
-  const headingMatch = content.match(/^# Results:\s*(.+?):\s*(.+)$/m);
+  // Extract test ID and name from heading. Grader uses varying formats:
+  //   # Results: TEST-1: basic-usage
+  //   # Results: TD-1 — Generated Test Case
+  //   # Results: TD-2 -- Detects Existing Spec
+  //   # Test Result: TD-2 -- Detects Existing Spec
+  const headingMatch = content.match(/^#\s+(?:Results|Test Result):\s*(\S+?)(?:\s*:\s*|\s+—\s*|\s+--\s+)(.+)$/m);
   const testId = headingMatch ? headingMatch[1].trim() : 'unknown';
   const testName = headingMatch ? headingMatch[2].trim() : 'unknown';
 
-  // Extract verdict
-  const verdictMatch = content.match(/\*\*Verdict:\*\*\s*(PASS|FAIL)/i);
+  // Extract verdict -- grader output varies across runs:
+  //   **Verdict:** PASS       (markdown bold)
+  //   ## Verdict: PASS        (heading)
+  //   ## Result: PASS         (heading, different keyword)
+  //   **Result: PASS**        (bold wrapping the value)
+  const verdictMatch = content.match(/(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*(PASS|FAIL)\b/im);
   const passed = verdictMatch ? verdictMatch[1].toUpperCase() === 'PASS' : false;
 
   // Extract expectation lines (checkmark and x lines, plus arrow continuation lines)

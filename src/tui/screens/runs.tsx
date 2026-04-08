@@ -67,7 +67,7 @@ export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManag
 
       {/* Header row */}
       <Box marginBottom={1}>
-        <Box width={18}><Text bold color="gray">Timestamp</Text></Box>
+        <Box width={22}><Text bold color="gray">Timestamp</Text></Box>
         <Box width={7}><Text bold color="gray">Tests</Text></Box>
         <Box width={7}><Text bold color="gray">Pass</Text></Box>
         <Box width={7}><Text bold color="gray">Fail</Text></Box>
@@ -86,7 +86,7 @@ export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManag
                 {isActive ? '>' : ' '}
                 {' '}
               </Text>
-              <Box width={17}>
+              <Box width={22}>
                 <Text bold={isActive} color={isActive ? 'blue' : undefined}>
                   {formatTimestamp(run.timestamp)}
                 </Text>
