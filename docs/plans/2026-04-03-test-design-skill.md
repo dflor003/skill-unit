@@ -12,9 +12,9 @@
 
 ## File Structure
 
-| Action | Path | Responsibility |
-|--------|------|----------------|
-| Create | `skills/test-design/SKILL.md` | Skill workflow + inline authoring guide |
+| Action | Path                                              | Responsibility                                 |
+| ------ | ------------------------------------------------- | ---------------------------------------------- |
+| Create | `skills/test-design/SKILL.md`                     | Skill workflow + inline authoring guide        |
 | Create | `skills/test-design/references/fixture-design.md` | Conditional guidance for fixture folder design |
 
 No modifications to existing files. The skill-unit evaluator skill is under active iteration elsewhere and must not be touched.
@@ -24,6 +24,7 @@ No modifications to existing files. The skill-unit evaluator skill is under acti
 ### Task 1: Create the SKILL.md Frontmatter and Description Block
 
 **Files:**
+
 - Create: `skills/test-design/SKILL.md`
 
 This task writes the frontmatter (name, description for activation matching) and the top-level overview section. The description field is critical — it controls when the harness activates this skill.
@@ -65,6 +66,7 @@ git commit -m "feat(test-design): add skill frontmatter and overview"
 ### Task 2: Add the Skill Discovery Section
 
 **Files:**
+
 - Modify: `skills/test-design/SKILL.md`
 
 This section tells the skill how to find the target skill the user wants to test. It scans both plugin-level and repo-level skill directories.
@@ -92,8 +94,8 @@ Use the Glob tool with patterns `skills/*/SKILL.md` and `.claude/skills/*/SKILL.
 ### If no skill name was provided
 
 Scan both locations using the Glob tool. Collect all found skills and present a numbered list:
-
 ```
+
 I found these skills:
 
 1. skill-unit (plugin: skills/skill-unit/SKILL.md)
@@ -101,6 +103,7 @@ I found these skills:
 3. report-card (repo: .claude/skills/report-card/SKILL.md)
 
 Which skill would you like to design tests for?
+
 ```
 
 Wait for the user to pick one before proceeding.
@@ -127,6 +130,7 @@ git commit -m "feat(test-design): add skill discovery and selection logic"
 ### Task 3: Add the Existing Spec Detection Section
 
 **Files:**
+
 - Modify: `skills/test-design/SKILL.md`
 
 After selecting a skill, the skill checks whether spec files already exist for it. This determines whether to enter create mode or edit mode.
@@ -183,6 +187,7 @@ git commit -m "feat(test-design): add existing spec detection with recursive sea
 ### Task 4: Add the New Spec Creation Workflow — Read, Analyze, and ID Prefix
 
 **Files:**
+
 - Modify: `skills/test-design/SKILL.md`
 
 This covers Steps 3-5 of the overall workflow: reading the target SKILL.md, asking targeted questions, and generating the ID prefix.
@@ -229,13 +234,13 @@ Ask questions **one at a time**. Wait for each answer before asking the next. St
 
 Auto-generate a 2-4 letter prefix from the skill name by taking uppercase initials or a short abbreviation:
 
-| Skill Name | Prefix |
-|------------|--------|
-| commit | `COM` |
-| report-card | `RC` |
-| brainstorming | `BRN` |
-| skill-unit | `SU` |
-| test-design | `TD` |
+| Skill Name    | Prefix |
+| ------------- | ------ |
+| commit        | `COM`  |
+| report-card   | `RC`   |
+| brainstorming | `BRN`  |
+| skill-unit    | `SU`   |
+| test-design   | `TD`   |
 
 Check for collisions: use the Glob tool to find all `*.spec.md` files in the test directory and read their `###` headings to collect existing prefixes. If the auto-generated prefix matches an existing one from a different skill, prompt the user:
 
@@ -261,6 +266,7 @@ git commit -m "feat(test-design): add skill analysis, targeted questions, and ID
 ### Task 5: Add the Frontmatter Generation and Category Generation Workflow
 
 **Files:**
+
 - Modify: `skills/test-design/SKILL.md`
 
 This is the core of the skill — generating the frontmatter for approval, then incrementally generating test cases by category with refinement loops.
@@ -269,7 +275,7 @@ This is the core of the skill — generating the frontmatter for approval, then 
 
 Append after the ID prefix section:
 
-```markdown
+````markdown
 ### Step 6: Frontmatter
 
 Generate the YAML frontmatter for the new spec file and present it to the user for approval:
@@ -285,8 +291,10 @@ tags: [{inferred-tags}]
 # teardown: teardown.sh
 ---
 ```
+````
 
 Infer tags from the skill's characteristics:
+
 - `slash-command` if the skill has a slash command
 - `activation` if the skill has auto-activation triggers
 - `fixtures` if fixture folders are needed
@@ -300,14 +308,14 @@ Wait for approval before proceeding to test case generation.
 
 Generate test cases one category at a time, in this order:
 
-| Order | Category | Purpose | When to Include |
-|-------|----------|---------|-----------------|
-| 1 | Activation tests | Verify the skill triggers (and doesn't trigger) on expected prompts | Always for auto-activating skills; slash-command-only skills test the command |
-| 2 | Happy path tests | Core functionality with realistic, well-formed inputs | Always |
-| 3 | Failure mode tests | Missing files, bad input, conflicting state, empty data | Always |
-| 4 | Boundary tests | Edge cases at the limits of the skill's scope | When the skill has identifiable scope boundaries |
-| 5 | Graceful decline tests | Requests adjacent to but outside the skill's purpose | Always |
-| 6 | Interaction style tests | Tone, format, clarifying questions | When the skill has specific interaction expectations |
+| Order | Category                | Purpose                                                             | When to Include                                                               |
+| ----- | ----------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1     | Activation tests        | Verify the skill triggers (and doesn't trigger) on expected prompts | Always for auto-activating skills; slash-command-only skills test the command |
+| 2     | Happy path tests        | Core functionality with realistic, well-formed inputs               | Always                                                                        |
+| 3     | Failure mode tests      | Missing files, bad input, conflicting state, empty data             | Always                                                                        |
+| 4     | Boundary tests          | Edge cases at the limits of the skill's scope                       | When the skill has identifiable scope boundaries                              |
+| 5     | Graceful decline tests  | Requests adjacent to but outside the skill's purpose                | Always                                                                        |
+| 6     | Interaction style tests | Tone, format, clarifying questions                                  | When the skill has specific interaction expectations                          |
 
 **For each category:**
 
@@ -319,13 +327,16 @@ Generate test cases one category at a time, in this order:
 ### {PREFIX}-{N}: {descriptive-name}
 
 **Prompt:**
+
 > {natural, human-sounding prompt}
 
 **Expectations:**
+
 - {observable outcome}
 - {observable outcome}
 
 **Negative Expectations:**
+
 - {specific prohibited behavior}
 ```
 
@@ -368,7 +379,8 @@ Bad: "Ran `git commit -m 'fix: auth bug'`"
 - Formality level ("fix this" vs. "could you please address this issue")
 - Specificity ("commit" vs. "commit the auth changes I just made")
 - Intent framing ("do X" vs. "I need X done" vs. "can you X?")
-```
+
+````
 
 - [ ] **Step 2: Verify the sections were appended**
 
@@ -380,13 +392,14 @@ Expected: Lines containing `### Step 6: Frontmatter` and `### Step 7: Incrementa
 ```bash
 git add skills/test-design/SKILL.md
 git commit -m "feat(test-design): add frontmatter generation and incremental category workflow"
-```
+````
 
 ---
 
 ### Task 6: Add the Write to Disk Section
 
 **Files:**
+
 - Modify: `skills/test-design/SKILL.md`
 
 After all categories are approved, assemble and write the spec file.
@@ -434,6 +447,7 @@ git commit -m "feat(test-design): add write-to-disk section for spec file output
 ### Task 7: Add the Edit Mode Sections
 
 **Files:**
+
 - Modify: `skills/test-design/SKILL.md`
 
 Two edit modes: gap analysis (automatic review) and user-directed edits.
@@ -464,13 +478,16 @@ Used when the user asks for a review without specific instructions.
 > "Here's what I found in `{spec-file}`:
 >
 > **Missing coverage:**
+>
 > - No failure mode tests (minimum: 1)
 > - No graceful decline tests (minimum: 1)
 >
 > **Prompt quality issues:**
+>
 > - {PREFIX}-{N}: Prompt mentions the skill name — rewrite to be more natural
 >
 > **Expectation quality issues:**
+>
 > - {PREFIX}-{N}: Expectation 'Ran `git commit -m ...`' tests implementation detail — rewrite as behavioral assertion
 > - {PREFIX}-{N}: Expectation combines two checks — split into separate bullets
 >
@@ -512,6 +529,7 @@ git commit -m "feat(test-design): add gap analysis and user-directed edit modes"
 ### Task 8: Add the Inline Authoring Guide
 
 **Files:**
+
 - Modify: `skills/test-design/SKILL.md`
 
 This is the reference material that lives inline — coverage checklist, prompt patterns, expectation patterns, and spec format rules. It powers both generation quality and gap analysis.
@@ -520,7 +538,7 @@ This is the reference material that lives inline — coverage checklist, prompt 
 
 Append after the edit mode sections:
 
-```markdown
+````markdown
 ## Inline Authoring Guide
 
 This guide is used during both new spec creation and gap analysis. It defines the quality standards for generated test cases and the coverage checklist for evaluating existing specs.
@@ -529,15 +547,15 @@ This guide is used during both new spec creation and gap analysis. It defines th
 
 Minimum coverage requirements by category. Use this during gap analysis to identify missing or thin categories.
 
-| Category | Minimum | Applies When |
-|----------|---------|--------------|
-| Activation (positive) | 1 | Skill has auto-activation or slash command |
-| Activation (negative) | 1 | Skill has auto-activation |
-| Happy path | 1 | Always |
-| Failure mode | 1 | Always |
-| Boundary | 0 | Skill has identifiable scope boundaries |
-| Graceful decline | 1 | Always |
-| Interaction style | 0 | Skill has specific tone/format expectations |
+| Category              | Minimum | Applies When                                |
+| --------------------- | ------- | ------------------------------------------- |
+| Activation (positive) | 1       | Skill has auto-activation or slash command  |
+| Activation (negative) | 1       | Skill has auto-activation                   |
+| Happy path            | 1       | Always                                      |
+| Failure mode          | 1       | Always                                      |
+| Boundary              | 0       | Skill has identifiable scope boundaries     |
+| Graceful decline      | 1       | Always                                      |
+| Interaction style     | 0       | Skill has specific tone/format expectations |
 
 ### Prompt Patterns
 
@@ -587,15 +605,15 @@ All generated spec files must follow this exact structure.
 
 **Frontmatter:** YAML block delimited by `---` at the top of the file.
 
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| `name` | Yes | string | Human-readable name for the test suite |
-| `skill` | No | string | Skill being tested (informational) |
-| `tags` | No | list | Tags for filtering test runs |
-| `timeout` | No | duration | Per-test timeout (e.g., `90s`) |
-| `fixtures` | No | path | Path to fixture folder, relative to spec file directory |
-| `setup` | No | filename | Script to run before tests |
-| `teardown` | No | filename | Script to run after tests |
+| Field      | Required | Type     | Description                                             |
+| ---------- | -------- | -------- | ------------------------------------------------------- |
+| `name`     | Yes      | string   | Human-readable name for the test suite                  |
+| `skill`    | No       | string   | Skill being tested (informational)                      |
+| `tags`     | No       | list     | Tags for filtering test runs                            |
+| `timeout`  | No       | duration | Per-test timeout (e.g., `90s`)                          |
+| `fixtures` | No       | path     | Path to fixture folder, relative to spec file directory |
+| `setup`    | No       | filename | Script to run before tests                              |
+| `teardown` | No       | filename | Script to run after tests                               |
 
 **Test case structure:**
 
@@ -603,14 +621,18 @@ All generated spec files must follow this exact structure.
 ### {ID}: {name}
 
 **Prompt:**
+
 > {prompt text — multi-line prompts use continued blockquote lines}
 
 **Expectations:**
+
 - {observable outcome — one per bullet}
 
 **Negative Expectations:**
+
 - {specific prohibited behavior — one per bullet}
 ```
+````
 
 **Rules:**
 
@@ -621,7 +643,8 @@ All generated spec files must follow this exact structure.
 - `---` horizontal rules between test cases are optional (cosmetic).
 - File extension is always `*.spec.md`.
 - Negative Expectations section is optional per test case.
-```
+
+````
 
 - [ ] **Step 2: Verify the authoring guide was appended**
 
@@ -633,20 +656,21 @@ Expected: Lines for all five headings.
 ```bash
 git add skills/test-design/SKILL.md
 git commit -m "feat(test-design): add inline authoring guide — coverage, prompts, expectations, format"
-```
+````
 
 ---
 
 ### Task 9: Create the Fixture Design Reference
 
 **Files:**
+
 - Create: `skills/test-design/references/fixture-design.md`
 
 Conditional reference loaded when the target skill operates on filesystem state.
 
 - [ ] **Step 1: Write the fixture design reference**
 
-```markdown
+````markdown
 # Fixture Design Guide
 
 Guidance for designing filesystem fixtures for skill test cases. This reference is loaded when the target skill operates on filesystem state (reads files, modifies projects, depends on git state).
@@ -669,6 +693,7 @@ Fixtures live in a companion folder alongside or near the spec file. The spec fi
 ```yaml
 fixtures: ./fixtures/basic-project
 ```
+````
 
 The folder contains the exact file tree that will be copied into the working directory before tests run. Example:
 
@@ -694,6 +719,7 @@ Include only the files the skill actually needs — not a full project scaffold.
 **Bad:** A complete Node.js project with `node_modules/`, full `tsconfig.json`, and dozens of source files the skill never touches.
 
 Smaller fixtures are:
+
 - Easier to review in PRs
 - Faster to copy during test runs
 - Less likely to collide with existing repo files
@@ -737,6 +763,7 @@ git add src/index.ts
 ```
 
 Common git states to script:
+
 - Clean repo with history (init + commit)
 - Repo with staged changes (add without commit)
 - Repo with unstaged changes (modify after commit)
@@ -765,7 +792,8 @@ The skill-unit evaluator copies fixtures to the repo root or a workspace directo
 - Use distinctive file and directory names that are unlikely to collide with existing repo files (e.g., `test-project/` rather than `src/`).
 - Prefer nested directories over flat files at the root level.
 - Document in the spec file (via a comment or the test case description) what files the fixture adds, so cleanup issues can be diagnosed.
-```
+
+````
 
 Write this to `skills/test-design/references/fixture-design.md`.
 
@@ -779,13 +807,14 @@ Expected: `fixture-design.md` is listed.
 ```bash
 git add skills/test-design/references/fixture-design.md
 git commit -m "feat(test-design): add fixture design reference for filesystem-dependent skills"
-```
+````
 
 ---
 
 ### Task 10: Final Review — Read the Complete SKILL.md End to End
 
 **Files:**
+
 - Read: `skills/test-design/SKILL.md`
 - Read: `skills/test-design/references/fixture-design.md`
 
@@ -794,6 +823,7 @@ git commit -m "feat(test-design): add fixture design reference for filesystem-de
 Run: Read `skills/test-design/SKILL.md` from start to finish.
 
 Verify:
+
 - Frontmatter `name` and `description` are present and well-formed.
 - All sections flow logically: Invocation → Step 1 (Select) → Step 2 (Detect) → New Spec Creation (Steps 3-8) → Edit Modes → Inline Authoring Guide.
 - No placeholder text ("TBD", "TODO", "fill in").
@@ -806,6 +836,7 @@ Verify:
 Run: Read `skills/test-design/references/fixture-design.md` from start to finish.
 
 Verify:
+
 - Content is self-contained — does not assume the reader has seen the SKILL.md sections.
 - Examples are concrete and actionable.
 - No placeholder text.

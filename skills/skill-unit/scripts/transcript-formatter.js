@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-"use strict";
+'use strict';
 
 // ---------------------------------------------------------------------------
 // transcript-formatter.js — Markdown formatting for skill-unit transcripts
@@ -18,10 +18,10 @@ function formatBash(input) {
   } else {
     lines.push(`**Bash:**`);
   }
-  lines.push("```bash");
-  lines.push(input.command || "");
-  lines.push("```");
-  return lines.join("\n") + "\n\n";
+  lines.push('```bash');
+  lines.push(input.command || '');
+  lines.push('```');
+  return lines.join('\n') + '\n\n';
 }
 
 function formatAgent(input) {
@@ -35,11 +35,11 @@ function formatAgent(input) {
   }
   if (input.prompt) {
     lines.push(`- **Prompt:**`);
-    for (const pline of input.prompt.split("\n")) {
+    for (const pline of input.prompt.split('\n')) {
       lines.push(`  > ${pline}`);
     }
   }
-  return lines.join("\n") + "\n\n";
+  return lines.join('\n') + '\n\n';
 }
 
 function formatRead(input) {
@@ -48,43 +48,47 @@ function formatRead(input) {
     const details = [];
     if (input.offset) details.push(`offset: ${input.offset}`);
     if (input.limit) details.push(`limit: ${input.limit}`);
-    parts[0] += ` *(${details.join(", ")})*`;
+    parts[0] += ` *(${details.join(', ')})*`;
   }
-  return parts.join("") + "\n\n";
+  return parts.join('') + '\n\n';
 }
 
 function formatWrite(input) {
   const lines = [`**Write:** \`${input.file_path}\``];
   if (input.content != null) {
-    const preview = input.content.length > 300
-      ? input.content.substring(0, 300) + `\n... (${input.content.length} chars total)`
-      : input.content;
-    lines.push("```");
+    const preview =
+      input.content.length > 300
+        ? input.content.substring(0, 300) +
+          `\n... (${input.content.length} chars total)`
+        : input.content;
+    lines.push('```');
     lines.push(preview);
-    lines.push("```");
+    lines.push('```');
   }
-  return lines.join("\n") + "\n\n";
+  return lines.join('\n') + '\n\n';
 }
 
 function formatEdit(input) {
   const lines = [`**Edit:** \`${input.file_path}\``];
   if (input.old_string != null && input.new_string != null) {
-    const oldPreview = input.old_string.length > 150
-      ? input.old_string.substring(0, 150) + "..."
-      : input.old_string;
-    const newPreview = input.new_string.length > 150
-      ? input.new_string.substring(0, 150) + "..."
-      : input.new_string;
-    lines.push("```diff");
-    for (const l of oldPreview.split("\n")) {
+    const oldPreview =
+      input.old_string.length > 150
+        ? input.old_string.substring(0, 150) + '...'
+        : input.old_string;
+    const newPreview =
+      input.new_string.length > 150
+        ? input.new_string.substring(0, 150) + '...'
+        : input.new_string;
+    lines.push('```diff');
+    for (const l of oldPreview.split('\n')) {
       lines.push(`- ${l}`);
     }
-    for (const l of newPreview.split("\n")) {
+    for (const l of newPreview.split('\n')) {
       lines.push(`+ ${l}`);
     }
-    lines.push("```");
+    lines.push('```');
   }
-  return lines.join("\n") + "\n\n";
+  return lines.join('\n') + '\n\n';
 }
 
 function formatGlob(input) {
@@ -92,7 +96,7 @@ function formatGlob(input) {
   if (input.path) {
     parts[0] += ` in \`${input.path}\``;
   }
-  return parts.join("") + "\n\n";
+  return parts.join('') + '\n\n';
 }
 
 function formatGrep(input) {
@@ -102,9 +106,9 @@ function formatGrep(input) {
   if (input.glob) details.push(`glob: \`${input.glob}\``);
   if (input.type) details.push(`type: ${input.type}`);
   if (details.length) {
-    parts[0] += ` *(${details.join(", ")})*`;
+    parts[0] += ` *(${details.join(', ')})*`;
   }
-  return parts.join("") + "\n\n";
+  return parts.join('') + '\n\n';
 }
 
 function formatSkill(input) {
@@ -112,16 +116,16 @@ function formatSkill(input) {
   if (input.args) {
     parts[0] += ` — ${input.args}`;
   }
-  return parts.join("") + "\n\n";
+  return parts.join('') + '\n\n';
 }
 
 function formatGeneric(name, input) {
   const lines = [];
   lines.push(`**${name}:**`);
-  lines.push("```json");
+  lines.push('```json');
   lines.push(JSON.stringify(input, null, 2));
-  lines.push("```");
-  return lines.join("\n") + "\n\n";
+  lines.push('```');
+  return lines.join('\n') + '\n\n';
 }
 
 const TOOL_FORMATTERS = {
@@ -158,22 +162,22 @@ function formatToolCall(name, input) {
  * @returns {string} Formatted markdown string
  */
 function formatToolResult(output, isError) {
-  const label = isError ? "**Tool result (ERROR):**" : "**Tool result:**";
+  const label = isError ? '**Tool result (ERROR):**' : '**Tool result:**';
   if (!output) {
-    return "";
+    return '';
   }
   const lines = [label];
   if (output.length > 500) {
-    lines.push("```");
+    lines.push('```');
     lines.push(output.substring(0, 500));
     lines.push(`... (${output.length} chars total)`);
-    lines.push("```");
+    lines.push('```');
   } else {
-    lines.push("```");
+    lines.push('```');
     lines.push(output);
-    lines.push("```");
+    lines.push('```');
   }
-  return lines.join("\n") + "\n\n";
+  return lines.join('\n') + '\n\n';
 }
 
 /**
@@ -184,11 +188,13 @@ function formatToolResult(output, isError) {
 function formatTurnUsage(usage) {
   const parts = [];
   if (usage.input_tokens) parts.push(`in: ${usage.input_tokens}`);
-  if (usage.cache_read_input_tokens) parts.push(`cache read: ${usage.cache_read_input_tokens}`);
-  if (usage.cache_creation_input_tokens) parts.push(`cache write: ${usage.cache_creation_input_tokens}`);
+  if (usage.cache_read_input_tokens)
+    parts.push(`cache read: ${usage.cache_read_input_tokens}`);
+  if (usage.cache_creation_input_tokens)
+    parts.push(`cache write: ${usage.cache_creation_input_tokens}`);
   if (usage.output_tokens) parts.push(`out: ${usage.output_tokens}`);
-  if (!parts.length) return "";
-  return `> *Tokens — ${parts.join(" | ")}*\n\n`;
+  if (!parts.length) return '';
+  return `> *Tokens — ${parts.join(' | ')}*\n\n`;
 }
 
 /**
@@ -198,13 +204,13 @@ function formatTurnUsage(usage) {
  */
 function formatSessionInit(event) {
   const lines = [];
-  lines.push(`- **Model:** ${event.model || "unknown"}`);
-  lines.push(`- **Skills:** ${(event.skills || []).join(", ") || "none"}`);
-  lines.push(`- **CWD:** ${event.cwd || "unknown"}`);
-  lines.push("");
-  lines.push("---");
-  lines.push("");
-  return lines.join("\n");
+  lines.push(`- **Model:** ${event.model || 'unknown'}`);
+  lines.push(`- **Skills:** ${(event.skills || []).join(', ') || 'none'}`);
+  lines.push(`- **CWD:** ${event.cwd || 'unknown'}`);
+  lines.push('');
+  lines.push('---');
+  lines.push('');
+  return lines.join('\n');
 }
 
 /**
@@ -216,20 +222,22 @@ function formatSessionInit(event) {
 function formatUsageSummary(usage, costUsd) {
   const parts = [];
   if (usage.input_tokens) parts.push(`Input: ${usage.input_tokens}`);
-  if (usage.cache_read_input_tokens) parts.push(`Cache read: ${usage.cache_read_input_tokens}`);
-  if (usage.cache_creation_input_tokens) parts.push(`Cache write: ${usage.cache_creation_input_tokens}`);
+  if (usage.cache_read_input_tokens)
+    parts.push(`Cache read: ${usage.cache_read_input_tokens}`);
+  if (usage.cache_creation_input_tokens)
+    parts.push(`Cache write: ${usage.cache_creation_input_tokens}`);
   if (usage.output_tokens) parts.push(`Output: ${usage.output_tokens}`);
-  if (!parts.length && costUsd == null) return "";
+  if (!parts.length && costUsd == null) return '';
 
-  const lines = ["### Usage Summary", ""];
+  const lines = ['### Usage Summary', ''];
   for (const part of parts) {
     lines.push(`- ${part}`);
   }
   if (costUsd != null) {
     lines.push(`- **Cost: $${costUsd.toFixed(4)}**`);
   }
-  lines.push("");
-  return lines.join("\n");
+  lines.push('');
+  return lines.join('\n');
 }
 
 module.exports = {

@@ -15,6 +15,7 @@
 ## Task 1: Bold Active Tab in Bottom Bar
 
 **Files:**
+
 - Modify: `src/tui/components/bottom-bar.tsx`
 - Modify: `tests/tui/runs.spec.tsx` (adding bottom bar tests here since no dedicated bottom-bar spec exists)
 
@@ -96,6 +97,7 @@ git commit -m "feat: change active tab color to white for better contrast"
 ## Task 2: Unified Concurrency Config
 
 **Files:**
+
 - Modify: `src/types/config.ts`
 - Modify: `src/config/loader.ts`
 - Modify: `tests/core/config-loader.spec.ts`
@@ -163,7 +165,13 @@ export interface SkillUnitConfig {
   defaults: DefaultsConfig;
 }
 
-export type LogLevel = 'debug' | 'verbose' | 'info' | 'success' | 'warn' | 'error';
+export type LogLevel =
+  | 'debug'
+  | 'verbose'
+  | 'info'
+  | 'success'
+  | 'warn'
+  | 'error';
 ```
 
 - [ ] **Step 4: Update config loader defaults**
@@ -200,20 +208,27 @@ In `src/config/loader.ts`, add a post-merge migration at the end of `loadConfig`
 
 ```typescript
 export function loadConfig(configPath: string): SkillUnitConfig {
-  const defaults = JSON.parse(JSON.stringify(CONFIG_DEFAULTS)) as SkillUnitConfig;
+  const defaults = JSON.parse(
+    JSON.stringify(CONFIG_DEFAULTS)
+  ) as SkillUnitConfig;
 
   if (!configPath || !fs.existsSync(configPath)) {
     return defaults;
   }
 
   const raw = fs.readFileSync(configPath, 'utf-8');
-  const parsed = parseYaml(raw) as Partial<SkillUnitConfig> & Record<string, unknown>;
+  const parsed = parseYaml(raw) as Partial<SkillUnitConfig> &
+    Record<string, unknown>;
 
   const merged = deepMerge(defaults, parsed);
 
   // Backward compatibility: runner-concurrency -> concurrency
   const runnerRaw = parsed.runner as Record<string, unknown> | undefined;
-  if (runnerRaw && 'runner-concurrency' in runnerRaw && !('concurrency' in runnerRaw)) {
+  if (
+    runnerRaw &&
+    'runner-concurrency' in runnerRaw &&
+    !('concurrency' in runnerRaw)
+  ) {
     merged.runner.concurrency = runnerRaw['runner-concurrency'] as number;
   }
 
@@ -253,6 +268,7 @@ Expected: All PASS.
 Update all files that reference `runner-concurrency` or `grader-concurrency`:
 
 In `src/cli/commands/test.ts` line 182, change:
+
 ```typescript
 // Before:
 const concurrency = config.runner['runner-concurrency'] || 5;
@@ -261,6 +277,7 @@ const concurrency = config.runner.concurrency || 5;
 ```
 
 In `src/tui/hooks/use-test-run.ts` line 168, change:
+
 ```typescript
 // Before:
 const concurrency = config.runner['runner-concurrency'] || 5;
@@ -269,19 +286,26 @@ const concurrency = config.runner.concurrency || 5;
 ```
 
 In `src/core/grader.ts` line 228, change:
+
 ```typescript
 // Before:
-const concurrency = (config.execution && config.execution['grader-concurrency']) || 5;
+const concurrency =
+  (config.execution && config.execution['grader-concurrency']) || 5;
 // After:
 const concurrency = config.runner.concurrency || 5;
 ```
 
 In `src/tui/app.tsx` line 20-25, update `DEFAULT_CONFIG`:
+
 ```typescript
 const DEFAULT_CONFIG: SkillUnitConfig = {
   'test-dir': 'skill-tests',
   runner: { tool: 'claude', model: null, 'max-turns': 10, concurrency: 5 },
-  output: { format: 'interactive', 'show-passing-details': false, 'log-level': 'info' },
+  output: {
+    format: 'interactive',
+    'show-passing-details': false,
+    'log-level': 'info',
+  },
   execution: { timeout: '120s' },
   defaults: { setup: 'setup.sh', teardown: 'teardown.sh' },
 };
@@ -308,6 +332,7 @@ git commit -m "refactor: unify concurrency config, rename runner-concurrency to 
 ## Task 3: Scrollable Session Panel
 
 **Files:**
+
 - Modify: `src/tui/components/session-panel.tsx`
 - Create: `tests/tui/session-panel.spec.tsx`
 
@@ -334,7 +359,7 @@ describe('SessionPanel', () => {
           gradeTranscript={[]}
           elapsed={0}
           viewMode="execution"
-        />,
+        />
       );
 
       // Assert
@@ -354,7 +379,7 @@ describe('SessionPanel', () => {
           gradeTranscript={[]}
           elapsed={5000}
           viewMode="execution"
-        />,
+        />
       );
 
       // Assert
@@ -377,7 +402,7 @@ describe('SessionPanel', () => {
           gradeTranscript={[]}
           elapsed={5000}
           viewMode="execution"
-        />,
+        />
       );
 
       // Assert
@@ -403,7 +428,7 @@ describe('SessionPanel', () => {
           gradeTranscript={gradeTranscript}
           elapsed={5000}
           viewMode="grading"
-        />,
+        />
       );
 
       // Assert
@@ -427,7 +452,7 @@ describe('SessionPanel', () => {
           gradeTranscript={[]}
           elapsed={1000}
           viewMode="execution"
-        />,
+        />
       );
 
       // Assert
@@ -469,7 +494,10 @@ interface SessionPanelProps {
   following?: boolean;
 }
 
-function statusLabel(status: TestStatus | 'idle'): { label: string; color: string } {
+function statusLabel(status: TestStatus | 'idle'): {
+  label: string;
+  color: string;
+} {
   switch (status) {
     case 'idle':
       return { label: 'Idle', color: 'gray' };
@@ -521,13 +549,16 @@ export function SessionPanel({
   if (!testId) {
     return (
       <Box flexDirection="column" flexGrow={1} padding={1}>
-        <Text color="gray">No session selected. Use Left/Right arrows to switch sessions.</Text>
+        <Text color="gray">
+          No session selected. Use Left/Right arrows to switch sessions.
+        </Text>
       </Box>
     );
   }
 
   const { label, color } = statusLabel(status);
-  const activeTranscript = viewMode === 'grading' ? gradeTranscript : transcript;
+  const activeTranscript =
+    viewMode === 'grading' ? gradeTranscript : transcript;
 
   // Join transcript into a single string, then split by lines for slicing
   const fullContent = activeTranscript.join('\n');
@@ -544,7 +575,9 @@ export function SessionPanel({
     // Scroll offset is lines from the bottom
     startLine = Math.max(0, allLines.length - visibleLines - scrollOffset);
   }
-  const visibleContent = allLines.slice(startLine, startLine + visibleLines).join('\n');
+  const visibleContent = allLines
+    .slice(startLine, startLine + visibleLines)
+    .join('\n');
 
   const showFollowIndicator = !following && scrollOffset > 0;
 
@@ -567,18 +600,30 @@ export function SessionPanel({
 
       {/* View mode indicator */}
       <Box paddingX={1}>
-        <Text bold={viewMode === 'execution'} color={viewMode === 'execution' ? 'white' : 'gray'}>
+        <Text
+          bold={viewMode === 'execution'}
+          color={viewMode === 'execution' ? 'white' : 'gray'}
+        >
           {viewMode === 'execution' ? '[Execution]' : 'Execution'}
         </Text>
         <Text color="gray"> | </Text>
-        <Text bold={viewMode === 'grading'} color={viewMode === 'grading' ? 'white' : 'gray'}>
+        <Text
+          bold={viewMode === 'grading'}
+          color={viewMode === 'grading' ? 'white' : 'gray'}
+        >
           {viewMode === 'grading' ? '[Grading]' : 'Grading'}
         </Text>
-        <Text color="gray">  [t] toggle</Text>
+        <Text color="gray"> [t] toggle</Text>
       </Box>
 
       {/* Transcript content */}
-      <Box ref={panelRef} flexDirection="column" paddingX={1} flexGrow={1} overflow="hidden">
+      <Box
+        ref={panelRef}
+        flexDirection="column"
+        paddingX={1}
+        flexGrow={1}
+        overflow="hidden"
+      >
         {activeTranscript.length === 0 ? (
           <Text color="gray">Waiting for output...</Text>
         ) : (
@@ -625,6 +670,7 @@ git commit -m "feat: add scrollable session panel with dual transcript and follo
 ## Task 4: Scroll and Toggle Key Handling in Runner
 
 **Files:**
+
 - Modify: `src/tui/screens/runner.tsx`
 
 - [ ] **Step 1: Add scroll and toggle state to Runner**
@@ -635,9 +681,13 @@ Add state variables inside the `Runner` function, after the existing state:
 
 ```typescript
 // Scroll state per test: { [testId]: { offset, following } }
-const [scrollState, setScrollState] = useState<Record<string, { offset: number; following: boolean }>>({});
+const [scrollState, setScrollState] = useState<
+  Record<string, { offset: number; following: boolean }>
+>({});
 // View mode per test (execution or grading)
-const [viewModes, setViewModes] = useState<Record<string, TranscriptViewMode>>({});
+const [viewModes, setViewModes] = useState<Record<string, TranscriptViewMode>>(
+  {}
+);
 // Track which tests the user has manually toggled (prevents auto-switch)
 const [manualToggled, setManualToggled] = useState<Set<string>>(new Set());
 ```
@@ -656,9 +706,12 @@ Inside the `useInput` callback in Runner, add to the `viewMode === 'primary'` br
 // Scroll up
 if (key.upArrow) {
   if (activeTestId) {
-    setScrollState(prev => {
+    setScrollState((prev) => {
       const curr = prev[activeTestId] ?? { offset: 0, following: true };
-      return { ...prev, [activeTestId]: { offset: curr.offset + 3, following: false } };
+      return {
+        ...prev,
+        [activeTestId]: { offset: curr.offset + 3, following: false },
+      };
     });
   }
   return;
@@ -667,9 +720,15 @@ if (key.upArrow) {
 // Scroll down
 if (key.downArrow) {
   if (activeTestId) {
-    setScrollState(prev => {
+    setScrollState((prev) => {
       const curr = prev[activeTestId] ?? { offset: 0, following: true };
-      return { ...prev, [activeTestId]: { offset: Math.max(0, curr.offset - 3), following: curr.offset - 3 <= 0 } };
+      return {
+        ...prev,
+        [activeTestId]: {
+          offset: Math.max(0, curr.offset - 3),
+          following: curr.offset - 3 <= 0,
+        },
+      };
     });
   }
   return;
@@ -678,7 +737,10 @@ if (key.downArrow) {
 // Follow mode
 if (input === 'f') {
   if (activeTestId) {
-    setScrollState(prev => ({ ...prev, [activeTestId]: { offset: 0, following: true } }));
+    setScrollState((prev) => ({
+      ...prev,
+      [activeTestId]: { offset: 0, following: true },
+    }));
   }
   return;
 }
@@ -686,11 +748,14 @@ if (input === 'f') {
 // Toggle execution/grading transcript
 if (input === 't') {
   if (activeTestId) {
-    setViewModes(prev => {
+    setViewModes((prev) => {
       const curr = prev[activeTestId] ?? 'execution';
-      return { ...prev, [activeTestId]: curr === 'execution' ? 'grading' : 'execution' };
+      return {
+        ...prev,
+        [activeTestId]: curr === 'execution' ? 'grading' : 'execution',
+      };
     });
-    setManualToggled(prev => new Set(prev).add(activeTestId));
+    setManualToggled((prev) => new Set(prev).add(activeTestId));
   }
   return;
 }
@@ -704,7 +769,7 @@ Add a `useEffect` in Runner that watches for status transitions to `'grading'`:
 useEffect(() => {
   for (const test of tests) {
     if (test.status === 'grading' && !manualToggled.has(test.id)) {
-      setViewModes(prev => {
+      setViewModes((prev) => {
         if (prev[test.id] !== 'grading') {
           return { ...prev, [test.id]: 'grading' };
         }
@@ -738,11 +803,13 @@ Update the `<SessionPanel>` usage in Runner to pass the new props. Replace the e
 Update the footer text in Runner to include the new keys:
 
 ```tsx
-{status === 'complete'
-  ? 'Run complete. [Space] select  [Enter] re-run selected  [D] dashboard'
-  : viewMode === 'primary'
-    ? '← → switch sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split view'
-    : '[1-9] focus pane  [m] maximize  [v] primary view'}
+{
+  status === 'complete'
+    ? 'Run complete. [Space] select  [Enter] re-run selected  [D] dashboard'
+    : viewMode === 'primary'
+      ? '← → switch sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split view'
+      : '[1-9] focus pane  [m] maximize  [v] primary view';
+}
 ```
 
 - [ ] **Step 6: Typecheck**
@@ -765,6 +832,7 @@ git commit -m "feat: add scroll, follow, and transcript toggle key handling to R
 ## Task 5: Update Runner Props and TestRunEntry for Grade Transcript
 
 **Files:**
+
 - Modify: `src/tui/hooks/use-test-run.ts`
 - Modify: `src/tui/screens/runner.tsx`
 - Modify: `src/tui/app.tsx`
@@ -790,7 +858,7 @@ export interface TestRunEntry {
 And update the `startRun` callback where entries are created (inside the `entries` mapping):
 
 ```typescript
-const entries: TestRunEntry[] = tests.map(t => ({
+const entries: TestRunEntry[] = tests.map((t) => ({
   id: t.id,
   name: t.name,
   specName: t.specName,
@@ -837,6 +905,7 @@ git commit -m "feat: add gradeTranscript field to TestRunEntry"
 ## Task 6: Per-test Immediate Grading in useTestRun
 
 **Files:**
+
 - Modify: `src/tui/hooks/use-test-run.ts`
 - Modify: `src/core/grader.ts`
 
@@ -857,7 +926,13 @@ describe('gradeTest', () => {
     };
 
     // Act
-    const handle = gradeTest(testCase, '/fake/path', CONFIG_DEFAULTS, 'test-spec', '2026-04-07-10-00-00');
+    const handle = gradeTest(
+      testCase,
+      '/fake/path',
+      CONFIG_DEFAULTS,
+      'test-spec',
+      '2026-04-07-10-00-00'
+    );
 
     // Assert
     expect(handle).toBeDefined();
@@ -895,16 +970,24 @@ const executeRun = useCallback(
     manifests: Manifest[],
     specs: Spec[],
     config: SkillUnitConfig,
-    timestamp: string,
+    timestamp: string
   ) => {
     const maxConcurrency = config.runner.concurrency || 5;
 
     // Build flat task list
-    const allTasks: Array<{ manifest: Manifest; testCase: ManifestTestCase; spec: Spec }> = [];
+    const allTasks: Array<{
+      manifest: Manifest;
+      testCase: ManifestTestCase;
+      spec: Spec;
+    }> = [];
     for (const manifest of manifests) {
       for (const tc of manifest['test-cases']) {
         // Find the full spec for this manifest
-        const spec = specs.find(s => s.frontmatter.name === manifest['spec-name'] || path.basename(s.path, '.spec.md') === manifest['spec-name']);
+        const spec = specs.find(
+          (s) =>
+            s.frontmatter.name === manifest['spec-name'] ||
+            path.basename(s.path, '.spec.md') === manifest['spec-name']
+        );
         if (spec) {
           allTasks.push({ manifest, testCase: tc, spec });
         }
@@ -927,39 +1010,44 @@ const executeRun = useCallback(
         const reportResult = generateReport(runDir);
 
         // Build RunResult for stats
-        const testResults: import('../../types/run.js').TestResult[] = allTasks.map((task) => {
-          const specName = task.manifest['spec-name'];
-          const specGroup = reportResult.grouped[specName];
-          const graded = specGroup?.find((r) => r.testId === task.testCase.id);
-          const passed = graded ? graded.passed : false;
+        const testResults: import('../../types/run.js').TestResult[] =
+          allTasks.map((task) => {
+            const specName = task.manifest['spec-name'];
+            const specGroup = reportResult.grouped[specName];
+            const graded = specGroup?.find(
+              (r) => r.testId === task.testCase.id
+            );
+            const passed = graded ? graded.passed : false;
 
-          let testName = task.testCase.id;
-          for (const spec of specs) {
-            const tc = spec.testCases.find((c) => c.id === task.testCase.id);
-            if (tc) {
-              testName = tc.name;
-              break;
+            let testName = task.testCase.id;
+            for (const spec of specs) {
+              const tc = spec.testCases.find((c) => c.id === task.testCase.id);
+              if (tc) {
+                testName = tc.name;
+                break;
+              }
             }
-          }
 
-          return {
-            id: task.testCase.id,
-            name: testName,
-            specName,
-            status: 'passed' as const,
-            durationMs: 0,
-            passed,
-            passedChecks: graded?.passedChecks ?? 0,
-            failedChecks: graded?.failedChecks ?? 0,
-            totalChecks: graded?.totalChecks ?? 0,
-            expectationLines: graded?.expectationLines ?? [],
-            negativeExpectationLines: graded?.negativeExpectationLines ?? [],
-          };
-        });
+            return {
+              id: task.testCase.id,
+              name: testName,
+              specName,
+              status: 'passed' as const,
+              durationMs: 0,
+              passed,
+              passedChecks: graded?.passedChecks ?? 0,
+              failedChecks: graded?.failedChecks ?? 0,
+              totalChecks: graded?.totalChecks ?? 0,
+              expectationLines: graded?.expectationLines ?? [],
+              negativeExpectationLines: graded?.negativeExpectationLines ?? [],
+            };
+          });
 
         const totalPassed = testResults.filter((t) => t.passed).length;
         const totalFailed = testResults.filter((t) => !t.passed).length;
-        const totalDuration = startTimeRef.current ? Date.now() - startTimeRef.current : 0;
+        const totalDuration = startTimeRef.current
+          ? Date.now() - startTimeRef.current
+          : 0;
 
         const runResult: import('../../types/run.js').RunResult = {
           id: timestamp,
@@ -984,11 +1072,20 @@ const executeRun = useCallback(
       }
     }
 
-    function startGrading(task: { manifest: Manifest; testCase: ManifestTestCase; spec: Spec }): void {
+    function startGrading(task: {
+      manifest: Manifest;
+      testCase: ManifestTestCase;
+      spec: Spec;
+    }): void {
       // Find full test case from spec (with expectations)
-      const fullTestCase = task.spec.testCases.find(tc => tc.id === task.testCase.id);
+      const fullTestCase = task.spec.testCases.find(
+        (tc) => tc.id === task.testCase.id
+      );
       if (!fullTestCase) {
-        updateTest(task.testCase.id, { status: 'error', activity: 'Test case not found in spec' });
+        updateTest(task.testCase.id, {
+          status: 'error',
+          activity: 'Test case not found in spec',
+        });
         completedCount++;
         active--;
         tryNext();
@@ -996,15 +1093,27 @@ const executeRun = useCallback(
         return;
       }
 
-      updateTest(task.testCase.id, { status: 'grading', activity: 'Grading...' });
+      updateTest(task.testCase.id, {
+        status: 'grading',
+        activity: 'Grading...',
+      });
 
       const specName = task.manifest['spec-name'];
       const transcriptPath = path.join(
-        '.workspace', 'runs', timestamp, 'results',
-        `${specName}.${task.testCase.id}.transcript.md`,
+        '.workspace',
+        'runs',
+        timestamp,
+        'results',
+        `${specName}.${task.testCase.id}.transcript.md`
       );
 
-      const gradeHandle = gradeTest(fullTestCase, transcriptPath, config, specName, timestamp);
+      const gradeHandle = gradeTest(
+        fullTestCase,
+        transcriptPath,
+        config,
+        specName,
+        timestamp
+      );
 
       gradeHandle.on('output', (chunk: string) => {
         const buf = gradeTranscriptBuffers.current.get(task.testCase.id) ?? [];
@@ -1032,9 +1141,14 @@ const executeRun = useCallback(
         const task = allTasks[taskIdx];
         active++;
 
-        updateTest(task.testCase.id, { status: 'running', activity: 'Starting...' });
+        updateTest(task.testCase.id, {
+          status: 'running',
+          activity: 'Starting...',
+        });
 
-        const handle = runTest(task.manifest, task.testCase, config, { silent: true });
+        const handle = runTest(task.manifest, task.testCase, config, {
+          silent: true,
+        });
 
         handle.on('output', (chunk: string) => {
           const buf = transcriptBuffers.current.get(task.testCase.id) ?? [];
@@ -1099,12 +1213,16 @@ const executeRun = useCallback(
       }
     }
 
-    const gradingQueue: Array<{ manifest: Manifest; testCase: ManifestTestCase; spec: Spec }> = [];
+    const gradingQueue: Array<{
+      manifest: Manifest;
+      testCase: ManifestTestCase;
+      spec: Spec;
+    }> = [];
 
     // Kick off
     tryNext();
   },
-  [updateTest, completeRun, flushTranscripts],
+  [updateTest, completeRun, flushTranscripts]
 );
 ```
 
@@ -1124,17 +1242,26 @@ const flushTranscripts = useCallback(() => {
   const gradeBuffers = gradeTranscriptBuffers.current;
   if (buffers.size === 0 && gradeBuffers.size === 0) return;
 
-  setState(prev => {
+  setState((prev) => {
     let changed = false;
-    const updatedTests = prev.tests.map(t => {
+    const updatedTests = prev.tests.map((t) => {
       const pending = buffers.get(t.id);
       const gradePending = gradeBuffers.get(t.id);
-      if ((pending && pending.length > 0) || (gradePending && gradePending.length > 0)) {
+      if (
+        (pending && pending.length > 0) ||
+        (gradePending && gradePending.length > 0)
+      ) {
         changed = true;
         return {
           ...t,
-          transcript: pending && pending.length > 0 ? [...t.transcript, ...pending] : t.transcript,
-          gradeTranscript: gradePending && gradePending.length > 0 ? [...t.gradeTranscript, ...gradePending] : t.gradeTranscript,
+          transcript:
+            pending && pending.length > 0
+              ? [...t.transcript, ...pending]
+              : t.transcript,
+          gradeTranscript:
+            gradePending && gradePending.length > 0
+              ? [...t.gradeTranscript, ...gradePending]
+              : t.gradeTranscript,
         };
       }
       return t;
@@ -1190,6 +1317,7 @@ git commit -m "feat: per-test immediate grading with shared concurrency pool"
 ## Task 7: Historical Run Detail View
 
 **Files:**
+
 - Modify: `src/tui/screens/runs.tsx`
 - Modify: `src/tui/app.tsx`
 - Create: `src/tui/hooks/use-historical-run.ts`
@@ -1214,12 +1342,15 @@ describe('loadHistoricalRun', () => {
       'my-spec.TEST-2.transcript.md',
       'my-spec.TEST-2.results.md',
     ] as unknown as fs.Dirent[]);
-    vi.spyOn(fs, 'readFileSync').mockImplementation((filePath: fs.PathOrFileDescriptor) => {
-      const p = String(filePath);
-      if (p.endsWith('transcript.md')) return '## Turn 1\nHello world';
-      if (p.endsWith('results.md')) return '# Results: TEST-1: basic\n\n**Verdict:** PASS';
-      return '';
-    });
+    vi.spyOn(fs, 'readFileSync').mockImplementation(
+      (filePath: fs.PathOrFileDescriptor) => {
+        const p = String(filePath);
+        if (p.endsWith('transcript.md')) return '## Turn 1\nHello world';
+        if (p.endsWith('results.md'))
+          return '# Results: TEST-1: basic\n\n**Verdict:** PASS';
+        return '';
+      }
+    );
 
     // Act
     const result = loadHistoricalRun('.workspace/runs/2026-04-07-10-00-00', {
@@ -1229,7 +1360,7 @@ describe('loadHistoricalRun', () => {
       passed: 2,
       failed: 0,
       duration: 30000,
-      cost: 0.10,
+      cost: 0.1,
       tokens: 5000,
     });
 
@@ -1288,15 +1419,25 @@ export interface HistoricalRunData {
  * Load a historical run from disk artifacts.
  * Reads transcript and results files from the run directory.
  */
-export function loadHistoricalRun(runDir: string, runEntry: RunEntry): HistoricalRunData {
+export function loadHistoricalRun(
+  runDir: string,
+  runEntry: RunEntry
+): HistoricalRunData {
   const resultsDir = path.join(runDir, 'results');
   const tests: HistoricalTestEntry[] = [];
 
   if (!fs.existsSync(resultsDir)) {
-    return { tests: [], activeTestId: null, elapsed: runEntry.duration, status: 'complete' };
+    return {
+      tests: [],
+      activeTestId: null,
+      elapsed: runEntry.duration,
+      status: 'complete',
+    };
   }
 
-  const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.transcript.md'));
+  const files = fs
+    .readdirSync(resultsDir)
+    .filter((f) => f.endsWith('.transcript.md'));
 
   for (const transcriptFile of files) {
     // Parse spec name and test ID from filename: <spec>.<testId>.transcript.md
@@ -1399,14 +1540,21 @@ In `src/tui/app.tsx`, add state for the historical run and a handler:
 Add import:
 
 ```typescript
-import { loadHistoricalRun, type HistoricalRunData } from './hooks/use-historical-run.js';
+import {
+  loadHistoricalRun,
+  type HistoricalRunData,
+} from './hooks/use-historical-run.js';
 ```
 
 Add state:
 
 ```typescript
-const [historicalRun, setHistoricalRun] = useState<HistoricalRunData | null>(null);
-const [historicalActiveTestId, setHistoricalActiveTestId] = useState<string | null>(null);
+const [historicalRun, setHistoricalRun] = useState<HistoricalRunData | null>(
+  null
+);
+const [historicalActiveTestId, setHistoricalActiveTestId] = useState<
+  string | null
+>(null);
 ```
 
 Add handler:
@@ -1430,25 +1578,37 @@ import path from 'node:path';
 Update the RunManager render to pass the new prop:
 
 ```tsx
-{screen === 'runs' && (
-  <RunManager
-    runs={statsIndex.runs}
-    onCleanup={handleCleanup}
-    onDeleteRun={handleDeleteRun}
-    onViewRun={handleViewRun}
-  />
-)}
+{
+  screen === 'runs' && (
+    <RunManager
+      runs={statsIndex.runs}
+      onCleanup={handleCleanup}
+      onDeleteRun={handleDeleteRun}
+      onViewRun={handleViewRun}
+    />
+  );
+}
 ```
 
 Update the Runner render to use historical data when available. Since `HistoricalRunData` and `TestRunState` share the same shape (both have `tests`, `activeTestId`, `elapsed`, `status`), cast the historical data:
 
 ```tsx
-{screen === 'runner' && (
-  <Runner
-    runState={historicalRun ? { ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId } as unknown as TestRunState : runState}
-    onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
-  />
-)}
+{
+  screen === 'runner' && (
+    <Runner
+      runState={
+        historicalRun
+          ? ({
+              ...historicalRun,
+              activeTestId:
+                historicalActiveTestId ?? historicalRun.activeTestId,
+            } as unknown as TestRunState)
+          : runState
+      }
+      onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
+    />
+  );
+}
 ```
 
 Add `TestRunState` to the imports from the hook:
@@ -1469,13 +1629,23 @@ setHistoricalRun(null);
 In `tests/tui/runs.spec.tsx`, update the RunManager renders to include the new prop:
 
 ```tsx
-<RunManager runs={[]} onCleanup={() => {}} onDeleteRun={() => {}} onViewRun={() => {}} />
+<RunManager
+  runs={[]}
+  onCleanup={() => {}}
+  onDeleteRun={() => {}}
+  onViewRun={() => {}}
+/>
 ```
 
 And for the run list test:
 
 ```tsx
-<RunManager runs={runs} onCleanup={() => {}} onDeleteRun={() => {}} onViewRun={() => {}} />
+<RunManager
+  runs={runs}
+  onCleanup={() => {}}
+  onDeleteRun={() => {}}
+  onViewRun={() => {}}
+/>
 ```
 
 - [ ] **Step 8: Typecheck and run tests**
@@ -1499,6 +1669,7 @@ git commit -m "feat: historical run detail view with Enter from Run Manager"
 ## Task 8: Re-run Selected Tests from Completed Run
 
 **Files:**
+
 - Modify: `src/tui/screens/runner.tsx`
 - Modify: `src/tui/components/progress-tree.tsx`
 - Modify: `src/tui/app.tsx`
@@ -1514,14 +1685,29 @@ describe('ProgressTree', () => {
   it('when selectable should show checkboxes', () => {
     // Arrange
     const tests = [
-      { id: 'TEST-1', name: 'basic', status: 'passed' as const, durationMs: 1200 },
-      { id: 'TEST-2', name: 'error', status: 'failed' as const, durationMs: 3000 },
+      {
+        id: 'TEST-1',
+        name: 'basic',
+        status: 'passed' as const,
+        durationMs: 1200,
+      },
+      {
+        id: 'TEST-2',
+        name: 'error',
+        status: 'failed' as const,
+        durationMs: 3000,
+      },
     ];
     const selected = new Set(['TEST-2']);
 
     // Act
     const { lastFrame } = render(
-      <ProgressTree tests={tests} elapsed={5000} selectable selected={selected} />,
+      <ProgressTree
+        tests={tests}
+        elapsed={5000}
+        selectable
+        selected={selected}
+      />
     );
     const output = lastFrame()!;
 
@@ -1562,23 +1748,27 @@ export function ProgressTree({ tests, elapsed, selectable, selected }: ProgressT
 Update the test row rendering to show checkboxes when selectable:
 
 ```tsx
-{tests.map(test => {
-  const { symbol, color } = statusIcon(test.status);
-  const isRunning = test.status === 'running';
-  const isSelected = selected?.has(test.id) ?? false;
-  return (
-    <Box key={test.id}>
-      {selectable && (
-        <Text color={isSelected ? 'blue' : 'gray'}>{isSelected ? '[x]' : '[ ]'} </Text>
-      )}
-      <Text color={color}>{symbol} </Text>
-      <Text bold={isRunning}>{test.name}</Text>
-      {test.durationMs > 0 && (
-        <Text color="gray">{formatDuration(test.durationMs)}</Text>
-      )}
-    </Box>
-  );
-})}
+{
+  tests.map((test) => {
+    const { symbol, color } = statusIcon(test.status);
+    const isRunning = test.status === 'running';
+    const isSelected = selected?.has(test.id) ?? false;
+    return (
+      <Box key={test.id}>
+        {selectable && (
+          <Text color={isSelected ? 'blue' : 'gray'}>
+            {isSelected ? '[x]' : '[ ]'}{' '}
+          </Text>
+        )}
+        <Text color={color}>{symbol} </Text>
+        <Text bold={isRunning}>{test.name}</Text>
+        {test.durationMs > 0 && (
+          <Text color="gray">{formatDuration(test.durationMs)}</Text>
+        )}
+      </Box>
+    );
+  });
+}
 ```
 
 - [ ] **Step 4: Add selection state and re-run handlers to Runner**
@@ -1596,8 +1786,13 @@ Auto-initialize selection with failed tests when run completes:
 useEffect(() => {
   if (status === 'complete' && !selectionInitialized) {
     const failedIds = tests
-      .filter(t => t.status === 'failed' || t.status === 'error' || t.status === 'timedout')
-      .map(t => t.id);
+      .filter(
+        (t) =>
+          t.status === 'failed' ||
+          t.status === 'error' ||
+          t.status === 'timedout'
+      )
+      .map((t) => t.id);
     setSelectedTests(new Set(failedIds));
     setSelectionInitialized(true);
   }
@@ -1610,7 +1805,7 @@ Add space/enter handlers in the `useInput` callback (inside the `viewMode === 'p
 // Selection toggle (only when run is complete)
 if (input === ' ' && status === 'complete') {
   if (activeTestId) {
-    setSelectedTests(prev => {
+    setSelectedTests((prev) => {
       const next = new Set(prev);
       if (next.has(activeTestId)) {
         next.delete(activeTestId);
@@ -1676,7 +1871,7 @@ In `src/tui/app.tsx`, add a handler that re-runs selected tests:
 function handleRerunTests(testIds: string[]) {
   // Find the test entries from the current run state (live or historical)
   const currentTests = historicalRun?.tests ?? runState.tests;
-  const testsToRerun = currentTests.filter(t => testIds.includes(t.id));
+  const testsToRerun = currentTests.filter((t) => testIds.includes(t.id));
 
   if (testsToRerun.length === 0) return;
 
@@ -1693,26 +1888,28 @@ function handleRerunTests(testIds: string[]) {
     matchedSpecs.add(t.specName);
   }
 
-  const selectedSpecs = specs.filter(s => {
+  const selectedSpecs = specs.filter((s) => {
     const specName = s.frontmatter.name || path.basename(s.path, '.spec.md');
     return matchedSpecs.has(specName);
   });
 
-  const manifests = selectedSpecs.map(spec => {
-    const manifest = buildManifest(spec, appConfig, { timestamp });
-    manifest['test-cases'] = manifest['test-cases'].filter(tc =>
-      selectedTestIds.has(tc.id),
-    );
-    return manifest;
-  }).filter(m => m['test-cases'].length > 0);
+  const manifests = selectedSpecs
+    .map((spec) => {
+      const manifest = buildManifest(spec, appConfig, { timestamp });
+      manifest['test-cases'] = manifest['test-cases'].filter((tc) =>
+        selectedTestIds.has(tc.id)
+      );
+      return manifest;
+    })
+    .filter((m) => m['test-cases'].length > 0);
 
   // Start run
   startRun(
-    testsToRerun.map(t => ({
+    testsToRerun.map((t) => ({
       id: t.id,
       name: t.name,
       specName: t.specName,
-    })),
+    }))
   );
 
   executeRun(manifests, selectedSpecs, appConfig, timestamp);
@@ -1722,13 +1919,15 @@ function handleRerunTests(testIds: string[]) {
 Pass it to Runner:
 
 ```tsx
-{screen === 'runner' && (
-  <Runner
-    runState={historicalRun ?? runState}
-    onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
-    onRerunTests={handleRerunTests}
-  />
-)}
+{
+  screen === 'runner' && (
+    <Runner
+      runState={historicalRun ?? runState}
+      onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
+      onRerunTests={handleRerunTests}
+    />
+  );
+}
 ```
 
 - [ ] **Step 6: Run tests**
@@ -1760,6 +1959,7 @@ git commit -m "feat: re-run selected tests from completed run view"
 ## Task 9: Update Architecture Documentation
 
 **Files:**
+
 - Modify: `docs/architecture/tui-design.md`
 
 - [ ] **Step 1: Update tui-design.md**

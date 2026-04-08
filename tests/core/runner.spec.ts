@@ -17,7 +17,7 @@ describe('scopeToolsToWorkspace', () => {
   it('scopes file tools to workspace path', () => {
     const tools = ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep'];
     const scoped = scopeToolsToWorkspace(tools, '/workspace/abc');
-    const readTool = scoped.find(t => t.startsWith('Read'));
+    const readTool = scoped.find((t) => t.startsWith('Read'));
     expect(readTool).toContain('/workspace/abc');
     // Bash should not be scoped
     expect(scoped).toContain('Bash');

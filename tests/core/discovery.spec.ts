@@ -24,17 +24,43 @@ describe('filterSpecs', () => {
   const specs: Spec[] = [
     {
       path: 'skill-tests/runner.spec.md',
-      frontmatter: { name: 'runner-tests', tags: ['integration', 'core'], skill: 'skill-unit' },
+      frontmatter: {
+        name: 'runner-tests',
+        tags: ['integration', 'core'],
+        skill: 'skill-unit',
+      },
       testCases: [
-        { id: 'TEST-1', name: 'basic-usage', prompt: 'test', expectations: [], 'negative-expectations': [] },
-        { id: 'TEST-2', name: 'error-case', prompt: 'test', expectations: [], 'negative-expectations': [] },
+        {
+          id: 'TEST-1',
+          name: 'basic-usage',
+          prompt: 'test',
+          expectations: [],
+          'negative-expectations': [],
+        },
+        {
+          id: 'TEST-2',
+          name: 'error-case',
+          prompt: 'test',
+          expectations: [],
+          'negative-expectations': [],
+        },
       ],
     },
     {
       path: 'skill-tests/design.spec.md',
-      frontmatter: { name: 'design-tests', tags: ['e2e'], skill: 'test-design' },
+      frontmatter: {
+        name: 'design-tests',
+        tags: ['e2e'],
+        skill: 'test-design',
+      },
       testCases: [
-        { id: 'TEST-1', name: 'design-flow', prompt: 'test', expectations: [], 'negative-expectations': [] },
+        {
+          id: 'TEST-1',
+          name: 'design-flow',
+          prompt: 'test',
+          expectations: [],
+          'negative-expectations': [],
+        },
       ],
     },
   ];

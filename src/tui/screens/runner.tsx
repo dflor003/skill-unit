@@ -16,7 +16,12 @@ interface RunnerProps {
 
 type ViewMode = 'primary' | 'split';
 
-export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange }: RunnerProps) {
+export function Runner({
+  runState,
+  onSelectTest,
+  onRerunTests,
+  onViewModeChange,
+}: RunnerProps) {
   const { tests, activeTestId, elapsed, status } = runState;
   const [viewMode, setViewMode] = useState<ViewMode>('primary');
   const [splitFocusedId, setSplitFocusedId] = useState<string | null>(null);
@@ -24,9 +29,13 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
   const [selectedTests, setSelectedTests] = useState<Set<string>>(new Set());
   const [selectionInitialized, setSelectionInitialized] = useState(false);
   // Scroll state per test: { [testId]: { offset, following } }
-  const [scrollState, setScrollState] = useState<Record<string, { offset: number; following: boolean }>>({});
+  const [scrollState, setScrollState] = useState<
+    Record<string, { offset: number; following: boolean }>
+  >({});
   // View mode per test (execution or grading)
-  const [viewModes, setViewModes] = useState<Record<string, TranscriptViewMode>>({});
+  const [viewModes, setViewModes] = useState<
+    Record<string, TranscriptViewMode>
+  >({});
   // Track which tests the user has manually toggled (prevents auto-switch)
   const [manualToggled, setManualToggled] = useState<Set<string>>(new Set());
 
@@ -35,7 +44,7 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
 
     // Toggle view mode with [v]
     if (input === 'v') {
-      setViewMode(prev => {
+      setViewMode((prev) => {
         const next = prev === 'primary' ? 'split' : 'primary';
         if (onViewModeChange) onViewModeChange(next);
         return next;
@@ -47,7 +56,7 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
       // Selection toggle (only when run is complete)
       if (input === ' ' && status === 'complete') {
         if (activeTestId) {
-          setSelectedTests(prev => {
+          setSelectedTests((prev) => {
             const next = new Set(prev);
             if (next.has(activeTestId)) {
               next.delete(activeTestId);
@@ -69,9 +78,12 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
       // Scroll up
       if (key.upArrow) {
         if (activeTestId) {
-          setScrollState(prev => {
+          setScrollState((prev) => {
             const curr = prev[activeTestId] ?? { offset: 0, following: true };
-            return { ...prev, [activeTestId]: { offset: curr.offset + 3, following: false } };
+            return {
+              ...prev,
+              [activeTestId]: { offset: curr.offset + 3, following: false },
+            };
           });
         }
         return;
@@ -80,9 +92,15 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
       // Scroll down
       if (key.downArrow) {
         if (activeTestId) {
-          setScrollState(prev => {
+          setScrollState((prev) => {
             const curr = prev[activeTestId] ?? { offset: 0, following: true };
-            return { ...prev, [activeTestId]: { offset: Math.max(0, curr.offset - 3), following: curr.offset - 3 <= 0 } };
+            return {
+              ...prev,
+              [activeTestId]: {
+                offset: Math.max(0, curr.offset - 3),
+                following: curr.offset - 3 <= 0,
+              },
+            };
           });
         }
         return;
@@ -91,7 +109,10 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
       // Follow mode
       if (input === 'f') {
         if (activeTestId) {
-          setScrollState(prev => ({ ...prev, [activeTestId]: { offset: 0, following: true } }));
+          setScrollState((prev) => ({
+            ...prev,
+            [activeTestId]: { offset: 0, following: true },
+          }));
         }
         return;
       }
@@ -99,16 +120,19 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
       // Toggle execution/grading transcript
       if (input === 't') {
         if (activeTestId) {
-          setViewModes(prev => {
+          setViewModes((prev) => {
             const curr = prev[activeTestId] ?? 'execution';
-            return { ...prev, [activeTestId]: curr === 'execution' ? 'grading' : 'execution' };
+            return {
+              ...prev,
+              [activeTestId]: curr === 'execution' ? 'grading' : 'execution',
+            };
           });
-          setManualToggled(prev => new Set(prev).add(activeTestId));
+          setManualToggled((prev) => new Set(prev).add(activeTestId));
         }
         return;
       }
 
-      const currentIdx = tests.findIndex(t => t.id === activeTestId);
+      const currentIdx = tests.findIndex((t) => t.id === activeTestId);
 
       if (key.leftArrow) {
         const prevIdx = Math.max(0, currentIdx - 1);
@@ -123,7 +147,7 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
       // Split pane mode: [1-9] sets focused pane, [m] toggles maximized
       if (input === 'm') {
         const focusId = splitFocusedId ?? tests[0]?.id ?? null;
-        setMaximizedId(prev => (prev === focusId ? null : focusId));
+        setMaximizedId((prev) => (prev === focusId ? null : focusId));
         return;
       }
 
@@ -144,7 +168,7 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
   useEffect(() => {
     for (const test of tests) {
       if (test.status === 'grading' && !manualToggled.has(test.id)) {
-        setViewModes(prev => {
+        setViewModes((prev) => {
           if (prev[test.id] !== 'grading') {
             return { ...prev, [test.id]: 'grading' };
           }
@@ -157,8 +181,13 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
   useEffect(() => {
     if (status === 'complete' && !selectionInitialized) {
       const failedIds = tests
-        .filter(t => t.status === 'failed' || t.status === 'error' || t.status === 'timedout')
-        .map(t => t.id);
+        .filter(
+          (t) =>
+            t.status === 'failed' ||
+            t.status === 'error' ||
+            t.status === 'timedout'
+        )
+        .map((t) => t.id);
       setSelectedTests(new Set(failedIds));
       setSelectionInitialized(true);
     }
@@ -171,16 +200,16 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
     }
   }, [status]);
 
-  const activeTest = tests.find(t => t.id === activeTestId) ?? null;
+  const activeTest = tests.find((t) => t.id === activeTestId) ?? null;
 
-  const tickerSessions = tests.map(t => ({
+  const tickerSessions = tests.map((t) => ({
     id: t.id,
     name: t.name,
     status: t.status,
     activity: t.activity,
   }));
 
-  const splitSessions = tests.map(t => ({
+  const splitSessions = tests.map((t) => ({
     id: t.id,
     name: t.name,
     status: t.status,
@@ -233,7 +262,10 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
                   scrollOffset={scrollState[activeTest.id]?.offset ?? 0}
                   following={scrollState[activeTest.id]?.following ?? true}
                   onScrollClamp={(clamped) => {
-                    setScrollState(prev => ({ ...prev, [activeTest.id]: { offset: clamped, following: false } }));
+                    setScrollState((prev) => ({
+                      ...prev,
+                      [activeTest.id]: { offset: clamped, following: false },
+                    }));
                   }}
                 />
               ) : (
@@ -281,7 +313,6 @@ export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange 
           </Box>
         </Box>
       )}
-
     </Box>
   );
 }

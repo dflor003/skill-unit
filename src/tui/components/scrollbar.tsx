@@ -8,20 +8,29 @@ interface ScrollbarProps {
   height: number;
 }
 
-export function Scrollbar({ totalLines, visibleLines, scrollOffset, height }: ScrollbarProps) {
+export function Scrollbar({
+  totalLines,
+  visibleLines,
+  scrollOffset,
+  height,
+}: ScrollbarProps) {
   if (totalLines <= visibleLines || height <= 0) {
     return <Box />;
   }
 
-  const thumbHeight = Math.max(1, Math.round(height * visibleLines / totalLines));
+  const thumbHeight = Math.max(
+    1,
+    Math.round((height * visibleLines) / totalLines)
+  );
   const maxOffset = Math.max(0, totalLines - visibleLines);
   const clampedOffset = Math.min(scrollOffset, maxOffset);
 
   // scrollOffset=0 means at bottom, scrollOffset=maxOffset means at top
   // We want thumb at bottom when offset=0, at top when offset=maxOffset
-  const thumbTop = maxOffset > 0
-    ? Math.round((clampedOffset / maxOffset) * (height - thumbHeight))
-    : 0;
+  const thumbTop =
+    maxOffset > 0
+      ? Math.round((clampedOffset / maxOffset) * (height - thumbHeight))
+      : 0;
 
   const rows: string[] = [];
   for (let i = 0; i < height; i++) {
@@ -37,7 +46,9 @@ export function Scrollbar({ totalLines, visibleLines, scrollOffset, height }: Sc
   return (
     <Box flexDirection="column" width={1} marginLeft={1}>
       {rows.map((char, i) => (
-        <Text key={i} color="gray">{char}</Text>
+        <Text key={i} color="gray">
+          {char}
+        </Text>
       ))}
     </Box>
   );

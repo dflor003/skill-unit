@@ -115,9 +115,11 @@ function formatRead(input: ReadInput): string {
 function formatWrite(input: WriteInput): string {
   const lines: string[] = [`**Write:** \`${input.file_path ?? ''}\``];
   if (input.content != null) {
-    const preview = input.content.length > 300
-      ? input.content.substring(0, 300) + `\n... (${input.content.length} chars total)`
-      : input.content;
+    const preview =
+      input.content.length > 300
+        ? input.content.substring(0, 300) +
+          `\n... (${input.content.length} chars total)`
+        : input.content;
     lines.push('```');
     lines.push(preview);
     lines.push('```');
@@ -128,12 +130,14 @@ function formatWrite(input: WriteInput): string {
 function formatEdit(input: EditInput): string {
   const lines: string[] = [`**Edit:** \`${input.file_path ?? ''}\``];
   if (input.old_string != null && input.new_string != null) {
-    const oldPreview = input.old_string.length > 150
-      ? input.old_string.substring(0, 150) + '...'
-      : input.old_string;
-    const newPreview = input.new_string.length > 150
-      ? input.new_string.substring(0, 150) + '...'
-      : input.new_string;
+    const oldPreview =
+      input.old_string.length > 150
+        ? input.old_string.substring(0, 150) + '...'
+        : input.old_string;
+    const newPreview =
+      input.new_string.length > 150
+        ? input.new_string.substring(0, 150) + '...'
+        : input.new_string;
     lines.push('```diff');
     for (const l of oldPreview.split('\n')) {
       lines.push(`- ${l}`);
@@ -184,13 +188,13 @@ function formatGeneric(name: string, input: ToolInput): string {
 }
 
 const TOOL_FORMATTERS: Record<string, (input: ToolInput) => string> = {
-  Bash:  (i) => formatBash(i as BashInput),
+  Bash: (i) => formatBash(i as BashInput),
   Agent: (i) => formatAgent(i as AgentInput),
-  Read:  (i) => formatRead(i as ReadInput),
+  Read: (i) => formatRead(i as ReadInput),
   Write: (i) => formatWrite(i as WriteInput),
-  Edit:  (i) => formatEdit(i as EditInput),
-  Glob:  (i) => formatGlob(i as GlobInput),
-  Grep:  (i) => formatGrep(i as GrepInput),
+  Edit: (i) => formatEdit(i as EditInput),
+  Glob: (i) => formatGlob(i as GlobInput),
+  Grep: (i) => formatGrep(i as GrepInput),
   Skill: (i) => formatSkill(i as SkillInput),
 };
 
@@ -244,8 +248,10 @@ export function formatTurnUsage(usage: UsageData | null | undefined): string {
   if (!usage) return '';
   const parts: string[] = [];
   if (usage.input_tokens) parts.push(`in: ${usage.input_tokens}`);
-  if (usage.cache_read_input_tokens) parts.push(`cache read: ${usage.cache_read_input_tokens}`);
-  if (usage.cache_creation_input_tokens) parts.push(`cache write: ${usage.cache_creation_input_tokens}`);
+  if (usage.cache_read_input_tokens)
+    parts.push(`cache read: ${usage.cache_read_input_tokens}`);
+  if (usage.cache_creation_input_tokens)
+    parts.push(`cache write: ${usage.cache_creation_input_tokens}`);
   if (usage.output_tokens) parts.push(`out: ${usage.output_tokens}`);
   if (!parts.length) return '';
   return `> *Tokens -- ${parts.join(' | ')}*\n\n`;
@@ -275,14 +281,16 @@ export function formatSessionInit(event: SessionInitEvent): string {
  */
 export function formatUsageSummary(
   usage: UsageData | null | undefined,
-  costUsd: number | null | undefined,
+  costUsd: number | null | undefined
 ): string {
   if (!usage && costUsd == null) return '';
   const parts: string[] = [];
   if (usage) {
     if (usage.input_tokens) parts.push(`Input: ${usage.input_tokens}`);
-    if (usage.cache_read_input_tokens) parts.push(`Cache read: ${usage.cache_read_input_tokens}`);
-    if (usage.cache_creation_input_tokens) parts.push(`Cache write: ${usage.cache_creation_input_tokens}`);
+    if (usage.cache_read_input_tokens)
+      parts.push(`Cache read: ${usage.cache_read_input_tokens}`);
+    if (usage.cache_creation_input_tokens)
+      parts.push(`Cache write: ${usage.cache_creation_input_tokens}`);
     if (usage.output_tokens) parts.push(`Output: ${usage.output_tokens}`);
   }
   if (!parts.length && costUsd == null) return '';

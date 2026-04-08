@@ -37,6 +37,7 @@ skill-unit/
 ### Task 1: Runner — Write Transcripts to Results Directory
 
 **Files:**
+
 - Modify: `skills/skill-unit/scripts/runner.js:244-256` (log path setup)
 - Modify: `skills/skill-unit/scripts/runner.js:498-506` (log path variables)
 
@@ -48,11 +49,11 @@ In `runner.js`, the runner already creates `logsDir` and `responsesDir`. Add `re
 
 ```js
 // Around line 418-426, replace:
-const runDir = path.join(workspaceRoot, "runs", timestamp);
-const manifestsDir = path.join(runDir, "manifests");
-const logsDir = path.join(runDir, "logs");
-const responsesDir = path.join(runDir, "responses");
-const workspacesDir = path.join(workspaceRoot, "workspaces");
+const runDir = path.join(workspaceRoot, 'runs', timestamp);
+const manifestsDir = path.join(runDir, 'manifests');
+const logsDir = path.join(runDir, 'logs');
+const responsesDir = path.join(runDir, 'responses');
+const workspacesDir = path.join(workspaceRoot, 'workspaces');
 
 fs.mkdirSync(manifestsDir, { recursive: true });
 fs.mkdirSync(logsDir, { recursive: true });
@@ -60,12 +61,12 @@ fs.mkdirSync(responsesDir, { recursive: true });
 fs.mkdirSync(workspacesDir, { recursive: true });
 
 // With:
-const runDir = path.join(workspaceRoot, "runs", timestamp);
-const manifestsDir = path.join(runDir, "manifests");
-const logsDir = path.join(runDir, "logs");
-const responsesDir = path.join(runDir, "responses");
-const resultsDir = path.join(runDir, "results");
-const workspacesDir = path.join(workspaceRoot, "workspaces");
+const runDir = path.join(workspaceRoot, 'runs', timestamp);
+const manifestsDir = path.join(runDir, 'manifests');
+const logsDir = path.join(runDir, 'logs');
+const responsesDir = path.join(runDir, 'responses');
+const resultsDir = path.join(runDir, 'results');
+const workspacesDir = path.join(workspaceRoot, 'workspaces');
 
 fs.mkdirSync(manifestsDir, { recursive: true });
 fs.mkdirSync(logsDir, { recursive: true });
@@ -94,10 +95,10 @@ In the `runAsync` function (around line 253), change the heading written to the 
 
 ```js
 // Replace:
-mdLogStream.write(`# Test Log: ${options.testId || "unknown"}\n\n`);
+mdLogStream.write(`# Test Log: ${options.testId || 'unknown'}\n\n`);
 
 // With:
-mdLogStream.write(`# Transcript: ${options.testId || "unknown"}\n\n`);
+mdLogStream.write(`# Transcript: ${options.testId || 'unknown'}\n\n`);
 ```
 
 - [ ] **Step 4: Verify runner still works**
@@ -128,6 +129,7 @@ git commit -m "refactor(runner): write .transcript.md to results/ instead of .lo
 ### Task 2: Rewrite Grader Agent
 
 **Files:**
+
 - Modify: `agents/grader.md`
 
 Rewrite the grader agent to be fully self-contained. It reads a `.transcript.md` file, grades against expectations, and writes a `.results.md` file. All grading logic, transcript format understanding, and output format are baked into the agent prompt.
@@ -136,14 +138,14 @@ Rewrite the grader agent to be fully self-contained. It reads a `.transcript.md`
 
 Replace the entire contents of `agents/grader.md` with:
 
-````markdown
+```markdown
 ---
 name: grader
 description: |
   Use this agent to grade test responses against expected outcomes and write results to disk. This agent should only be spawned by the skill-unit evaluator.
 model: sonnet
 color: green
-tools: ["Read", "Write"]
+tools: ['Read', 'Write']
 ---
 
 You are a strict, objective test grader for the skill-unit testing framework. You grade a single test case by reading the full conversation transcript and evaluating it against expected outcomes.
@@ -163,8 +165,8 @@ You will receive:
 ## Step 1: Read the Transcript
 
 Use the Read tool to read the transcript file at the path provided. The transcript is a markdown file with this structure:
-
 ```
+
 # Transcript: {test-id}
 
 **Prompt:** {the original prompt}
@@ -182,11 +184,13 @@ Use the Read tool to read the transcript file at the path provided. The transcri
 {assistant's text response}
 
 **Tool call:** `{tool name}`
+
 ```json
 {tool input JSON}
 ```
 
 **Tool result:**
+
 ```
 {tool output}
 ```
@@ -194,7 +198,8 @@ Use the Read tool to read the transcript file at the path provided. The transcri
 ---
 
 **Result:** {success|error}
-```
+
+````
 
 The transcript captures the agent's complete behavioral trajectory: every turn of text, every tool call with its input, and every tool result. This is your primary evidence.
 
@@ -241,7 +246,7 @@ Use the Write tool to write the results to the output path in this exact format:
 - ✓ {negative expectation text}
 - ✗ {negative expectation text}
   → {specific reason with evidence from transcript}
-```
+````
 
 ### Output Rules
 
@@ -251,7 +256,8 @@ Use the Write tool to write the results to the output path in this exact format:
 - Do not summarize or editorialize on the agent's response beyond grading it.
 - Do not skip any expectations or negative expectations.
 - Write the file and then stop. Do not output anything else.
-````
+
+`````
 
 - [ ] **Step 2: Verify the agent file parses correctly**
 
@@ -262,6 +268,7 @@ head -8 agents/grader.md
 ```
 
 Expected output:
+
 ```
 ---
 name: grader
@@ -285,6 +292,7 @@ git commit -m "feat(grader): rewrite agent with self-contained transcript-based 
 ### Task 3: Report Generation Script
 
 **Files:**
+
 - Create: `skills/skill-unit/scripts/report.js`
 
 A deterministic Node.js script that globs all per-test-case `.results.md` files in a run directory, parses them, and generates a consolidated `report.md` with collapsible failure details and relative links.
@@ -293,10 +301,10 @@ A deterministic Node.js script that globs all per-test-case `.results.md` files 
 
 ```js
 #!/usr/bin/env node
-"use strict";
+'use strict';
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 // ---------------------------------------------------------------------------
 // skill-unit report generator — assembles a consolidated report from
@@ -311,11 +319,11 @@ const path = require("path");
 const runDir = process.argv[2];
 
 if (!runDir) {
-  process.stderr.write("Usage: node report.js <run-dir>\n");
+  process.stderr.write('Usage: node report.js <run-dir>\n');
   process.exit(1);
 }
 
-const resultsDir = path.join(runDir, "results");
+const resultsDir = path.join(runDir, 'results');
 
 if (!fs.existsSync(resultsDir)) {
   process.stderr.write(`ERROR: Results directory not found: ${resultsDir}\n`);
@@ -325,34 +333,39 @@ if (!fs.existsSync(resultsDir)) {
 // -- Parse a single results file --------------------------------------------
 
 function parseResultsFile(filePath) {
-  const content = fs.readFileSync(filePath, "utf-8");
+  const content = fs.readFileSync(filePath, 'utf-8');
   const fileName = path.basename(filePath);
 
   // Extract test ID and name from heading: # Results: {ID}: {Name}
   const headingMatch = content.match(/^# Results:\s*(.+?):\s*(.+)$/m);
-  const testId = headingMatch ? headingMatch[1].trim() : "unknown";
-  const testName = headingMatch ? headingMatch[2].trim() : "unknown";
+  const testId = headingMatch ? headingMatch[1].trim() : 'unknown';
+  const testName = headingMatch ? headingMatch[2].trim() : 'unknown';
 
   // Extract verdict
   const verdictMatch = content.match(/\*\*Verdict:\*\*\s*(PASS|FAIL)/i);
-  const passed = verdictMatch ? verdictMatch[1].toUpperCase() === "PASS" : false;
+  const passed = verdictMatch
+    ? verdictMatch[1].toUpperCase() === 'PASS'
+    : false;
 
   // Extract expectation lines (✓ and ✗ lines, plus → continuation lines)
   const expectationLines = [];
   const negativeExpectationLines = [];
   let currentSection = null;
 
-  for (const line of content.split("\n")) {
+  for (const line of content.split('\n')) {
     if (line.match(/^\*\*Expectations:\*\*/)) {
-      currentSection = "expectations";
+      currentSection = 'expectations';
       continue;
     }
     if (line.match(/^\*\*Negative Expectations:\*\*/)) {
-      currentSection = "negative";
+      currentSection = 'negative';
       continue;
     }
     // Stop at next section heading or end
-    if (line.match(/^#/) || (line.match(/^\*\*/) && !line.match(/^\*\*(Expectations|Negative)/))) {
+    if (
+      line.match(/^#/) ||
+      (line.match(/^\*\*/) && !line.match(/^\*\*(Expectations|Negative)/))
+    ) {
       if (currentSection) currentSection = null;
       continue;
     }
@@ -360,9 +373,15 @@ function parseResultsFile(filePath) {
     const trimmed = line.trimEnd();
     if (!trimmed) continue;
 
-    if (currentSection === "expectations" && (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))) {
+    if (
+      currentSection === 'expectations' &&
+      (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))
+    ) {
       expectationLines.push(trimmed);
-    } else if (currentSection === "negative" && (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))) {
+    } else if (
+      currentSection === 'negative' &&
+      (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))
+    ) {
       negativeExpectationLines.push(trimmed);
     }
   }
@@ -387,8 +406,9 @@ function parseResultsFile(filePath) {
 
 // -- Discover and parse results files ---------------------------------------
 
-const resultsFiles = fs.readdirSync(resultsDir)
-  .filter((f) => f.endsWith(".results.md"))
+const resultsFiles = fs
+  .readdirSync(resultsDir)
+  .filter((f) => f.endsWith('.results.md'))
   .sort();
 
 if (resultsFiles.length === 0) {
@@ -396,7 +416,9 @@ if (resultsFiles.length === 0) {
   process.exit(1);
 }
 
-const results = resultsFiles.map((f) => parseResultsFile(path.join(resultsDir, f)));
+const results = resultsFiles.map((f) =>
+  parseResultsFile(path.join(resultsDir, f))
+);
 
 // -- Group by spec name -----------------------------------------------------
 
@@ -404,8 +426,8 @@ const results = resultsFiles.map((f) => parseResultsFile(path.join(resultsDir, f
 // Extract spec name as everything before the last two dot-separated segments.
 function extractSpecName(fileName) {
   // e.g., "test-design-tests.TDD-1.results.md" → "test-design-tests"
-  const withoutExt = fileName.replace(/\.results\.md$/, "");
-  const lastDot = withoutExt.lastIndexOf(".");
+  const withoutExt = fileName.replace(/\.results\.md$/, '');
+  const lastDot = withoutExt.lastIndexOf('.');
   return lastDot > 0 ? withoutExt.substring(0, lastDot) : withoutExt;
 }
 
@@ -429,18 +451,20 @@ const totalTests = results.length;
 const lines = [];
 
 lines.push(`# Test Run: ${timestamp}`);
-lines.push("");
-lines.push(`**${totalPassed} passed** | **${totalFailed} failed** | ${totalTests} total`);
-lines.push("");
-lines.push("---");
-lines.push("");
+lines.push('');
+lines.push(
+  `**${totalPassed} passed** | **${totalFailed} failed** | ${totalTests} total`
+);
+lines.push('');
+lines.push('---');
+lines.push('');
 
 for (const [specName, specResults] of Object.entries(grouped)) {
   const specPassed = specResults.filter((r) => r.passed).length;
   const specFailed = specResults.filter((r) => !r.passed).length;
 
   lines.push(`## ${specName} (${specPassed} passed, ${specFailed} failed)`);
-  lines.push("");
+  lines.push('');
 
   for (const r of specResults) {
     const transcriptLink = `${specName}.${r.testId}.transcript.md`;
@@ -448,43 +472,47 @@ for (const [specName, specResults] of Object.entries(grouped)) {
 
     if (r.passed) {
       // Passing test — single line with links
-      lines.push(`- ✅ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`);
+      lines.push(
+        `- ✅ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`
+      );
     } else {
       // Failing test — collapsible details
-      lines.push(`- ❌ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`);
-      lines.push("");
+      lines.push(
+        `- ❌ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`
+      );
+      lines.push('');
       lines.push(`  <details>`);
       lines.push(`  <summary>Failure details</summary>`);
-      lines.push("");
+      lines.push('');
 
       if (r.expectationLines.length > 0) {
-        lines.push("  **Expectations:**");
+        lines.push('  **Expectations:**');
         for (const el of r.expectationLines) {
           lines.push(`  ${el}`);
         }
-        lines.push("");
+        lines.push('');
       }
 
       if (r.negativeExpectationLines.length > 0) {
-        lines.push("  **Negative Expectations:**");
+        lines.push('  **Negative Expectations:**');
         for (const el of r.negativeExpectationLines) {
           lines.push(`  ${el}`);
         }
-        lines.push("");
+        lines.push('');
       }
 
-      lines.push("  </details>");
+      lines.push('  </details>');
     }
-    lines.push("");
+    lines.push('');
   }
 }
 
 // -- Write report -----------------------------------------------------------
 
-const reportPath = path.join(resultsDir, "report.md");
-fs.writeFileSync(reportPath, lines.join("\n"), "utf-8");
+const reportPath = path.join(resultsDir, 'report.md');
+fs.writeFileSync(reportPath, lines.join('\n'), 'utf-8');
 
-process.stdout.write(reportPath + "\n");
+process.stdout.write(reportPath + '\n');
 ```
 
 - [ ] **Step 2: Verify the script parses without errors**
@@ -511,9 +539,11 @@ Write a dummy results file to `/tmp/skill-unit-report-test/results/test-spec.TC-
 **Verdict:** PASS
 
 **Prompt:**
+
 > do something
 
 **Expectations:**
+
 - ✓ Did the thing
 ```
 
@@ -525,9 +555,11 @@ Write a failing dummy to `/tmp/skill-unit-report-test/results/test-spec.TC-2.res
 **Verdict:** FAIL
 
 **Prompt:**
+
 > do another thing
 
 **Expectations:**
+
 - ✓ Started correctly
 - ✗ Completed the task
   → Turn 3 shows agent gave up after first tool call failed
@@ -540,6 +572,7 @@ node skills/skill-unit/scripts/report.js /tmp/skill-unit-report-test
 ```
 
 Expected: Prints a path ending in `results/report.md`. Read the file and verify it contains:
+
 - A heading with the directory name as timestamp
 - 1 passed, 1 failed summary
 - TC-1 as a single line with ✅
@@ -563,6 +596,7 @@ git commit -m "feat: add deterministic report generation script"
 ### Task 4: Configuration — Add grader-concurrency
 
 **Files:**
+
 - Modify: `skills/skill-unit/templates/.skill-unit.yml`
 
 Add the `grader-concurrency` field to the execution section of the config template.
@@ -572,9 +606,9 @@ Add the `grader-concurrency` field to the execution section of the config templa
 In `skills/skill-unit/templates/.skill-unit.yml`, add the new field to the `execution:` section. After the `timeout: 120s` line, add:
 
 ```yaml
-  # Maximum number of grader agents to run in parallel. Each test case is
-  # graded by a separate agent; this limits how many run concurrently.
-  grader-concurrency: 5
+# Maximum number of grader agents to run in parallel. Each test case is
+# graded by a separate agent; this limits how many run concurrently.
+grader-concurrency: 5
 ```
 
 The full `execution:` section should read:
@@ -601,6 +635,7 @@ git commit -m "feat(config): add grader-concurrency setting to template"
 ### Task 5: Update Evaluator Skill — Replace Inline Grading with Grader Dispatch
 
 **Files:**
+
 - Modify: `skills/skill-unit/SKILL.md`
 
 This is the core change. Replace the inline grading step (4d), remove the results writing step (4e), and update the summary step (5) to use the report script. Also update the `allowed-tools` frontmatter.
@@ -624,7 +659,7 @@ allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/runner.js *) Bash(node ${CL
 In the Step 2 (Load Configuration) section, add `grader-concurrency` to the defaults block. After the `timeout: 120s` line in the defaults YAML block (around line 44), add:
 
 ```yaml
-  grader-concurrency: 5
+grader-concurrency: 5
 ```
 
 Also add a note to the prose explaining the field. After the paragraph about the `runner` section (around line 50), add:
@@ -666,13 +701,14 @@ Grade this test case.
 ```
 
 **Dispatch rules:**
+
 - Use the Agent tool with `subagent_type` set to `grader`.
 - Pass all test metadata (ID, name, prompt, expectations) inline in the prompt — the grader agent's own instructions tell it how to read the transcript and write the results.
 - Do NOT include any information beyond what is listed above. The grader does not need spec-level metadata, other test cases, or configuration details.
 - Dispatch up to `grader-concurrency` agents in parallel by including multiple Agent tool calls in a single message.
 - After each batch completes, report progress to the user (e.g., "Graded 5/16 test cases...").
 - After all graders complete, proceed to Step 4e.
-````
+`````
 
 - [ ] **Step 4: Replace Step 4e (write results file) with a progress note**
 
@@ -722,6 +758,7 @@ In the "Helper Scripts" section (around line 317), add the report script. After 
 - [ ] **Step 7: Verify SKILL.md is well-formed**
 
 Read through the modified file and check:
+
 - The frontmatter `allowed-tools` line includes the report script
 - Step 4d references the grader agent correctly
 - Step 4e references the results files
@@ -746,6 +783,7 @@ git commit -m "feat(evaluator): replace inline grading with grader agent dispatc
 ### Task 6: Update Architecture Documentation
 
 **Files:**
+
 - Modify: `docs/architecture/workspaces.md`
 - Modify: `docs/architecture/test-execution.md`
 

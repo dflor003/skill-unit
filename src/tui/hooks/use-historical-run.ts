@@ -5,15 +5,25 @@ import type { TestRunEntry, TestRunState } from './use-test-run.js';
 
 type RunEntry = StatsIndex['runs'][number];
 
-export function loadHistoricalRun(runDir: string, runEntry: RunEntry): TestRunState {
+export function loadHistoricalRun(
+  runDir: string,
+  runEntry: RunEntry
+): TestRunState {
   const resultsDir = path.join(runDir, 'results');
   const tests: TestRunEntry[] = [];
 
   if (!fs.existsSync(resultsDir)) {
-    return { tests: [], activeTestId: null, elapsed: runEntry.duration, status: 'complete' };
+    return {
+      tests: [],
+      activeTestId: null,
+      elapsed: runEntry.duration,
+      status: 'complete',
+    };
   }
 
-  const files = fs.readdirSync(resultsDir).filter(f => f.endsWith('.transcript.md'));
+  const files = fs
+    .readdirSync(resultsDir)
+    .filter((f) => f.endsWith('.transcript.md'));
 
   for (const transcriptFile of files) {
     const withoutExt = transcriptFile.replace(/\.transcript\.md$/, '');
@@ -32,10 +42,14 @@ export function loadHistoricalRun(runDir: string, runEntry: RunEntry): TestRunSt
     let passed = false;
     if (fs.existsSync(resultsPath)) {
       gradeContent = fs.readFileSync(resultsPath, 'utf-8');
-      passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(gradeContent);
+      passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(
+        gradeContent
+      );
     }
 
-    const headingMatch = gradeContent.match(/^#\s+(?:Results|Test Result):\s*(\S+?)(?:\s*:\s*|\s+—\s*|\s+--\s+)(.+)$/m);
+    const headingMatch = gradeContent.match(
+      /^#\s+(?:Results|Test Result):\s*(\S+?)(?:\s*:\s*|\s+—\s*|\s+--\s+)(.+)$/m
+    );
     const testName = headingMatch ? headingMatch[2].trim() : testId;
 
     const status: TestStatus = passed ? 'passed' : 'failed';

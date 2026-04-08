@@ -46,6 +46,7 @@ The `plugin.json` does not need changes — the plugin already discovers skills 
 3. If the skill name exists in both locations, ask the user which one.
 
 Scan locations:
+
 - `skills/*/SKILL.md` — plugin-level skills
 - `.claude/skills/*/SKILL.md` — repo-level skills
 
@@ -64,6 +65,7 @@ After selecting a skill, search the configured test directory (from `.skill-unit
 ### Step 1 — Read & Analyze
 
 Read the target skill's SKILL.md. Extract:
+
 - What the skill does (purpose, scope)
 - How it activates (slash command, natural language triggers, auto-activation)
 - What tools it uses
@@ -74,6 +76,7 @@ Read the target skill's SKILL.md. Extract:
 ### Step 2 — Targeted Questions
 
 Ask a few focused questions about things that can't be inferred from the SKILL.md:
+
 - Key failure modes or edge cases specific to this skill's domain
 - Interaction style expectations (should it ask clarifying questions? what tone?)
 
@@ -84,6 +87,7 @@ These are targeted gap-fillers, not an exhaustive interview. If the SKILL.md is 
 ### Step 3 — ID Prefix
 
 Auto-generate a 2-4 letter prefix from the skill name:
+
 - "report-card" → `RC`
 - "test-design" → `TD`
 - "brainstorming" → `BRN`
@@ -99,18 +103,19 @@ Generate the YAML frontmatter (`name`, `skill`, `tags`, and any applicable `fixt
 
 Generate test cases one category at a time, in this order:
 
-| Order | Category | Purpose | When Required |
-|-------|----------|---------|---------------|
-| 1 | Activation tests | Verify the skill triggers (and doesn't trigger) on expected prompts | Always for auto-activating skills; slash-command-only skills test the command |
-| 2 | Happy path tests | Core functionality with realistic, well-formed inputs | Always |
-| 3 | Failure mode tests | Missing files, bad input, conflicting state, empty data | Always |
-| 4 | Boundary tests | Edge cases at the limits of the skill's scope | When the skill has identifiable boundaries |
-| 5 | Graceful decline tests | Requests adjacent to but outside the skill's purpose | Always |
-| 6 | Interaction style tests | Tone, format, clarifying questions | When the skill has specific interaction expectations |
+| Order | Category                | Purpose                                                             | When Required                                                                 |
+| ----- | ----------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1     | Activation tests        | Verify the skill triggers (and doesn't trigger) on expected prompts | Always for auto-activating skills; slash-command-only skills test the command |
+| 2     | Happy path tests        | Core functionality with realistic, well-formed inputs               | Always                                                                        |
+| 3     | Failure mode tests      | Missing files, bad input, conflicting state, empty data             | Always                                                                        |
+| 4     | Boundary tests          | Edge cases at the limits of the skill's scope                       | When the skill has identifiable boundaries                                    |
+| 5     | Graceful decline tests  | Requests adjacent to but outside the skill's purpose                | Always                                                                        |
+| 6     | Interaction style tests | Tone, format, clarifying questions                                  | When the skill has specific interaction expectations                          |
 
 After each category, present the generated test cases and ask: "Want to refine any of these, add more, or move on to the next category?"
 
 The user can:
+
 - Edit a test case (prompt, expectations, negative expectations)
 - Remove a test case
 - Add a test case to this category
@@ -151,30 +156,33 @@ The following content lives as sections within the SKILL.md itself, not as separ
 
 Minimum coverage requirements by category:
 
-| Category | Minimum | Applies When |
-|----------|---------|--------------|
-| Activation (positive) | 1 | Skill has auto-activation or slash command |
-| Activation (negative) | 1 | Skill has auto-activation |
-| Happy path | 1 | Always |
-| Failure mode | 1 | Always |
-| Boundary | 0 | Skill has identifiable scope boundaries |
-| Graceful decline | 1 | Always |
-| Interaction style | 0 | Skill has specific tone/format expectations |
+| Category              | Minimum | Applies When                                |
+| --------------------- | ------- | ------------------------------------------- |
+| Activation (positive) | 1       | Skill has auto-activation or slash command  |
+| Activation (negative) | 1       | Skill has auto-activation                   |
+| Happy path            | 1       | Always                                      |
+| Failure mode          | 1       | Always                                      |
+| Boundary              | 0       | Skill has identifiable scope boundaries     |
+| Graceful decline      | 1       | Always                                      |
+| Interaction style     | 0       | Skill has specific tone/format expectations |
 
 ### Prompt Patterns
 
 **Good prompts** — natural, vague, human-sounding:
+
 - "commit my changes" (not "run git commit on staged files")
 - "how are the students doing?" (not "generate a report card using the report-card skill")
 - "this test keeps failing, can you help?" (not "debug the test failure in test_auth.py line 42")
 
 **Bad prompts** — leak implementation details or lead the agent:
+
 - Mention skill names, tool names, or internal function names
 - Describe the expected output format
 - Include hints about what the correct answer is
 - Use technical jargon a real user wouldn't use for this request
 
 **Prompt variation** — across test cases in the same spec, vary:
+
 - Formality level ("fix this" vs. "could you please address this issue")
 - Specificity ("commit" vs. "commit the auth changes I just made")
 - Intent framing ("do X" vs. "I need X done" vs. "can you X?")
@@ -182,17 +190,20 @@ Minimum coverage requirements by category:
 ### Expectation Patterns
 
 **Good expectations** — behavioral, observable, independently verifiable:
+
 - "Commit message references the nature of the changes"
 - "Agent detected there was nothing to commit"
 - "Output includes a markdown table"
 - "Did not modify files outside the target directory"
 
 **Bad expectations** — implementation-specific, compound, or vague:
+
 - "Ran `git commit -m 'fix: auth bug'`" (too specific to implementation)
 - "Produced correct output and formatted it properly" (compound — split into two)
 - "Handled the error well" (vague — what does 'well' mean observably?)
 
 **Negative expectations** — specific prohibited behaviors:
+
 - "Did not run `git push`"
 - "Did not create an empty commit"
 - "Did not fabricate data that wasn't in the input"
@@ -212,6 +223,7 @@ This concern is not always relevant (a skill that only formats text or answers q
 ### When Fixtures Are Needed
 
 The skill looks for signals in the target SKILL.md:
+
 - Uses Read, Write, Edit, Glob, or Grep tools on project files
 - References specific file types or directory structures (e.g., "reads `package.json`", "scans `src/`")
 - Has setup/teardown requirements
@@ -229,6 +241,7 @@ The skill looks for signals in the target SKILL.md:
 ### Workflow Integration
 
 During Step 2 (Targeted Questions), if fixtures are needed, the skill asks:
+
 - What filesystem state does the skill expect to find? (specific files, directory structures, git state)
 - Are there multiple distinct states that different test cases need?
 - Are there any files the skill modifies that need to be in a known starting state?
@@ -248,14 +261,14 @@ During Step 6 (Write to Disk), the skill creates the fixture folder alongside th
 
 ### Examples
 
-| Skill Name | Prefix |
-|------------|--------|
-| commit | `COM` |
-| report-card | `RC` |
-| brainstorming | `BRN` |
-| skill-unit | `SU` |
-| test-design | `TD` |
-| claude-api | `CA` |
+| Skill Name    | Prefix |
+| ------------- | ------ |
+| commit        | `COM`  |
+| report-card   | `RC`   |
+| brainstorming | `BRN`  |
+| skill-unit    | `SU`   |
+| test-design   | `TD`   |
+| claude-api    | `CA`   |
 
 ## Configuration
 

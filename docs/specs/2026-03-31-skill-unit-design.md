@@ -77,12 +77,12 @@ A separate grader agent (`agents/grader.md`) is included in the plugin for futur
    b. Create isolated workspace from fixture folder (if configured) using helper script.
    c. Run setup script (if configured) inside the workspace.
    d. For each test case (sequential):
-      - Execute the prompt via the configured CLI runner from the workspace directory.
-      - Collect the raw stdout response.
-      - Grade the response inline: binary pass/fail per expectation.
-   e. Write timestamped results file to `results/` subfolder.
-   f. Run teardown script (if configured) inside the workspace.
-   g. Clean up workspace using helper script.
+   - Execute the prompt via the configured CLI runner from the workspace directory.
+   - Collect the raw stdout response.
+   - Grade the response inline: binary pass/fail per expectation.
+     e. Write timestamped results file to `results/` subfolder.
+     f. Run teardown script (if configured) inside the workspace.
+     g. Clean up workspace using helper script.
 6. Evaluator reads all results files for this run and presents the summary.
 
 ## Anti-Bias Layer
@@ -98,6 +98,7 @@ The evaluator passes only the raw prompt text to the CLI runner. No test ID, no 
 When fixtures are configured, the evaluator creates a temp directory (`/tmp/skill-unit-workspace-XXXXXX/`) containing only the fixture files. The CLI runner is invoked from this workspace directory. The spawned session sees only the fixture contents — no test specs, no results files, no test directory. This provides process-level anti-bias isolation without hooks or marker files.
 
 Helper scripts manage the workspace lifecycle:
+
 - `create-workspace.sh <fixture-path>` — creates the temp directory, copies fixture contents, returns the path
 - `cleanup-workspace.sh <workspace-path>` — safely removes the temp directory (validates the naming pattern before deletion)
 
@@ -133,15 +134,15 @@ Each `*.spec.md` file contains multiple test cases for a skill or skill mode. YA
 
 ### Frontmatter
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Human-readable name for this test suite |
-| `skill` | No | Skill being tested (informational) |
-| `tags` | No | For filtering test runs |
-| `timeout` | No | Per-test timeout, overrides global default |
-| `fixtures` | No | Path to fixture folder, copied before tests run |
-| `setup` | No | Script to run before tests |
-| `teardown` | No | Script to run after tests |
+| Field      | Required | Description                                     |
+| ---------- | -------- | ----------------------------------------------- |
+| `name`     | Yes      | Human-readable name for this test suite         |
+| `skill`    | No       | Skill being tested (informational)              |
+| `tags`     | No       | For filtering test runs                         |
+| `timeout`  | No       | Per-test timeout, overrides global default      |
+| `fixtures` | No       | Path to fixture folder, copied before tests run |
+| `setup`    | No       | Script to run before tests                      |
+| `teardown` | No       | Script to run after tests                       |
 
 ### Test Case Structure
 
@@ -159,14 +160,17 @@ teardown: teardown.sh
 ### COM-1: basic-commit
 
 **Prompt:**
+
 > Create a commit for the staged changes
 
 **Expectations:**
+
 - Ran `git commit`
 - Commit message references the nature of the changes
 - No files left in dirty state after the commit
 
 **Negative Expectations:**
+
 - Did not run `git push`
 - Did not amend an existing commit
 
@@ -175,13 +179,16 @@ teardown: teardown.sh
 ### COM-2: nothing-to-commit
 
 **Prompt:**
+
 > Commit my changes
 
 **Expectations:**
+
 - Agent detected there was nothing to commit
 - Informed the user clearly
 
 **Negative Expectations:**
+
 - Did not create an empty commit
 ```
 
@@ -207,6 +214,7 @@ A companion folder (referenced in frontmatter as `fixtures: ./fixtures/basic-rep
 The isolated CLI session must operate in an environment that looks like a real project. Fixtures are copied into a temporary workspace directory (`/tmp/skill-unit-workspace-XXXXXX/`) using the `create-workspace.sh` helper script. The CLI runner is invoked from this workspace.
 
 This approach provides:
+
 - **Complete isolation** — the CLI session sees only the fixture files, no test specs or results
 - **No repo pollution** — fixtures never touch the real working directory
 - **Clean teardown** — `cleanup-workspace.sh` removes the entire temp directory
@@ -293,11 +301,11 @@ runner:
   # The CLI executable to invoke for each test prompt.
   command: claude
   # Default arguments passed to the CLI. The prompt is piped via stdin.
-  args: ["--print", "--output-format", "text", "--max-turns", "10"]
+  args: ['--print', '--output-format', 'text', '--max-turns', '10']
 
 # Output settings
 output:
-  format: interactive  # or "json"
+  format: interactive # or "json"
   show-passing-details: false
 
 # Execution settings

@@ -21,7 +21,10 @@ describe('selection persistence', () => {
   });
 
   it('saves and loads selection', () => {
-    const sel = { selectedTests: new Set(['runner/TEST-1', 'runner/TEST-2']), viewMode: 'primary' as const };
+    const sel = {
+      selectedTests: new Set(['runner/TEST-1', 'runner/TEST-2']),
+      viewMode: 'primary' as const,
+    };
     saveSelection(sel, tmpDir);
 
     const loaded = loadSelection(tmpDir);

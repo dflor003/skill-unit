@@ -33,11 +33,13 @@ The isolated CLI session has no knowledge it is being tested. Its behavior accur
 **Include natural language variation.** Across test cases, vary phrasing. Include typos, abbreviations, and casual requests. This validates robustness across the full range of realistic user input.
 
 Good prompts:
+
 - "commit my stuff"
 - "make a commit pls"
 - "hey can you commit the changes i made"
 
 Avoid:
+
 - "Please use the git commit command to commit the staged files with a descriptive message"
 - "Run the commit skill on my changes"
 
@@ -85,12 +87,14 @@ Avoid: "Called `git commit -m` with a non-empty string"
 Each bullet should check exactly one observable condition. Combined expectations hide which condition failed when the test does not pass.
 
 Good:
+
 ```
 - Commit was created successfully
 - Commit message is descriptive and non-generic
 ```
 
 Avoid:
+
 ```
 - Commit was created with a descriptive, non-generic message
 ```
@@ -161,12 +165,12 @@ Convention: `SKILLPREFIX-N` (e.g., `COM-1`, `COM-2`, `BRN-1`).
 
 Every skill test suite must include at least:
 
-| Requirement | Description |
-|-------------|-------------|
-| One happy-path test | The skill works correctly under normal conditions |
-| One failure-mode test | The skill handles an error or bad input gracefully |
-| One activation test | A realistic prompt triggers the skill |
-| One negative-activation test | An adjacent prompt does NOT trigger the skill |
-| One graceful-decline test | The skill declines a request outside its scope clearly and helpfully |
+| Requirement                  | Description                                                          |
+| ---------------------------- | -------------------------------------------------------------------- |
+| One happy-path test          | The skill works correctly under normal conditions                    |
+| One failure-mode test        | The skill handles an error or bad input gracefully                   |
+| One activation test          | A realistic prompt triggers the skill                                |
+| One negative-activation test | An adjacent prompt does NOT trigger the skill                        |
+| One graceful-decline test    | The skill declines a request outside its scope clearly and helpfully |
 
 These five tests form the minimum viable coverage for a skill. Additional tests for boundary conditions, slash command variants, interaction style, and context sensitivity are strongly recommended.

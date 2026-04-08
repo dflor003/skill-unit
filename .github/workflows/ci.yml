@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
     inputs:
       run-skill-tests:
-        description: "Run skill-unit tests (uses API credits)"
+        description: 'Run skill-unit tests (uses API credits)'
         required: false
         type: boolean
         default: false
@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20, 22]
+        node-version: [22, 24, 25]
     steps:
       - uses: actions/checkout@v4
 
@@ -36,6 +36,9 @@ jobs:
 
       - name: Type check
         run: npx tsc --noEmit
+
+      - name: Format check
+        run: npm run format:check
 
       - name: Lint
         run: npm run lint

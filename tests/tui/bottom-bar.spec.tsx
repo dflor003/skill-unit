@@ -29,7 +29,11 @@ describe('BottomBar', () => {
     it('should show Esc back hint', () => {
       // Act
       const { lastFrame } = render(
-        <BottomBar activeScreen="runner" runStatus="complete" runViewMode="primary" />,
+        <BottomBar
+          activeScreen="runner"
+          runStatus="complete"
+          runViewMode="primary"
+        />
       );
 
       // Assert
@@ -41,7 +45,11 @@ describe('BottomBar', () => {
     it('should show run-mode hints instead of nav', () => {
       // Act
       const { lastFrame } = render(
-        <BottomBar activeScreen="runner" runStatus="running" runViewMode="primary" />,
+        <BottomBar
+          activeScreen="runner"
+          runStatus="running"
+          runViewMode="primary"
+        />
       );
       const output = lastFrame()!;
 
@@ -56,7 +64,11 @@ describe('BottomBar', () => {
     it('should show split-mode hints', () => {
       // Act
       const { lastFrame } = render(
-        <BottomBar activeScreen="runner" runStatus="running" runViewMode="split" />,
+        <BottomBar
+          activeScreen="runner"
+          runStatus="running"
+          runViewMode="split"
+        />
       );
       const output = lastFrame()!;
 
@@ -71,7 +83,11 @@ describe('BottomBar', () => {
     it('should show selection and re-run hints', () => {
       // Act
       const { lastFrame } = render(
-        <BottomBar activeScreen="runner" runStatus="complete" runViewMode="primary" />,
+        <BottomBar
+          activeScreen="runner"
+          runStatus="complete"
+          runViewMode="primary"
+        />
       );
       const output = lastFrame()!;
 

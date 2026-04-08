@@ -8,7 +8,13 @@ describe('Statistics', () => {
     const emptyIndex = {
       version: 1,
       lastUpdated: '',
-      aggregate: { totalRuns: 0, totalTests: 0, passRate: 0, totalCost: 0, totalTokens: 0 },
+      aggregate: {
+        totalRuns: 0,
+        totalTests: 0,
+        passRate: 0,
+        totalCost: 0,
+        totalTokens: 0,
+      },
       tests: {},
       runs: [],
     };
@@ -20,7 +26,13 @@ describe('Statistics', () => {
     const index = {
       version: 1,
       lastUpdated: '',
-      aggregate: { totalRuns: 10, totalTests: 50, passRate: 0.85, totalCost: 2.5, totalTokens: 100000 },
+      aggregate: {
+        totalRuns: 10,
+        totalTests: 50,
+        passRate: 0.85,
+        totalCost: 2.5,
+        totalTokens: 100000,
+      },
       tests: {},
       runs: [],
     };

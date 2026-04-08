@@ -10,20 +10,34 @@ interface BottomBarProps {
   runViewMode?: RunViewMode;
 }
 
-export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarProps) {
+export function BottomBar({
+  activeScreen,
+  runStatus,
+  runViewMode,
+}: BottomBarProps) {
   const isRunner = activeScreen === 'runner';
   const isRunning = isRunner && runStatus === 'running';
 
   // Running: show contextual runner hints
   if (isRunning) {
-    const hints = runViewMode === 'split'
-      ? '[Esc] cancel  [1-9] focus  [m] maximize  [v] primary'
-      : '[Esc] cancel  \u2190 \u2192 sessions  \u2191\u2193 scroll  [f] follow  [t] transcript  [v] split';
+    const hints =
+      runViewMode === 'split'
+        ? '[Esc] cancel  [1-9] focus  [m] maximize  [v] primary'
+        : '[Esc] cancel  \u2190 \u2192 sessions  \u2191\u2193 scroll  [f] follow  [t] transcript  [v] split';
 
     return (
-      <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
+      <Box
+        borderStyle="single"
+        borderTop
+        borderBottom={false}
+        borderLeft={false}
+        borderRight={false}
+        paddingX={1}
+      >
         <Box flexGrow={1}>
-          <Text color="yellow" bold>Run in progress... </Text>
+          <Text color="yellow" bold>
+            Run in progress...{' '}
+          </Text>
           <Text color="gray">{hints}</Text>
         </Box>
       </Box>
@@ -32,12 +46,20 @@ export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarPro
 
   // Runner complete/idle: show completion hints
   if (isRunner) {
-    const completionHints = runViewMode === 'split'
-      ? '[1-9] focus  [m] maximize  [v] primary  [Esc] back'
-      : '[Space] select  [Enter] re-run  \u2190 \u2192 sessions  [Esc] back';
+    const completionHints =
+      runViewMode === 'split'
+        ? '[1-9] focus  [m] maximize  [v] primary  [Esc] back'
+        : '[Space] select  [Enter] re-run  \u2190 \u2192 sessions  [Esc] back';
 
     return (
-      <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
+      <Box
+        borderStyle="single"
+        borderTop
+        borderBottom={false}
+        borderLeft={false}
+        borderRight={false}
+        paddingX={1}
+      >
         <Box flexGrow={1}>
           <Text color="gray">{completionHints}</Text>
         </Box>
@@ -54,7 +76,14 @@ export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarPro
   ];
 
   return (
-    <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
+    <Box
+      borderStyle="single"
+      borderTop
+      borderBottom={false}
+      borderLeft={false}
+      borderRight={false}
+      paddingX={1}
+    >
       <Box flexGrow={1}>
         {items.map((item) => (
           <Box key={item.key} marginRight={2}>
@@ -67,7 +96,7 @@ export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarPro
           </Box>
         ))}
       </Box>
-      <Text color="gray">Tab: next  [Q]uit  skill-unit v0.0.1</Text>
+      <Text color="gray">Tab: next [Q]uit skill-unit v0.0.1</Text>
     </Box>
   );
 }

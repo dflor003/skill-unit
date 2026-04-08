@@ -41,13 +41,22 @@ export const lsCommand = defineCommand({
     const specs = specPaths.map((p) => parseSpecFile(p));
 
     // Collect positional args as name filters
-    const names = rawArgs.filter((a) => !a.startsWith('-') && a !== args.config && a !== args.tag && a !== args.file && a !== args.test);
+    const names = rawArgs.filter(
+      (a) =>
+        !a.startsWith('-') &&
+        a !== args.config &&
+        a !== args.tag &&
+        a !== args.file &&
+        a !== args.test
+    );
 
     const filter: SpecFilter = {};
     if (names.length > 0) filter.name = names;
     if (args.tag) filter.tag = args.tag.split(',').map((t: string) => t.trim());
-    if (args.file) filter.file = args.file.split(',').map((f: string) => f.trim());
-    if (args.test) filter.test = args.test.split(',').map((t: string) => t.trim());
+    if (args.file)
+      filter.file = args.file.split(',').map((f: string) => f.trim());
+    if (args.test)
+      filter.test = args.test.split(',').map((t: string) => t.trim());
 
     const filtered = filterSpecs(specs, filter);
 
@@ -58,7 +67,10 @@ export const lsCommand = defineCommand({
 
     for (const spec of filtered) {
       const name = spec.frontmatter.name || spec.path;
-      const tags = spec.frontmatter.tags.length > 0 ? ` [${spec.frontmatter.tags.join(', ')}]` : '';
+      const tags =
+        spec.frontmatter.tags.length > 0
+          ? ` [${spec.frontmatter.tags.join(', ')}]`
+          : '';
       console.log(`${name}${tags}`);
       for (const tc of spec.testCases) {
         console.log(`  ${tc.id}: ${tc.name}`);

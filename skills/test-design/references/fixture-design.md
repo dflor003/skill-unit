@@ -45,6 +45,7 @@ Include only the files the skill actually needs — not a full project scaffold.
 **Bad:** A complete Node.js project with `node_modules/`, full `tsconfig.json`, and dozens of source files the skill never touches.
 
 Smaller fixtures are:
+
 - Easier to review in PRs
 - Faster to copy during test runs
 - Less likely to collide with existing repo files
@@ -88,6 +89,7 @@ git add src/index.ts
 ```
 
 Common git states to script:
+
 - Clean repo with history (init + commit)
 - Repo with staged changes (add without commit)
 - Repo with unstaged changes (modify after commit)

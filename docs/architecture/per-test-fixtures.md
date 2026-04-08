@@ -30,9 +30,11 @@ Individual test cases can declare an optional `**Fixtures:**` section containing
 Purpose statement...
 
 **Fixtures:**
+
 - ./fixtures/existing-config
 
 **Prompt:**
+
 > ...
 ```
 
@@ -55,8 +57,12 @@ The manifest JSON was updated to support this:
 {
   "global-fixture-path": "skill-tests/my-skill/fixtures/base-project",
   "test-cases": [
-    {"id": "TC-1", "prompt": "..."},
-    {"id": "TC-2", "prompt": "...", "fixture-paths": ["skill-tests/my-skill/fixtures/existing-config"]}
+    { "id": "TC-1", "prompt": "..." },
+    {
+      "id": "TC-2",
+      "prompt": "...",
+      "fixture-paths": ["skill-tests/my-skill/fixtures/existing-config"]
+    }
   ]
 }
 ```

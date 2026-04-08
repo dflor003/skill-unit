@@ -21,8 +21,15 @@ export function loadSelection(baseDir: string): SelectionState {
 export function saveSelection(state: SelectionState, baseDir: string): void {
   fs.mkdirSync(baseDir, { recursive: true });
   const filePath = path.join(baseDir, 'selection.json');
-  fs.writeFileSync(filePath, JSON.stringify({
-    selectedTests: [...state.selectedTests],
-    viewMode: state.viewMode,
-  }, null, 2));
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify(
+      {
+        selectedTests: [...state.selectedTests],
+        viewMode: state.viewMode,
+      },
+      null,
+      2
+    )
+  );
 }

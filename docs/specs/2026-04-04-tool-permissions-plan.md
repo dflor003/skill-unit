@@ -15,6 +15,7 @@
 ### Task 1: Update runner.js — Add scopeToolsToWorkspace helper
 
 **Files:**
+
 - Modify: `skills/skill-unit/scripts/runner.js:30-48` (after TOOL_PROFILES)
 
 - [ ] **Step 1: Add the FILE_TOOLS constant and scopeToolsToWorkspace function**
@@ -24,7 +25,7 @@ Add after line 48 (after the `TOOL_PROFILES` closing brace):
 ```js
 // -- Workspace path scoping for file tools ----------------------------------
 
-const FILE_TOOLS = new Set(["Read", "Write", "Edit", "Glob", "Grep"]);
+const FILE_TOOLS = new Set(['Read', 'Write', 'Edit', 'Glob', 'Grep']);
 
 // Rewrite bare file tool names to include workspace path restrictions.
 // Tools with existing path patterns (e.g., "Read(/some/path/**)") pass through unchanged.
@@ -55,6 +56,7 @@ git commit -m "feat(runner): add scopeToolsToWorkspace helper for file tool path
 ### Task 2: Update runner.js — Change TOOL_PROFILES signature and replace --dangerously-skip-permissions
 
 **Files:**
+
 - Modify: `skills/skill-unit/scripts/runner.js:33-48` (TOOL_PROFILES object)
 
 - [ ] **Step 1: Update the claude profile to accept allowedTools and disallowedTools**
@@ -64,26 +66,33 @@ Replace the existing `TOOL_PROFILES` object (lines 33-48) with:
 ```js
 const TOOL_PROFILES = {
   claude: (model, maxTurns, pluginDir, allowedTools, disallowedTools) => [
-    "--print",
-    "--verbose",
-    "--output-format", "stream-json",
-    "--include-partial-messages",
-    "--max-turns", String(maxTurns),
-    "--permission-mode", "dontAsk",
-    ...(allowedTools.length ? ["--allowedTools", ...allowedTools] : []),
-    ...(disallowedTools.length ? ["--disallowedTools", ...disallowedTools] : []),
-    "--no-chrome",
-    "--no-session-persistence",
-    "--setting-sources", "project",
-    "--strict-mcp-config",
-    ...(model ? ["--model", model] : []),
-    ...(pluginDir ? ["--plugin-dir", pluginDir] : []),
+    '--print',
+    '--verbose',
+    '--output-format',
+    'stream-json',
+    '--include-partial-messages',
+    '--max-turns',
+    String(maxTurns),
+    '--permission-mode',
+    'dontAsk',
+    ...(allowedTools.length ? ['--allowedTools', ...allowedTools] : []),
+    ...(disallowedTools.length
+      ? ['--disallowedTools', ...disallowedTools]
+      : []),
+    '--no-chrome',
+    '--no-session-persistence',
+    '--setting-sources',
+    'project',
+    '--strict-mcp-config',
+    ...(model ? ['--model', model] : []),
+    ...(pluginDir ? ['--plugin-dir', pluginDir] : []),
   ],
   // Future: add copilot, codex profiles here
 };
 ```
 
 Key changes:
+
 - Signature gains `allowedTools` and `disallowedTools` parameters
 - `--dangerously-skip-permissions` replaced with `--permission-mode dontAsk`
 - `--allowedTools` and `--disallowedTools` flags added conditionally
@@ -105,6 +114,7 @@ git commit -m "feat(runner): replace --dangerously-skip-permissions with --permi
 ### Task 3: Update runner.js — Read tool lists from manifest and wire into execution
 
 **Files:**
+
 - Modify: `skills/skill-unit/scripts/runner.js:73-83` (manifest destructuring)
 - Modify: `skills/skill-unit/scripts/runner.js:96-114` (runner resolution and CLI arg building)
 - Modify: `skills/skill-unit/scripts/runner.js:410-411` (cmdArgs building in main)
@@ -116,29 +126,33 @@ At line 73, the manifest is destructured. Add the two new fields:
 
 ```js
 const {
-  "spec-name": specName,
-  "fixture-path": rawFixturePath,
-  "skill-path": rawSkillPath,
-  "spec-dir": rawSpecDir,
+  'spec-name': specName,
+  'fixture-path': rawFixturePath,
+  'skill-path': rawSkillPath,
+  'spec-dir': rawSpecDir,
   timestamp,
   timeout: timeoutStr,
   runner,
-  "test-cases": testCases,
+  'test-cases': testCases,
 } = manifest;
 ```
 
 After the runner resolution block (around line 98), add:
 
 ```js
-const allowedTools = runner["allowed-tools"] || [];
-const disallowedTools = runner["disallowed-tools"] || [];
+const allowedTools = runner['allowed-tools'] || [];
+const disallowedTools = runner['disallowed-tools'] || [];
 ```
 
 Add logging after the existing log block (around line 114):
 
 ```js
-log(`Allowed tools: ${allowedTools.length ? allowedTools.join(", ") : "(none — using dangerously-skip-permissions fallback)"}`);
-log(`Disallowed tools: ${disallowedTools.length ? disallowedTools.join(", ") : "(none)"}`);
+log(
+  `Allowed tools: ${allowedTools.length ? allowedTools.join(', ') : '(none — using dangerously-skip-permissions fallback)'}`
+);
+log(
+  `Disallowed tools: ${disallowedTools.length ? disallowedTools.join(', ') : '(none)'}`
+);
 ```
 
 - [ ] **Step 2: Move CLI arg building into the per-test-case loop and apply path scoping**
@@ -154,15 +168,23 @@ Replace this with building args per test case inside the loop. At line 411, remo
 Inside the test case loop (after workspace creation, around line 445), add:
 
 ```js
-    // Scope file tools to this test case's workspace path
-    const scopedAllowed = scopeToolsToWorkspace(allowedTools, workspacePath);
-    const cmdArgs = buildArgs(model, maxTurns, pluginDir, scopedAllowed, disallowedTools);
+// Scope file tools to this test case's workspace path
+const scopedAllowed = scopeToolsToWorkspace(allowedTools, workspacePath);
+const cmdArgs = buildArgs(
+  model,
+  maxTurns,
+  pluginDir,
+  scopedAllowed,
+  disallowedTools
+);
 ```
 
 Move the CLI args log line into the loop as well (it now varies per test case):
 
 ```js
-    log(`[${i + 1}/${testCases.length}] ${testId}: CLI args: ${tool} ${cmdArgs.join(" ")}`);
+log(
+  `[${i + 1}/${testCases.length}] ${testId}: CLI args: ${tool} ${cmdArgs.join(' ')}`
+);
 ```
 
 - [ ] **Step 3: Verify the script still parses**
@@ -182,6 +204,7 @@ git commit -m "feat(runner): read tool permission lists from manifest and scope 
 ### Task 4: Update SKILL.md — Add tool permission resolution to evaluator instructions
 
 **Files:**
+
 - Modify: `skills/skill-unit/SKILL.md:30-48` (Step 2: Load Configuration)
 - Modify: `skills/skill-unit/SKILL.md:80-101` (Step 4b: Write Manifest)
 
@@ -189,7 +212,7 @@ git commit -m "feat(runner): read tool permission lists from manifest and scope 
 
 After the existing defaults YAML block in Step 2 (line 48), add a new subsection:
 
-```markdown
+````markdown
 #### Tool Permission Defaults
 
 The runner uses `--permission-mode dontAsk` with explicit tool allowlists instead of `--dangerously-skip-permissions`. Built-in defaults (used when `.skill-unit.yml` omits these fields):
@@ -207,9 +230,11 @@ runner:
   disallowed-tools:
     - AskUserQuestion
 ```
+````
 
 If `.skill-unit.yml` specifies `runner.allowed-tools`, it fully replaces the built-in allowed list. Same for `runner.disallowed-tools`. Each field is independent.
-```
+
+````
 
 - [ ] **Step 2: Update Step 4b (Write Manifest) to document the resolution chain**
 
@@ -227,7 +252,7 @@ Apply the three-level resolution chain to produce the final `allowed-tools` and 
    - If only `allowed-tools-extra` is present, union its entries with the resolved allowed list.
    - Same logic for `disallowed-tools` / `disallowed-tools-extra`.
 4. Conflict resolution: if a tool appears in both final lists, remove it from allowed (disallow wins).
-```
+````
 
 Update the manifest JSON example to include the resolved lists:
 
@@ -247,7 +272,7 @@ Update the manifest JSON example to include the resolved lists:
     "disallowed-tools": ["{resolved disallowed tools list}"]
   },
   "test-cases": [
-    {"id": "{test-id}", "prompt": "{prompt text from blockquote}"}
+    { "id": "{test-id}", "prompt": "{prompt text from blockquote}" }
   ]
 }
 ```
@@ -264,6 +289,7 @@ git commit -m "docs(SKILL.md): add tool permission resolution chain to evaluator
 ### Task 5: Update .skill-unit.yml template
 
 **Files:**
+
 - Modify: `skills/skill-unit/templates/.skill-unit.yml:9-16` (runner section)
 
 - [ ] **Step 1: Add commented-out allowed-tools and disallowed-tools fields**
@@ -271,25 +297,24 @@ git commit -m "docs(SKILL.md): add tool permission resolution chain to evaluator
 After the existing `max-turns: 10` line in the runner section, add:
 
 ```yaml
-
-  # Tool permissions for test sessions. Controls what the harness agent can do.
-  # Built-in defaults allow: Read, Write, Edit, Bash, Glob, Grep, Agent
-  # Built-in defaults disallow: AskUserQuestion
-  #
-  # These lists fully REPLACE the built-in defaults when specified.
-  # Spec frontmatter can further override or extend via allowed-tools-extra
-  # and disallowed-tools-extra fields.
-  #
-  # allowed-tools:
-  #   - Read
-  #   - Write
-  #   - Edit
-  #   - Bash
-  #   - Glob
-  #   - Grep
-  #   - Agent
-  # disallowed-tools:
-  #   - AskUserQuestion
+# Tool permissions for test sessions. Controls what the harness agent can do.
+# Built-in defaults allow: Read, Write, Edit, Bash, Glob, Grep, Agent
+# Built-in defaults disallow: AskUserQuestion
+#
+# These lists fully REPLACE the built-in defaults when specified.
+# Spec frontmatter can further override or extend via allowed-tools-extra
+# and disallowed-tools-extra fields.
+#
+# allowed-tools:
+#   - Read
+#   - Write
+#   - Edit
+#   - Bash
+#   - Glob
+#   - Grep
+#   - Agent
+# disallowed-tools:
+#   - AskUserQuestion
 ```
 
 - [ ] **Step 2: Commit**
@@ -304,6 +329,7 @@ git commit -m "docs(template): add tool permission fields to .skill-unit.yml tem
 ### Task 6: Update spec-format.md reference
 
 **Files:**
+
 - Modify: `skills/skill-unit/references/spec-format.md:16-27` (frontmatter fields table)
 - Modify: `skills/skill-unit/references/spec-format.md` (add new section after frontmatter)
 
@@ -322,7 +348,7 @@ Add four new rows to the frontmatter fields table (after the `teardown` row):
 
 Insert a new section after the frontmatter fields table (before the "Test Case Structure" section):
 
-```markdown
+````markdown
 ### Tool Permissions
 
 Test sessions run with `--permission-mode dontAsk` — only explicitly allowed tools work. The framework resolves tool lists through a three-level chain:
@@ -342,11 +368,12 @@ File tools (`Read`, `Write`, `Edit`, `Glob`, `Grep`) are automatically scoped to
 name: docker-skill-tests
 skill: docker-manager
 allowed-tools-extra:
-  - "Bash(docker *)"
+  - 'Bash(docker *)'
 disallowed-tools-extra:
-  - "Bash(rm -rf *)"
+  - 'Bash(rm -rf *)'
 ---
 ```
+````
 
 **Example — fully custom tool set:**
 
@@ -365,14 +392,15 @@ disallowed-tools:
   - Edit
 ---
 ```
-```
+
+````
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add skills/skill-unit/references/spec-format.md
 git commit -m "docs(spec-format): add tool permission fields and resolution chain documentation"
-```
+````
 
 ---
 
@@ -386,6 +414,7 @@ Expected: No output (clean parse)
 - [ ] **Step 2: Review the final state of runner.js**
 
 Read `skills/skill-unit/scripts/runner.js` and verify:
+
 - `--dangerously-skip-permissions` does not appear anywhere
 - `--permission-mode dontAsk` is present in TOOL_PROFILES
 - `scopeToolsToWorkspace` is defined and called per test case
@@ -395,6 +424,7 @@ Read `skills/skill-unit/scripts/runner.js` and verify:
 - [ ] **Step 3: Review SKILL.md**
 
 Read `skills/skill-unit/SKILL.md` and verify:
+
 - Step 2 documents the built-in defaults for allowed/disallowed tools
 - Step 4b includes the resolution chain (built-in → global → spec)
 - The manifest JSON example includes `allowed-tools` and `disallowed-tools` in the runner section
@@ -402,12 +432,14 @@ Read `skills/skill-unit/SKILL.md` and verify:
 - [ ] **Step 4: Review spec-format.md**
 
 Read `skills/skill-unit/references/spec-format.md` and verify:
+
 - Frontmatter table includes all four new fields
 - Tool Permissions section exists with resolution chain explanation and examples
 
 - [ ] **Step 5: Review .skill-unit.yml template**
 
 Read `skills/skill-unit/templates/.skill-unit.yml` and verify:
+
 - Commented-out `allowed-tools` and `disallowed-tools` fields exist under runner section
 - Comments explain the built-in defaults and resolution model
 

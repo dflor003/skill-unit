@@ -57,7 +57,7 @@ The runner writes conversation transcripts to `results/` as `.transcript.md` fil
 
 The transcript format is unchanged from the current `.log.md` — it already captures:
 
-```markdown
+````markdown
 # Transcript: {test-id}
 
 **Prompt:** {original prompt}
@@ -75,11 +75,14 @@ The transcript format is unchanged from the current `.log.md` — it already cap
 {assistant text}
 
 **Tool call:** `{tool name}`
+
 ```json
 {tool input}
 ```
+````
 
 **Tool result:**
+
 ```
 {tool output}
 ```
@@ -87,7 +90,8 @@ The transcript format is unchanged from the current `.log.md` — it already cap
 ---
 
 **Result:** {success|error}
-```
+
+````
 
 #### Changes to `runner.js`
 
@@ -104,7 +108,7 @@ A Node.js script (`scripts/report.js`) generates a single `report.md` from all i
 
 ```bash
 node ${CLAUDE_SKILL_DIR}/scripts/report.js .workspace/runs/{timestamp}
-```
+````
 
 #### Process
 
@@ -128,6 +132,7 @@ The same `report.md` works for `$GITHUB_STEP_SUMMARY` — `<details>` blocks ren
 Steps 1-3 and 4a-4c are unchanged. Changes:
 
 **Step 4d (replaced):** Dispatch grader agents.
+
 - Collect all test cases from the current spec (already parsed in 4a)
 - Dispatch grader agents in batches of up to `grader-concurrency`
 - Each grader receives: test metadata inline, transcript path to read, output path to write
@@ -136,11 +141,13 @@ Steps 1-3 and 4a-4c are unchanged. Changes:
 **Step 4e (removed):** Eliminated — each grader writes its own results file.
 
 **Step 5 (replaced):** Run report script and present.
+
 - Invoke `node ${CLAUDE_SKILL_DIR}/scripts/report.js .workspace/runs/{timestamp}`
 - Read the generated `results/report.md`
 - Present content to the user
 
 **SKILL.md `allowed-tools`** updated to include:
+
 ```
 Bash(node ${CLAUDE_SKILL_DIR}/scripts/report.js *)
 ```
@@ -168,12 +175,12 @@ Bash(node ${CLAUDE_SKILL_DIR}/scripts/report.js *)
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| `agents/grader.md` | Rewritten — self-contained grading logic, transcript-aware prompt |
-| `skills/skill-unit/SKILL.md` | Updated steps 4d, 4e, 5; added report script to allowed-tools |
-| `skills/skill-unit/scripts/runner.js` | Write `.transcript.md` to `results/` instead of `.log.md` to `logs/` |
-| `skills/skill-unit/scripts/report.js` | New — consolidated report generation |
-| `skills/skill-unit/templates/.skill-unit.yml` | Add `grader-concurrency` field |
-| `docs/architecture/workspaces.md` | Updated structure and artifact descriptions |
-| `docs/architecture/test-execution.md` | Updated to reference grader delegation |
+| File                                          | Change                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| `agents/grader.md`                            | Rewritten — self-contained grading logic, transcript-aware prompt    |
+| `skills/skill-unit/SKILL.md`                  | Updated steps 4d, 4e, 5; added report script to allowed-tools        |
+| `skills/skill-unit/scripts/runner.js`         | Write `.transcript.md` to `results/` instead of `.log.md` to `logs/` |
+| `skills/skill-unit/scripts/report.js`         | New — consolidated report generation                                 |
+| `skills/skill-unit/templates/.skill-unit.yml` | Add `grader-concurrency` field                                       |
+| `docs/architecture/workspaces.md`             | Updated structure and artifact descriptions                          |
+| `docs/architecture/test-execution.md`         | Updated to reference grader delegation                               |

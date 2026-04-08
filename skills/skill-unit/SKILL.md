@@ -33,10 +33,10 @@ Read `.skill-unit.yml` from the repository root if it exists. Apply these defaul
 ```yaml
 test-dir: skill-tests
 runner:
-  tool: claude        # The harness CLI to use (claude, copilot, codex)
-  model: sonnet       # Model to use for test execution (optional)
-  max-turns: 10       # Max turns per test case
-  runner-concurrency: 5  # Max spec files to run in parallel
+  tool: claude # The harness CLI to use (claude, copilot, codex)
+  model: sonnet # Model to use for test execution (optional)
+  max-turns: 10 # Max turns per test case
+  runner-concurrency: 5 # Max spec files to run in parallel
 output:
   format: interactive
   show-passing-details: false
@@ -137,8 +137,12 @@ Write `.workspace/runs/{timestamp}/manifests/{spec-name}.manifest.json` using th
     "disallowed-tools": ["{resolved disallowed tools list}"]
   },
   "test-cases": [
-    {"id": "{test-id}", "prompt": "{prompt text from blockquote}"},
-    {"id": "{test-id}", "prompt": "{prompt text from blockquote}", "fixture-paths": ["{resolved path}", "{resolved path}"]}
+    { "id": "{test-id}", "prompt": "{prompt text from blockquote}" },
+    {
+      "id": "{test-id}",
+      "prompt": "{prompt text from blockquote}",
+      "fixture-paths": ["{resolved path}", "{resolved path}"]
+    }
   ]
 }
 ```
@@ -146,6 +150,7 @@ Write `.workspace/runs/{timestamp}/manifests/{spec-name}.manifest.json` using th
 Per-test `fixture-paths` is an array of resolved paths (relative to repo root). It is only present when the test case has a `**Fixtures:**` section. These are layered on top of the global fixture in copy order: global first, then per-test fixtures in list order.
 
 **Resolving skill-path:** If the spec frontmatter has a `skill` field, search for the skill directory:
+
 1. Check `.claude/skills/{skill-name}/SKILL.md` (repo-level skills)
 2. Check `skills/{skill-name}/SKILL.md` (plugin skills)
 3. If found, use the directory path (e.g., `.claude/skills/report-card`). If not found, set to null.
@@ -183,6 +188,7 @@ sleep 45 && cat .workspace/runs/{timestamp}/manifests/{spec-name}.progress.json
 ```
 
 **Timing guidance:**
+
 - **First poll:** Wait ~45-55 seconds. Test cases typically take 15-60s each, and the runner needs startup time.
 - **Subsequent polls:** Wait ~30-40 seconds between checks.
 - **After a test completes:** If more tests remain, the next one is already running. Keep polling.
@@ -197,8 +203,8 @@ sleep 45 && cat .workspace/runs/{timestamp}/manifests/{spec-name}.progress.json
   "completed": 2,
   "current": "RC-3",
   "results": [
-    {"id": "RC-1", "status": "OK", "duration-ms": 5200},
-    {"id": "RC-2", "status": "OK", "duration-ms": 3100}
+    { "id": "RC-1", "status": "OK", "duration-ms": 5200 },
+    { "id": "RC-2", "status": "OK", "duration-ms": 3100 }
   ]
 }
 ```
@@ -235,6 +241,7 @@ Once the runner completes, read the responses JSON file at the path indicated in
 ```
 
 **Critical anti-bias notes:**
+
 - The manifest contains ONLY test IDs and prompts, no expectations or test metadata.
 - Each test case runs in a completely isolated CLI session from its own workspace.
 - The workspace contains only fixture files, no spec files, no results, no test metadata.
@@ -280,6 +287,7 @@ Grade this test case.
 ```
 
 **Dispatch rules:**
+
 - Use the Agent tool with `subagent_type` set to `grader`.
 - Pass all test metadata (ID, name, prompt, expectations) inline in the prompt. The grader agent's own instructions tell it how to read the transcript and write the results.
 - Do NOT include any information beyond what is listed above. The grader does not need spec-level metadata, other test cases, or configuration details.

@@ -15,6 +15,7 @@
 ### Task 1: Add `cancelled` to TestStatus
 
 **Files:**
+
 - Modify: `src/types/run.ts:1`
 - Modify: `src/tui/components/progress-tree.tsx:19-36`
 - Test: `tests/tui/runner.spec.tsx`
@@ -24,7 +25,15 @@
 In `src/types/run.ts`, add `'cancelled'` to the union:
 
 ```typescript
-export type TestStatus = 'pending' | 'running' | 'grading' | 'passed' | 'failed' | 'timedout' | 'error' | 'cancelled';
+export type TestStatus =
+  | 'pending'
+  | 'running'
+  | 'grading'
+  | 'passed'
+  | 'failed'
+  | 'timedout'
+  | 'error'
+  | 'cancelled';
 ```
 
 - [ ] **Step 2: Add cancelled icon to ProgressTree**
@@ -42,7 +51,12 @@ In `src/tui/components/progress-tree.tsx`, update the `completed` filter (line 5
 
 ```typescript
 const completed = tests.filter(
-  t => t.status === 'passed' || t.status === 'failed' || t.status === 'timedout' || t.status === 'error' || t.status === 'cancelled',
+  (t) =>
+    t.status === 'passed' ||
+    t.status === 'failed' ||
+    t.status === 'timedout' ||
+    t.status === 'error' ||
+    t.status === 'cancelled'
 ).length;
 ```
 
@@ -54,7 +68,12 @@ Add to `tests/tui/runner.spec.tsx` inside the `ProgressTree` describe:
 it('when a test is cancelled should show the cancelled icon', () => {
   // Arrange
   const tests = [
-    { id: 'TEST-1', name: 'cancelled-test', status: 'cancelled' as const, durationMs: 0 },
+    {
+      id: 'TEST-1',
+      name: 'cancelled-test',
+      status: 'cancelled' as const,
+      durationMs: 0,
+    },
   ];
 
   // Act
@@ -88,6 +107,7 @@ git commit -m "feat: add 'cancelled' to TestStatus with progress tree icon"
 ### Task 2: Add `kill()` to RunHandle and GradeHandle
 
 **Files:**
+
 - Modify: `src/core/runner.ts:191-197,449-466`
 - Modify: `src/core/grader.ts:37-40,135-190`
 
@@ -102,7 +122,17 @@ export interface RunHandle extends EventEmitter {
   on(event: 'output', listener: (chunk: string) => void): this;
   on(event: 'tool-use', listener: (name: string, input: unknown) => void): this;
   on(event: 'progress', listener: (progress: RunProgress) => void): this;
-  on(event: 'complete', listener: (result: { exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }) => void): this;
+  on(
+    event: 'complete',
+    listener: (result: {
+      exitCode: number;
+      timedOut: boolean;
+      durationMs: number;
+      costUsd: number;
+      inputTokens: number;
+      outputTokens: number;
+    }) => void
+  ): this;
   on(event: 'error', listener: (error: Error) => void): this;
   kill(): void;
 }
@@ -117,7 +147,7 @@ export function runTest(
   manifest: Manifest,
   testCase: ManifestTestCase,
   config: SkillUnitConfig,
-  options?: RunTestOptions,
+  options?: RunTestOptions
 ): RunHandle {
   const handle = new EventEmitter() as RunHandle;
   const silent = options?.silent ?? false;
@@ -130,7 +160,9 @@ export function runTest(
   };
 
   setImmediate(() => {
-    _runTestAsync(manifest, testCase, config, handle, silent, (p) => { proc = p; }).catch((err: Error) => {
+    _runTestAsync(manifest, testCase, config, handle, silent, (p) => {
+      proc = p;
+    }).catch((err: Error) => {
       handle.emit('error', err);
     });
   });
@@ -231,6 +263,7 @@ git commit -m "feat: add kill() method to RunHandle and GradeHandle"
 ### Task 3: Add `cancelRun` to useTestRun hook
 
 **Files:**
+
 - Modify: `src/tui/hooks/use-test-run.ts`
 
 - [ ] **Step 1: Import handle types**
@@ -262,7 +295,13 @@ activeHandles.current.set(task.testCase.id, handle);
 Similarly, in `startGrading`, after `gradeTest()` returns:
 
 ```typescript
-const gradeHandle = gradeTest(fullTestCase, transcriptPath, config, specName, timestamp);
+const gradeHandle = gradeTest(
+  fullTestCase,
+  transcriptPath,
+  config,
+  specName,
+  timestamp
+);
 activeHandles.current.set(task.testCase.id, gradeHandle);
 ```
 
@@ -285,11 +324,15 @@ const cancelRun = useCallback(() => {
   activeHandles.current.clear();
 
   // Transition all non-terminal tests to cancelled
-  setState(prev => ({
+  setState((prev) => ({
     ...prev,
     status: 'complete',
-    tests: prev.tests.map(t => {
-      if (t.status === 'pending' || t.status === 'running' || t.status === 'grading') {
+    tests: prev.tests.map((t) => {
+      if (
+        t.status === 'pending' ||
+        t.status === 'running' ||
+        t.status === 'grading'
+      ) {
         return { ...t, status: 'cancelled' as const, activity: '' };
       }
       return t;
@@ -317,8 +360,15 @@ Update the `TestRunActions` interface:
 
 ```typescript
 export interface TestRunActions {
-  startRun: (tests: Array<{ id: string; name: string; specName: string }>) => void;
-  executeRun: (manifests: Manifest[], specs: Spec[], config: SkillUnitConfig, timestamp: string) => void;
+  startRun: (
+    tests: Array<{ id: string; name: string; specName: string }>
+  ) => void;
+  executeRun: (
+    manifests: Manifest[],
+    specs: Spec[],
+    config: SkillUnitConfig,
+    timestamp: string
+  ) => void;
   selectTest: (id: string) => void;
   updateTest: (id: string, patch: Partial<TestRunEntry>) => void;
   completeRun: () => void;
@@ -329,7 +379,14 @@ export interface TestRunActions {
 Update the actions object at the bottom of the hook:
 
 ```typescript
-const actions: TestRunActions = { startRun, executeRun, selectTest, updateTest, completeRun, cancelRun };
+const actions: TestRunActions = {
+  startRun,
+  executeRun,
+  selectTest,
+  updateTest,
+  completeRun,
+  cancelRun,
+};
 ```
 
 - [ ] **Step 6: Clear handles on startRun**
@@ -357,6 +414,7 @@ git commit -m "feat: add cancelRun action to useTestRun hook"
 ### Task 4: Create ConfirmDialog component
 
 **Files:**
+
 - Create: `src/tui/components/confirm-dialog.tsx`
 - Test: `tests/tui/confirm-dialog.spec.tsx`
 
@@ -374,7 +432,11 @@ describe('ConfirmDialog', () => {
   it('should render the message and yes/no options', () => {
     // Act
     const { lastFrame } = render(
-      <ConfirmDialog message="Cancel the run?" onConfirm={() => {}} onDismiss={() => {}} />,
+      <ConfirmDialog
+        message="Cancel the run?"
+        onConfirm={() => {}}
+        onDismiss={() => {}}
+      />
     );
 
     // Assert
@@ -389,7 +451,11 @@ describe('ConfirmDialog', () => {
       // Arrange
       const onConfirm = vi.fn();
       const { stdin } = render(
-        <ConfirmDialog message="Cancel?" onConfirm={onConfirm} onDismiss={() => {}} />,
+        <ConfirmDialog
+          message="Cancel?"
+          onConfirm={onConfirm}
+          onDismiss={() => {}}
+        />
       );
 
       // Act
@@ -405,7 +471,11 @@ describe('ConfirmDialog', () => {
       // Arrange
       const onDismiss = vi.fn();
       const { stdin } = render(
-        <ConfirmDialog message="Cancel?" onConfirm={() => {}} onDismiss={onDismiss} />,
+        <ConfirmDialog
+          message="Cancel?"
+          onConfirm={() => {}}
+          onDismiss={onDismiss}
+        />
       );
 
       // Act
@@ -421,7 +491,11 @@ describe('ConfirmDialog', () => {
       // Arrange
       const onDismiss = vi.fn();
       const { stdin } = render(
-        <ConfirmDialog message="Cancel?" onConfirm={() => {}} onDismiss={onDismiss} />,
+        <ConfirmDialog
+          message="Cancel?"
+          onConfirm={() => {}}
+          onDismiss={onDismiss}
+        />
       );
 
       // Act
@@ -453,7 +527,11 @@ interface ConfirmDialogProps {
   onDismiss: () => void;
 }
 
-export function ConfirmDialog({ message, onConfirm, onDismiss }: ConfirmDialogProps) {
+export function ConfirmDialog({
+  message,
+  onConfirm,
+  onDismiss,
+}: ConfirmDialogProps) {
   useInput((input, key) => {
     if (input === 'y' || input === 'Y') {
       onConfirm();
@@ -506,6 +584,7 @@ git commit -m "feat: add ConfirmDialog component"
 ### Task 5: Create Scrollbar component
 
 **Files:**
+
 - Create: `src/tui/components/scrollbar.tsx`
 - Test: `tests/tui/scrollbar.spec.tsx`
 
@@ -524,7 +603,12 @@ describe('Scrollbar', () => {
     it('should render nothing', () => {
       // Act
       const { lastFrame } = render(
-        <Scrollbar totalLines={10} visibleLines={20} scrollOffset={0} height={10} />,
+        <Scrollbar
+          totalLines={10}
+          visibleLines={20}
+          scrollOffset={0}
+          height={10}
+        />
       );
 
       // Assert
@@ -536,7 +620,12 @@ describe('Scrollbar', () => {
     it('should render a track with thumb characters', () => {
       // Act
       const { lastFrame } = render(
-        <Scrollbar totalLines={100} visibleLines={20} scrollOffset={0} height={10} />,
+        <Scrollbar
+          totalLines={100}
+          visibleLines={20}
+          scrollOffset={0}
+          height={10}
+        />
       );
       const output = lastFrame()!;
 
@@ -550,12 +639,17 @@ describe('Scrollbar', () => {
     it('should place the thumb at the bottom of the track', () => {
       // Act
       const { lastFrame } = render(
-        <Scrollbar totalLines={100} visibleLines={20} scrollOffset={0} height={10} />,
+        <Scrollbar
+          totalLines={100}
+          visibleLines={20}
+          scrollOffset={0}
+          height={10}
+        />
       );
       const lines = lastFrame()!.split('\n');
 
       // Assert -- last non-empty line should be thumb
-      const nonEmpty = lines.filter(l => l.trim());
+      const nonEmpty = lines.filter((l) => l.trim());
       expect(nonEmpty[nonEmpty.length - 1]).toContain('█');
     });
   });
@@ -564,12 +658,17 @@ describe('Scrollbar', () => {
     it('should place the thumb at the top of the track', () => {
       // Arrange -- maxOffset = 100 - 20 = 80
       const { lastFrame } = render(
-        <Scrollbar totalLines={100} visibleLines={20} scrollOffset={80} height={10} />,
+        <Scrollbar
+          totalLines={100}
+          visibleLines={20}
+          scrollOffset={80}
+          height={10}
+        />
       );
       const lines = lastFrame()!.split('\n');
 
       // Assert -- first non-empty line should be thumb
-      const nonEmpty = lines.filter(l => l.trim());
+      const nonEmpty = lines.filter((l) => l.trim());
       expect(nonEmpty[0]).toContain('█');
     });
   });
@@ -578,10 +677,20 @@ describe('Scrollbar', () => {
     it('should have a larger thumb when more content is visible', () => {
       // Arrange
       const { lastFrame: small } = render(
-        <Scrollbar totalLines={200} visibleLines={10} scrollOffset={0} height={20} />,
+        <Scrollbar
+          totalLines={200}
+          visibleLines={10}
+          scrollOffset={0}
+          height={20}
+        />
       );
       const { lastFrame: large } = render(
-        <Scrollbar totalLines={40} visibleLines={10} scrollOffset={0} height={20} />,
+        <Scrollbar
+          totalLines={40}
+          visibleLines={10}
+          scrollOffset={0}
+          height={20}
+        />
       );
 
       // Assert
@@ -612,20 +721,29 @@ interface ScrollbarProps {
   height: number;
 }
 
-export function Scrollbar({ totalLines, visibleLines, scrollOffset, height }: ScrollbarProps) {
+export function Scrollbar({
+  totalLines,
+  visibleLines,
+  scrollOffset,
+  height,
+}: ScrollbarProps) {
   if (totalLines <= visibleLines || height <= 0) {
     return <Box />;
   }
 
-  const thumbHeight = Math.max(1, Math.round(height * visibleLines / totalLines));
+  const thumbHeight = Math.max(
+    1,
+    Math.round((height * visibleLines) / totalLines)
+  );
   const maxOffset = Math.max(0, totalLines - visibleLines);
   const clampedOffset = Math.min(scrollOffset, maxOffset);
 
   // scrollOffset=0 means bottom, scrollOffset=maxOffset means top
   // thumbTop=0 means top of track, thumbTop=(height-thumbHeight) means bottom
-  const thumbTop = maxOffset > 0
-    ? Math.round((clampedOffset / maxOffset) * (height - thumbHeight))
-    : 0;
+  const thumbTop =
+    maxOffset > 0
+      ? Math.round((clampedOffset / maxOffset) * (height - thumbHeight))
+      : 0;
 
   // Invert: high scrollOffset = top of content = thumb at top of track
   const invertedTop = height - thumbHeight - thumbTop;
@@ -642,7 +760,9 @@ export function Scrollbar({ totalLines, visibleLines, scrollOffset, height }: Sc
   return (
     <Box flexDirection="column" width={1} marginLeft={1}>
       {rows.map((char, i) => (
-        <Text key={i} color="gray">{char}</Text>
+        <Text key={i} color="gray">
+          {char}
+        </Text>
       ))}
     </Box>
   );
@@ -666,6 +786,7 @@ git commit -m "feat: add Scrollbar component"
 ### Task 6: Integrate Scrollbar into SessionPanel
 
 **Files:**
+
 - Modify: `src/tui/components/session-panel.tsx`
 - Modify: `tests/tui/session-panel.spec.tsx`
 
@@ -681,7 +802,17 @@ describe('when transcript overflows the panel', () => {
 
     // Act
     const { lastFrame } = render(
-      <SessionPanel testId="TEST-1" testName="test" status="running" transcript={manyLines} gradeTranscript={[]} elapsed={0} viewMode="execution" scrollOffset={0} following={true} />,
+      <SessionPanel
+        testId="TEST-1"
+        testName="test"
+        status="running"
+        transcript={manyLines}
+        gradeTranscript={[]}
+        elapsed={0}
+        viewMode="execution"
+        scrollOffset={0}
+        following={true}
+      />
     );
 
     // Assert
@@ -693,7 +824,15 @@ describe('when transcript fits the panel', () => {
   it('should not show a scrollbar', () => {
     // Act
     const { lastFrame } = render(
-      <SessionPanel testId="TEST-1" testName="test" status="running" transcript={['short']} gradeTranscript={[]} elapsed={0} viewMode="execution" />,
+      <SessionPanel
+        testId="TEST-1"
+        testName="test"
+        status="running"
+        transcript={['short']}
+        gradeTranscript={[]}
+        elapsed={0}
+        viewMode="execution"
+      />
     );
 
     // Assert
@@ -748,6 +887,7 @@ git commit -m "feat: integrate scrollbar into session panel"
 ### Task 7: Context-aware BottomBar
 
 **Files:**
+
 - Modify: `src/tui/components/bottom-bar.tsx`
 - Modify: `tests/tui/bottom-bar.spec.tsx`
 
@@ -760,7 +900,11 @@ describe('when on runner screen with completed run', () => {
   it('should show Esc back hint', () => {
     // Act
     const { lastFrame } = render(
-      <BottomBar activeScreen="runner" runStatus="complete" runViewMode="primary" />,
+      <BottomBar
+        activeScreen="runner"
+        runStatus="complete"
+        runViewMode="primary"
+      />
     );
 
     // Assert
@@ -772,7 +916,11 @@ describe('when on runner screen with active run in primary view', () => {
   it('should show run-mode hints instead of nav', () => {
     // Act
     const { lastFrame } = render(
-      <BottomBar activeScreen="runner" runStatus="running" runViewMode="primary" />,
+      <BottomBar
+        activeScreen="runner"
+        runStatus="running"
+        runViewMode="primary"
+      />
     );
     const output = lastFrame()!;
 
@@ -787,7 +935,11 @@ describe('when on runner screen with active run in split view', () => {
   it('should show split-mode hints', () => {
     // Act
     const { lastFrame } = render(
-      <BottomBar activeScreen="runner" runStatus="running" runViewMode="split" />,
+      <BottomBar
+        activeScreen="runner"
+        runStatus="running"
+        runViewMode="split"
+      />
     );
     const output = lastFrame()!;
 
@@ -802,7 +954,11 @@ describe('when on runner screen with complete run in primary view', () => {
   it('should show selection and re-run hints', () => {
     // Act
     const { lastFrame } = render(
-      <BottomBar activeScreen="runner" runStatus="complete" runViewMode="primary" />,
+      <BottomBar
+        activeScreen="runner"
+        runStatus="complete"
+        runViewMode="primary"
+      />
     );
     const output = lastFrame()!;
 
@@ -836,20 +992,34 @@ interface BottomBarProps {
   runViewMode?: RunViewMode;
 }
 
-export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarProps) {
+export function BottomBar({
+  activeScreen,
+  runStatus,
+  runViewMode,
+}: BottomBarProps) {
   const isRunner = activeScreen === 'runner';
   const isRunning = isRunner && runStatus === 'running';
 
   // Running: show contextual runner hints
   if (isRunning) {
-    const hints = runViewMode === 'split'
-      ? '[Esc] cancel  [1-9] focus  [m] maximize  [v] primary'
-      : '[Esc] cancel  ← → sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split';
+    const hints =
+      runViewMode === 'split'
+        ? '[Esc] cancel  [1-9] focus  [m] maximize  [v] primary'
+        : '[Esc] cancel  ← → sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split';
 
     return (
-      <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
+      <Box
+        borderStyle="single"
+        borderTop
+        borderBottom={false}
+        borderLeft={false}
+        borderRight={false}
+        paddingX={1}
+      >
         <Box flexGrow={1}>
-          <Text color="yellow" bold>Run in progress... </Text>
+          <Text color="yellow" bold>
+            Run in progress...{' '}
+          </Text>
           <Text color="gray">{hints}</Text>
         </Box>
       </Box>
@@ -858,12 +1028,20 @@ export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarPro
 
   // Runner complete/idle: show completion hints
   if (isRunner) {
-    const completionHints = runViewMode === 'primary'
-      ? '[Space] select  [Enter] re-run  ← → sessions  [Esc] back'
-      : '[1-9] focus  [m] maximize  [v] primary  [Esc] back';
+    const completionHints =
+      runViewMode === 'primary'
+        ? '[Space] select  [Enter] re-run  ← → sessions  [Esc] back'
+        : '[1-9] focus  [m] maximize  [v] primary  [Esc] back';
 
     return (
-      <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
+      <Box
+        borderStyle="single"
+        borderTop
+        borderBottom={false}
+        borderLeft={false}
+        borderRight={false}
+        paddingX={1}
+      >
         <Box flexGrow={1}>
           <Text color="gray">{completionHints}</Text>
         </Box>
@@ -880,7 +1058,14 @@ export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarPro
   ];
 
   return (
-    <Box borderStyle="single" borderTop borderBottom={false} borderLeft={false} borderRight={false} paddingX={1}>
+    <Box
+      borderStyle="single"
+      borderTop
+      borderBottom={false}
+      borderLeft={false}
+      borderRight={false}
+      paddingX={1}
+    >
       <Box flexGrow={1}>
         {items.map((item) => (
           <Box key={item.key} marginRight={2}>
@@ -893,7 +1078,7 @@ export function BottomBar({ activeScreen, runStatus, runViewMode }: BottomBarPro
           </Box>
         ))}
       </Box>
-      <Text color="gray">Tab: next  [Q]uit  skill-unit v0.0.1</Text>
+      <Text color="gray">Tab: next [Q]uit skill-unit v0.0.1</Text>
     </Box>
   );
 }
@@ -916,6 +1101,7 @@ git commit -m "feat: context-aware bottom bar with run-mode hints"
 ### Task 8: Wire up App shell -- back navigation, nav lock, cancel dialog
 
 **Files:**
+
 - Modify: `src/tui/app.tsx`
 - Modify: `src/tui/screens/runner.tsx` (remove inline footer, report view mode)
 
@@ -939,7 +1125,8 @@ const [runnerViewMode, setRunnerViewMode] = useState<RunViewMode>('primary');
 Update hook destructuring:
 
 ```typescript
-const [runState, { startRun, executeRun, selectTest, cancelRun }] = useTestRun();
+const [runState, { startRun, executeRun, selectTest, cancelRun }] =
+  useTestRun();
 ```
 
 - [ ] **Step 2: Track previousScreen on navigation to runner**
@@ -996,7 +1183,7 @@ useInput((input, key) => {
   if (input === 's' || input === 'S') setScreen('stats');
   if (input === 'o' || input === 'O') setScreen('options');
   if (key.tab) {
-    setScreen(prev => {
+    setScreen((prev) => {
       const idx = NAV_SCREENS.indexOf(prev);
       return NAV_SCREENS[(idx + 1) % NAV_SCREENS.length];
     });
@@ -1034,29 +1221,35 @@ return (
         {screen === 'dashboard' && (
           <Dashboard
             specs={specs}
-            onRunTests={tests => {
+            onRunTests={(tests) => {
               setHistoricalRun(null);
               setPreviousScreen('dashboard');
               startRun(
-                tests.map(t => ({
+                tests.map((t) => ({
                   id: t.testCase.id,
                   name: t.testCase.name,
                   specName: t.specName,
-                })),
+                }))
               );
               setScreen('runner');
 
               const timestamp = formatTimestamp(new Date());
-              const specPathSet = new Set(tests.map(t => t.specPath));
-              const selectedSpecs = specs.filter(s => specPathSet.has(s.path));
-              const selectedTestIds = new Set(tests.map(t => t.testCase.id));
-              const manifests = selectedSpecs.map(spec => {
-                const manifest = buildManifest(spec, appConfig, { timestamp });
-                manifest['test-cases'] = manifest['test-cases'].filter(tc =>
-                  selectedTestIds.has(tc.id),
-                );
-                return manifest;
-              }).filter(m => m['test-cases'].length > 0);
+              const specPathSet = new Set(tests.map((t) => t.specPath));
+              const selectedSpecs = specs.filter((s) =>
+                specPathSet.has(s.path)
+              );
+              const selectedTestIds = new Set(tests.map((t) => t.testCase.id));
+              const manifests = selectedSpecs
+                .map((spec) => {
+                  const manifest = buildManifest(spec, appConfig, {
+                    timestamp,
+                  });
+                  manifest['test-cases'] = manifest['test-cases'].filter((tc) =>
+                    selectedTestIds.has(tc.id)
+                  );
+                  return manifest;
+                })
+                .filter((m) => m['test-cases'].length > 0);
 
               executeRun(manifests, selectedSpecs, appConfig, timestamp);
             }}
@@ -1078,10 +1271,16 @@ return (
           <Runner
             runState={
               historicalRun
-                ? { ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId }
+                ? {
+                    ...historicalRun,
+                    activeTestId:
+                      historicalActiveTestId ?? historicalRun.activeTestId,
+                  }
                 : runState
             }
-            onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
+            onSelectTest={
+              historicalRun ? setHistoricalActiveTestId : selectTest
+            }
             onRerunTests={handleRerunTests}
             onViewModeChange={setRunnerViewMode}
           />
@@ -1120,7 +1319,7 @@ Update the `[v]` toggle handler to notify parent:
 
 ```typescript
 if (input === 'v') {
-  setViewMode(prev => {
+  setViewMode((prev) => {
     const next = prev === 'primary' ? 'split' : 'primary';
     if (onViewModeChange) onViewModeChange(next);
     return next;
@@ -1174,6 +1373,7 @@ git commit -m "feat: back navigation, nav lock during runs, cancel dialog"
 ### Task 9: Add YAML serializer to config loader
 
 **Files:**
+
 - Modify: `src/config/loader.ts`
 - Test: `tests/core/config-serializer.spec.ts`
 
@@ -1237,8 +1437,17 @@ describe('serializeYaml', () => {
       // Arrange
       const original = {
         'test-dir': 'skill-tests',
-        runner: { tool: 'claude', model: null, 'max-turns': 10, concurrency: 5 },
-        output: { format: 'interactive', 'show-passing-details': false, 'log-level': 'info' },
+        runner: {
+          tool: 'claude',
+          model: null,
+          'max-turns': 10,
+          concurrency: 5,
+        },
+        output: {
+          format: 'interactive',
+          'show-passing-details': false,
+          'log-level': 'info',
+        },
         execution: { timeout: '120s' },
         defaults: { setup: 'setup.sh', teardown: 'teardown.sh' },
       };
@@ -1251,7 +1460,9 @@ describe('serializeYaml', () => {
       expect(parsed['test-dir']).toBe('skill-tests');
       expect((parsed.runner as Record<string, unknown>).tool).toBe('claude');
       expect((parsed.runner as Record<string, unknown>).concurrency).toBe(5);
-      expect((parsed.output as Record<string, unknown>).format).toBe('interactive');
+      expect((parsed.output as Record<string, unknown>).format).toBe(
+        'interactive'
+      );
     });
   });
 });
@@ -1277,7 +1488,9 @@ export function serializeYaml(obj: Record<string, unknown>): string {
       output += `${key}: [${value.join(', ')}]\n`;
     } else if (typeof value === 'object') {
       output += `${key}:\n`;
-      for (const [childKey, childValue] of Object.entries(value as Record<string, unknown>)) {
+      for (const [childKey, childValue] of Object.entries(
+        value as Record<string, unknown>
+      )) {
         if (childValue === null || childValue === undefined) {
           output += `  ${childKey}: null\n`;
         } else if (Array.isArray(childValue)) {
@@ -1312,6 +1525,7 @@ git commit -m "feat: add YAML serializer for config roundtripping"
 ### Task 10: Editable Options screen
 
 **Files:**
+
 - Modify: `src/tui/screens/options.tsx`
 - Modify: `tests/tui/options.spec.tsx`
 
@@ -1328,7 +1542,11 @@ import { Options } from '../../src/tui/screens/options.js';
 const defaultConfig = {
   'test-dir': 'skill-tests',
   runner: { tool: 'claude', model: null, 'max-turns': 10, concurrency: 5 },
-  output: { format: 'interactive' as const, 'show-passing-details': false, 'log-level': 'info' as const },
+  output: {
+    format: 'interactive' as const,
+    'show-passing-details': false,
+    'log-level': 'info' as const,
+  },
   execution: { timeout: '120s' },
   defaults: { setup: 'setup.sh', teardown: 'teardown.sh' },
 };
@@ -1336,7 +1554,9 @@ const defaultConfig = {
 describe('Options', () => {
   it('should render config fields', () => {
     // Act
-    const { lastFrame } = render(<Options config={defaultConfig} onSave={() => {}} />);
+    const { lastFrame } = render(
+      <Options config={defaultConfig} onSave={() => {}} />
+    );
 
     // Assert
     expect(lastFrame()!).toContain('claude');
@@ -1344,7 +1564,9 @@ describe('Options', () => {
 
   it('should show edit hint in footer', () => {
     // Act
-    const { lastFrame } = render(<Options config={defaultConfig} onSave={() => {}} />);
+    const { lastFrame } = render(
+      <Options config={defaultConfig} onSave={() => {}} />
+    );
 
     // Assert
     expect(lastFrame()!).toContain('[Enter] edit');
@@ -1353,7 +1575,9 @@ describe('Options', () => {
   describe('when a boolean field is toggled', () => {
     it('should show unsaved changes indicator', () => {
       // Arrange
-      const { lastFrame, stdin } = render(<Options config={defaultConfig} onSave={() => {}} />);
+      const { lastFrame, stdin } = render(
+        <Options config={defaultConfig} onSave={() => {}} />
+      );
 
       // Navigate down to show-passing-details (index 5)
       for (let i = 0; i < 5; i++) {
@@ -1404,56 +1628,101 @@ interface FieldDef {
 
 const FIELDS: FieldDef[] = [
   {
-    section: 'Runner', key: 'tool', label: 'tool', type: 'enum',
+    section: 'Runner',
+    key: 'tool',
+    label: 'tool',
+    type: 'enum',
     options: ['claude'],
-    get: c => c.runner.tool,
+    get: (c) => c.runner.tool,
     set: (c, v) => ({ ...c, runner: { ...c.runner, tool: v } }),
   },
   {
-    section: 'Runner', key: 'model', label: 'model', type: 'string',
-    get: c => c.runner.model ?? '',
+    section: 'Runner',
+    key: 'model',
+    label: 'model',
+    type: 'string',
+    get: (c) => c.runner.model ?? '',
     set: (c, v) => ({ ...c, runner: { ...c.runner, model: v || null } }),
   },
   {
-    section: 'Runner', key: 'max-turns', label: 'max-turns', type: 'number',
-    get: c => String(c.runner['max-turns']),
-    set: (c, v) => ({ ...c, runner: { ...c.runner, 'max-turns': parseInt(v, 10) || 10 } }),
+    section: 'Runner',
+    key: 'max-turns',
+    label: 'max-turns',
+    type: 'number',
+    get: (c) => String(c.runner['max-turns']),
+    set: (c, v) => ({
+      ...c,
+      runner: { ...c.runner, 'max-turns': parseInt(v, 10) || 10 },
+    }),
   },
   {
-    section: 'Runner', key: 'concurrency', label: 'concurrency', type: 'number',
-    get: c => String(c.runner.concurrency),
-    set: (c, v) => ({ ...c, runner: { ...c.runner, concurrency: parseInt(v, 10) || 5 } }),
+    section: 'Runner',
+    key: 'concurrency',
+    label: 'concurrency',
+    type: 'number',
+    get: (c) => String(c.runner.concurrency),
+    set: (c, v) => ({
+      ...c,
+      runner: { ...c.runner, concurrency: parseInt(v, 10) || 5 },
+    }),
   },
   {
-    section: 'Output', key: 'format', label: 'format', type: 'enum',
+    section: 'Output',
+    key: 'format',
+    label: 'format',
+    type: 'enum',
     options: ['interactive', 'json'],
-    get: c => c.output.format,
-    set: (c, v) => ({ ...c, output: { ...c.output, format: v as 'interactive' | 'json' } }),
+    get: (c) => c.output.format,
+    set: (c, v) => ({
+      ...c,
+      output: { ...c.output, format: v as 'interactive' | 'json' },
+    }),
   },
   {
-    section: 'Output', key: 'show-passing-details', label: 'show-passing-details', type: 'boolean',
-    get: c => String(c.output['show-passing-details']),
-    set: (c, v) => ({ ...c, output: { ...c.output, 'show-passing-details': v === 'true' } }),
+    section: 'Output',
+    key: 'show-passing-details',
+    label: 'show-passing-details',
+    type: 'boolean',
+    get: (c) => String(c.output['show-passing-details']),
+    set: (c, v) => ({
+      ...c,
+      output: { ...c.output, 'show-passing-details': v === 'true' },
+    }),
   },
   {
-    section: 'Output', key: 'log-level', label: 'log-level', type: 'enum',
+    section: 'Output',
+    key: 'log-level',
+    label: 'log-level',
+    type: 'enum',
     options: ['debug', 'verbose', 'info', 'success', 'warn', 'error'],
-    get: c => c.output['log-level'],
-    set: (c, v) => ({ ...c, output: { ...c.output, 'log-level': v as LogLevel } }),
+    get: (c) => c.output['log-level'],
+    set: (c, v) => ({
+      ...c,
+      output: { ...c.output, 'log-level': v as LogLevel },
+    }),
   },
   {
-    section: 'Execution', key: 'timeout', label: 'timeout', type: 'string',
-    get: c => c.execution.timeout,
+    section: 'Execution',
+    key: 'timeout',
+    label: 'timeout',
+    type: 'string',
+    get: (c) => c.execution.timeout,
     set: (c, v) => ({ ...c, execution: { ...c.execution, timeout: v } }),
   },
   {
-    section: 'Defaults', key: 'setup', label: 'setup', type: 'string',
-    get: c => c.defaults.setup,
+    section: 'Defaults',
+    key: 'setup',
+    label: 'setup',
+    type: 'string',
+    get: (c) => c.defaults.setup,
     set: (c, v) => ({ ...c, defaults: { ...c.defaults, setup: v } }),
   },
   {
-    section: 'Defaults', key: 'teardown', label: 'teardown', type: 'string',
-    get: c => c.defaults.teardown,
+    section: 'Defaults',
+    key: 'teardown',
+    label: 'teardown',
+    type: 'string',
+    get: (c) => c.defaults.teardown,
     set: (c, v) => ({ ...c, defaults: { ...c.defaults, teardown: v } }),
   },
 ];
@@ -1475,9 +1744,9 @@ export function Options({ config, onSave }: OptionsProps) {
     }
 
     if (key.upArrow) {
-      setCursor(c => Math.max(0, c - 1));
+      setCursor((c) => Math.max(0, c - 1));
     } else if (key.downArrow) {
-      setCursor(c => Math.min(FIELDS.length - 1, c + 1));
+      setCursor((c) => Math.min(FIELDS.length - 1, c + 1));
     } else if (key.return) {
       const field = FIELDS[cursor];
       if (field.type === 'boolean') {
@@ -1514,7 +1783,9 @@ export function Options({ config, onSave }: OptionsProps) {
           <Box key={field.key} flexDirection="column">
             {sectionHeader && (
               <Box marginTop={idx === 0 ? 0 : 1}>
-                <Text bold color="cyan">{field.section}</Text>
+                <Text bold color="cyan">
+                  {field.section}
+                </Text>
               </Box>
             )}
             <Box>
@@ -1566,7 +1837,7 @@ function FieldEditor({
   if (field.type === 'enum' && field.options) {
     return (
       <Select
-        options={field.options.map(o => ({ label: o, value: o }))}
+        options={field.options.map((o) => ({ label: o, value: o }))}
         defaultValue={value}
         onChange={onSubmit}
       />
@@ -1635,6 +1906,7 @@ git commit -m "fix: address integration issues from TUI polish"
 ### Task 12: Update architecture docs
 
 **Files:**
+
 - Modify: `docs/architecture/tui-design.md`
 
 - [ ] **Step 1: Update tui-design.md**

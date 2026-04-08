@@ -47,9 +47,13 @@ const main = defineCommand({
       console.log('  ls       List discovered spec files and test cases');
       console.log('  compile  Parse spec files and write manifest JSON files');
       console.log('  test     Run tests from spec files');
-      console.log('  report   Generate a report from an existing test run directory');
+      console.log(
+        '  report   Generate a report from an existing test run directory'
+      );
       console.log('');
-      console.log('Run `skill-unit <command> --help` for command-specific help.');
+      console.log(
+        'Run `skill-unit <command> --help` for command-specific help.'
+      );
     }
   },
 });

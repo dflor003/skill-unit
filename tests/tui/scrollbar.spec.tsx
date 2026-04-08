@@ -8,7 +8,12 @@ describe('Scrollbar', () => {
     it('should render nothing', () => {
       // Act
       const { lastFrame } = render(
-        <Scrollbar totalLines={10} visibleLines={20} scrollOffset={0} height={10} />,
+        <Scrollbar
+          totalLines={10}
+          visibleLines={20}
+          scrollOffset={0}
+          height={10}
+        />
       );
 
       // Assert
@@ -20,7 +25,12 @@ describe('Scrollbar', () => {
     it('should render a track with thumb characters', () => {
       // Act
       const { lastFrame } = render(
-        <Scrollbar totalLines={100} visibleLines={20} scrollOffset={0} height={10} />,
+        <Scrollbar
+          totalLines={100}
+          visibleLines={20}
+          scrollOffset={0}
+          height={10}
+        />
       );
       const output = lastFrame()!;
 
@@ -34,12 +44,17 @@ describe('Scrollbar', () => {
     it('should place the thumb at the bottom of the track', () => {
       // Act
       const { lastFrame } = render(
-        <Scrollbar totalLines={100} visibleLines={20} scrollOffset={0} height={10} />,
+        <Scrollbar
+          totalLines={100}
+          visibleLines={20}
+          scrollOffset={0}
+          height={10}
+        />
       );
       const lines = lastFrame()!.split('\n');
 
       // Assert -- last non-empty line should be thumb
-      const nonEmpty = lines.filter(l => l.trim());
+      const nonEmpty = lines.filter((l) => l.trim());
       expect(nonEmpty[nonEmpty.length - 1]).toContain('\u2588');
     });
   });
@@ -48,12 +63,17 @@ describe('Scrollbar', () => {
     it('should place the thumb at the top of the track', () => {
       // Arrange -- maxOffset = 100 - 20 = 80
       const { lastFrame } = render(
-        <Scrollbar totalLines={100} visibleLines={20} scrollOffset={80} height={10} />,
+        <Scrollbar
+          totalLines={100}
+          visibleLines={20}
+          scrollOffset={80}
+          height={10}
+        />
       );
       const lines = lastFrame()!.split('\n');
 
       // Assert -- first non-empty line should be thumb
-      const nonEmpty = lines.filter(l => l.trim());
+      const nonEmpty = lines.filter((l) => l.trim());
       expect(nonEmpty[0]).toContain('\u2588');
     });
   });
@@ -62,10 +82,20 @@ describe('Scrollbar', () => {
     it('should have a larger thumb when more content is visible', () => {
       // Arrange
       const { lastFrame: small } = render(
-        <Scrollbar totalLines={200} visibleLines={10} scrollOffset={0} height={20} />,
+        <Scrollbar
+          totalLines={200}
+          visibleLines={10}
+          scrollOffset={0}
+          height={20}
+        />
       );
       const { lastFrame: large } = render(
-        <Scrollbar totalLines={40} visibleLines={10} scrollOffset={0} height={20} />,
+        <Scrollbar
+          totalLines={40}
+          visibleLines={10}
+          scrollOffset={0}
+          height={20}
+        />
       );
 
       // Assert

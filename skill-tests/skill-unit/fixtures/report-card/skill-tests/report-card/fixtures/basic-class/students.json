@@ -1,8 +1,8 @@
 {
   "class": "Computer Science 101",
   "students": [
-    {"name": "Alice", "grades": [95, 88, 92]},
-    {"name": "Bob", "grades": [72, 65, 80]},
-    {"name": "Charlie", "grades": [100, 98, 97]}
+    { "name": "Alice", "grades": [95, 88, 92] },
+    { "name": "Bob", "grades": [72, 65, 80] },
+    { "name": "Charlie", "grades": [100, 98, 97] }
   ]
 }

@@ -19,9 +19,9 @@ The Runner screen is the only screen accessed as a "child" of another screen (Da
 
 **Key bindings (Runner screen, run NOT active):**
 
-| Key | Action |
-|---|---|
-| Escape | Return to `previousScreen` |
+| Key       | Action                     |
+| --------- | -------------------------- |
+| Escape    | Return to `previousScreen` |
 | Backspace | Return to `previousScreen` |
 
 **Bottom bar update:** When on the Runner screen with a completed or idle run, the status area shows `[Esc] back` so the user knows how to return.
@@ -78,10 +78,10 @@ A new `ConfirmDialog` component rendered as an overlay in `app.tsx`. While visib
 
 **Input handling:**
 
-| Key | Action |
-|---|---|
-| y / Y | Confirm cancellation |
-| n / N | Dismiss dialog |
+| Key    | Action                      |
+| ------ | --------------------------- |
+| y / Y  | Confirm cancellation        |
+| n / N  | Dismiss dialog              |
 | Escape | Dismiss dialog (same as No) |
 
 All other keys are ignored while the dialog is visible.
@@ -100,11 +100,11 @@ A new `cancelRun` action is added to the `useTestRun` hook.
 
 **Status transitions on cancel:**
 
-| Current status | Transitions to |
-|---|---|
-| `running` | `cancelled` |
-| `grading` | `cancelled` |
-| `pending` | `cancelled` |
+| Current status                             | Transitions to               |
+| ------------------------------------------ | ---------------------------- |
+| `running`                                  | `cancelled`                  |
+| `grading`                                  | `cancelled`                  |
+| `pending`                                  | `cancelled`                  |
 | `passed` / `failed` / `timedout` / `error` | No change (already terminal) |
 
 **New TestStatus value:** `cancelled` is added to the `TestStatus` union type.
@@ -139,7 +139,7 @@ interface ScrollbarProps {
   totalLines: number;
   visibleLines: number;
   scrollOffset: number; // lines from bottom
-  height: number;       // available rows for the scrollbar
+  height: number; // available rows for the scrollbar
 }
 ```
 
@@ -185,12 +185,12 @@ The Options screen is currently read-only. It displays config values but provide
 
 **Field types and editors:**
 
-| Type | Fields | Editor | Controls |
-|---|---|---|---|
-| Enum | tool, format, log-level | `Select` from `@inkjs/ui` | Up/Down to browse, Enter to confirm |
-| Boolean | show-passing-details | Toggle inline | Space or Enter flips the value |
-| Number | max-turns, concurrency | `TextInput` from `@inkjs/ui` | Type digits, Enter to confirm |
-| String | model, timeout, setup, teardown | `TextInput` from `@inkjs/ui` | Type value, Enter to confirm |
+| Type    | Fields                          | Editor                       | Controls                            |
+| ------- | ------------------------------- | ---------------------------- | ----------------------------------- |
+| Enum    | tool, format, log-level         | `Select` from `@inkjs/ui`    | Up/Down to browse, Enter to confirm |
+| Boolean | show-passing-details            | Toggle inline                | Space or Enter flips the value      |
+| Number  | max-turns, concurrency          | `TextInput` from `@inkjs/ui` | Type digits, Enter to confirm       |
+| String  | model, timeout, setup, teardown | `TextInput` from `@inkjs/ui` | Type value, Enter to confirm        |
 
 **Enum valid values:**
 
@@ -215,33 +215,33 @@ The Options screen is currently read-only. It displays config values but provide
 
 ## Bottom Bar States (Summary)
 
-| Context | Bottom bar content |
-|---|---|
-| Dashboard / Runs / Stats / Options | `[D]ashboard [R]uns [S]tats [O]ptions  Tab: next [Q]uit` |
-| Runner (idle/complete) | `[D]ashboard [R]uns [S]tats [O]ptions  [Esc] back  Tab: next [Q]uit` |
-| Runner (running, primary view) | `Run in progress...  [Esc] cancel  ← → sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split` |
-| Runner (running, split view) | `Run in progress...  [Esc] cancel  [1-9] focus  [m] maximize  [v] primary` |
-| Runner (complete, primary view) | `[Space] select  [Enter] re-run  ← → sessions  [Esc] back` |
+| Context                            | Bottom bar content                                                                                 |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Dashboard / Runs / Stats / Options | `[D]ashboard [R]uns [S]tats [O]ptions  Tab: next [Q]uit`                                           |
+| Runner (idle/complete)             | `[D]ashboard [R]uns [S]tats [O]ptions  [Esc] back  Tab: next [Q]uit`                               |
+| Runner (running, primary view)     | `Run in progress...  [Esc] cancel  ← → sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split` |
+| Runner (running, split view)       | `Run in progress...  [Esc] cancel  [1-9] focus  [m] maximize  [v] primary`                         |
+| Runner (complete, primary view)    | `[Space] select  [Enter] re-run  ← → sessions  [Esc] back`                                         |
 
 ## New Files
 
-| File | Purpose |
-|---|---|
+| File                                    | Purpose                          |
+| --------------------------------------- | -------------------------------- |
 | `src/tui/components/confirm-dialog.tsx` | Modal yes/no confirmation dialog |
-| `src/tui/components/scrollbar.tsx` | Visual scrollbar track + thumb |
+| `src/tui/components/scrollbar.tsx`      | Visual scrollbar track + thumb   |
 
 ## Modified Files
 
-| File | Changes |
-|---|---|
-| `src/tui/app.tsx` | `previousScreen` state, nav lock during run, dialog state, Escape/Backspace handling, pass new props to BottomBar and Runner |
-| `src/tui/components/bottom-bar.tsx` | Accept run status + screen context props, render contextual hint modes |
-| `src/tui/screens/runner.tsx` | Remove inline footer (hints move to bottom bar), wire cancel dialog trigger |
-| `src/tui/components/session-panel.tsx` | Add Scrollbar to content area layout |
-| `src/tui/components/progress-tree.tsx` | Add `cancelled` status icon (`⊘` gray) |
-| `src/tui/hooks/use-test-run.ts` | Add `cancelRun` action, store active handles, implement process termination |
-| `src/types/run.ts` | Add `'cancelled'` to `TestStatus` union |
-| `src/tui/screens/options.tsx` | Full rewrite: inline editors per field type using `@inkjs/ui` components, edit mode state, unsaved changes tracking, config serialization on save |
+| File                                   | Changes                                                                                                                                           |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/tui/app.tsx`                      | `previousScreen` state, nav lock during run, dialog state, Escape/Backspace handling, pass new props to BottomBar and Runner                      |
+| `src/tui/components/bottom-bar.tsx`    | Accept run status + screen context props, render contextual hint modes                                                                            |
+| `src/tui/screens/runner.tsx`           | Remove inline footer (hints move to bottom bar), wire cancel dialog trigger                                                                       |
+| `src/tui/components/session-panel.tsx` | Add Scrollbar to content area layout                                                                                                              |
+| `src/tui/components/progress-tree.tsx` | Add `cancelled` status icon (`⊘` gray)                                                                                                            |
+| `src/tui/hooks/use-test-run.ts`        | Add `cancelRun` action, store active handles, implement process termination                                                                       |
+| `src/types/run.ts`                     | Add `'cancelled'` to `TestStatus` union                                                                                                           |
+| `src/tui/screens/options.tsx`          | Full rewrite: inline editors per field type using `@inkjs/ui` components, edit mode state, unsaved changes tracking, config serialization on save |
 
 ## Architecture Doc Updates
 

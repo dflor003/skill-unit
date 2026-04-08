@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-"use strict";
+'use strict';
 
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 // ---------------------------------------------------------------------------
 // skill-unit report generator -- assembles a consolidated report from
@@ -19,34 +19,39 @@ const path = require("path");
 // -- Parse a single results file --------------------------------------------
 
 function parseResultsFile(filePath) {
-  const content = fs.readFileSync(filePath, "utf-8");
+  const content = fs.readFileSync(filePath, 'utf-8');
   const fileName = path.basename(filePath);
 
   // Extract test ID and name from heading: # Results: {ID}: {Name}
   const headingMatch = content.match(/^# Results:\s*(.+?):\s*(.+)$/m);
-  const testId = headingMatch ? headingMatch[1].trim() : "unknown";
-  const testName = headingMatch ? headingMatch[2].trim() : "unknown";
+  const testId = headingMatch ? headingMatch[1].trim() : 'unknown';
+  const testName = headingMatch ? headingMatch[2].trim() : 'unknown';
 
   // Extract verdict
   const verdictMatch = content.match(/\*\*Verdict:\*\*\s*(PASS|FAIL)/i);
-  const passed = verdictMatch ? verdictMatch[1].toUpperCase() === "PASS" : false;
+  const passed = verdictMatch
+    ? verdictMatch[1].toUpperCase() === 'PASS'
+    : false;
 
   // Extract expectation lines (checkmark and x lines, plus arrow continuation lines)
   const expectationLines = [];
   const negativeExpectationLines = [];
   let currentSection = null;
 
-  for (const line of content.split("\n")) {
+  for (const line of content.split('\n')) {
     if (line.match(/^\*\*Expectations:\*\*/)) {
-      currentSection = "expectations";
+      currentSection = 'expectations';
       continue;
     }
     if (line.match(/^\*\*Negative Expectations:\*\*/)) {
-      currentSection = "negative";
+      currentSection = 'negative';
       continue;
     }
     // Stop at next section heading or end
-    if (line.match(/^#/) || (line.match(/^\*\*/) && !line.match(/^\*\*(Expectations|Negative)/))) {
+    if (
+      line.match(/^#/) ||
+      (line.match(/^\*\*/) && !line.match(/^\*\*(Expectations|Negative)/))
+    ) {
       if (currentSection) currentSection = null;
       continue;
     }
@@ -54,9 +59,15 @@ function parseResultsFile(filePath) {
     const trimmed = line.trimEnd();
     if (!trimmed) continue;
 
-    if (currentSection === "expectations" && (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))) {
+    if (
+      currentSection === 'expectations' &&
+      (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))
+    ) {
       expectationLines.push(trimmed);
-    } else if (currentSection === "negative" && (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))) {
+    } else if (
+      currentSection === 'negative' &&
+      (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))
+    ) {
       negativeExpectationLines.push(trimmed);
     }
   }
@@ -83,29 +94,32 @@ function parseResultsFile(filePath) {
 
 function extractSpecName(fileName) {
   // e.g., "test-design-tests.TDD-1.results.md" -> "test-design-tests"
-  const withoutExt = fileName.replace(/\.results\.md$/, "");
-  const lastDot = withoutExt.lastIndexOf(".");
+  const withoutExt = fileName.replace(/\.results\.md$/, '');
+  const lastDot = withoutExt.lastIndexOf('.');
   return lastDot > 0 ? withoutExt.substring(0, lastDot) : withoutExt;
 }
 
 // -- Generate report ----------------------------------------------------------
 
 function generateReport(runDir) {
-  const resultsDir = path.join(runDir, "results");
+  const resultsDir = path.join(runDir, 'results');
 
   if (!fs.existsSync(resultsDir)) {
     return { error: `Results directory not found: ${resultsDir}` };
   }
 
-  const resultsFiles = fs.readdirSync(resultsDir)
-    .filter((f) => f.endsWith(".results.md"))
+  const resultsFiles = fs
+    .readdirSync(resultsDir)
+    .filter((f) => f.endsWith('.results.md'))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
   if (resultsFiles.length === 0) {
     return { error: `No *.results.md files found in ${resultsDir}` };
   }
 
-  const results = resultsFiles.map((f) => parseResultsFile(path.join(resultsDir, f)));
+  const results = resultsFiles.map((f) =>
+    parseResultsFile(path.join(resultsDir, f))
+  );
   const timestamp = path.basename(runDir);
 
   // Group by spec name
@@ -125,81 +139,93 @@ function generateReport(runDir) {
   const fileLines = [];
 
   fileLines.push(`# Test Run: ${timestamp}`);
-  fileLines.push("");
-  fileLines.push(`**${totalPassed} passed** | **${totalFailed} failed** | ${totalTests} total`);
-  fileLines.push("");
-  fileLines.push("---");
-  fileLines.push("");
+  fileLines.push('');
+  fileLines.push(
+    `**${totalPassed} passed** | **${totalFailed} failed** | ${totalTests} total`
+  );
+  fileLines.push('');
+  fileLines.push('---');
+  fileLines.push('');
 
   for (const [specName, specResults] of Object.entries(grouped)) {
     const specPassed = specResults.filter((r) => r.passed).length;
     const specFailed = specResults.filter((r) => !r.passed).length;
 
-    fileLines.push(`## ${specName} (${specPassed} passed, ${specFailed} failed)`);
-    fileLines.push("");
+    fileLines.push(
+      `## ${specName} (${specPassed} passed, ${specFailed} failed)`
+    );
+    fileLines.push('');
 
     for (const r of specResults) {
       const transcriptLink = `${specName}.${r.testId}.transcript.md`;
       const resultsLink = r.fileName;
 
       if (r.passed) {
-        fileLines.push(`- ✅ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`);
+        fileLines.push(
+          `- ✅ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`
+        );
       } else {
-        fileLines.push(`- ❌ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`);
-        fileLines.push("");
+        fileLines.push(
+          `- ❌ **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) — [transcript](${transcriptLink}) | [grading](${resultsLink})`
+        );
+        fileLines.push('');
         fileLines.push(`  <details>`);
         fileLines.push(`  <summary>Failure details</summary>`);
-        fileLines.push("");
+        fileLines.push('');
 
         if (r.expectationLines.length > 0) {
-          fileLines.push("  **Expectations:**");
+          fileLines.push('  **Expectations:**');
           for (const el of r.expectationLines) {
             fileLines.push(`  ${el}`);
           }
-          fileLines.push("");
+          fileLines.push('');
         }
 
         if (r.negativeExpectationLines.length > 0) {
-          fileLines.push("  **Negative Expectations:**");
+          fileLines.push('  **Negative Expectations:**');
           for (const el of r.negativeExpectationLines) {
             fileLines.push(`  ${el}`);
           }
-          fileLines.push("");
+          fileLines.push('');
         }
 
-        fileLines.push("  </details>");
+        fileLines.push('  </details>');
       }
-      fileLines.push("");
+      fileLines.push('');
     }
   }
 
   // Write report file
-  const reportPath = path.join(resultsDir, "report.md");
-  fs.writeFileSync(reportPath, fileLines.join("\n"), "utf-8");
+  const reportPath = path.join(resultsDir, 'report.md');
+  fs.writeFileSync(reportPath, fileLines.join('\n'), 'utf-8');
 
   // -- Build terminal summary -------------------------------------------------
 
   const termLines = [];
 
-  termLines.push("");
+  termLines.push('');
   termLines.push(`# Test Results`);
-  termLines.push("");
+  termLines.push('');
 
   for (const [specName, specResults] of Object.entries(grouped)) {
     const specPassed = specResults.filter((r) => r.passed).length;
     const specFailed = specResults.filter((r) => !r.passed).length;
 
     termLines.push(`## ${specName}`);
-    termLines.push("");
+    termLines.push('');
 
     for (const r of specResults) {
-      const icon = r.passed ? "✅" : "❌";
+      const icon = r.passed ? '✅' : '❌';
       const score = `${r.passedChecks}/${r.totalChecks}`;
 
       if (r.passed) {
-        termLines.push(`  ${icon} **${r.testId}**: ${r.testName} \`(${score})\``);
+        termLines.push(
+          `  ${icon} **${r.testId}**: ${r.testName} \`(${score})\``
+        );
       } else {
-        termLines.push(`  ${icon} **${r.testId}**: ${r.testName} \`(${score})\``);
+        termLines.push(
+          `  ${icon} **${r.testId}**: ${r.testName} \`(${score})\``
+        );
 
         // Show failed expectations inline
         const failures = [
@@ -208,27 +234,29 @@ function generateReport(runDir) {
         ];
         for (const f of failures) {
           // Strip the "- ✗ " prefix and show as indented reason
-          const reason = f.replace(/^- ✗\s*/, "");
+          const reason = f.replace(/^- ✗\s*/, '');
           termLines.push(`     *✗ ${reason}*`);
         }
       }
     }
 
-    termLines.push("");
+    termLines.push('');
   }
 
   // Summary line
-  termLines.push("---");
-  termLines.push("");
+  termLines.push('---');
+  termLines.push('');
 
   if (totalFailed === 0) {
     termLines.push(`**${totalPassed} passed**, ${totalTests} total`);
   } else {
-    termLines.push(`**${totalPassed} passed**, **${totalFailed} failed**, ${totalTests} total`);
+    termLines.push(
+      `**${totalPassed} passed**, **${totalFailed} failed**, ${totalTests} total`
+    );
   }
 
   termLines.push(`Report: \`${reportPath}\``);
-  termLines.push("");
+  termLines.push('');
 
   return {
     reportPath,
@@ -236,7 +264,7 @@ function generateReport(runDir) {
     totalFailed,
     totalTests,
     grouped,
-    terminalSummary: termLines.join("\n"),
+    terminalSummary: termLines.join('\n'),
   };
 }
 
@@ -250,14 +278,14 @@ if (require.main === module) {
   const runDir = process.argv[2];
 
   if (!runDir) {
-    process.stderr.write("Usage: node report.js <run-dir>\n");
+    process.stderr.write('Usage: node report.js <run-dir>\n');
     process.exit(1);
   }
 
   const result = generateReport(runDir);
 
   if (result.error) {
-    process.stderr.write(result.error + "\n");
+    process.stderr.write(result.error + '\n');
     process.exit(1);
   }
 

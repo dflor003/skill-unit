@@ -16,12 +16,14 @@
     "su": "tsx src/cli/index.ts",
     "dev": "npm run su",
     "build": "tsc",
+    "lint": "eslint src/",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:skills": "npm run su -- test --all",
-    "lint": "eslint src/",
-    "typecheck": "tsc --noEmit"
+    "test:skills": "npm run su -- test --all"
   },
   "dependencies": {
     "@inkjs/ui": "^2.0.0",
@@ -41,6 +43,7 @@
     "@vitest/coverage-v8": "^4.1.2",
     "eslint": "^10.2.0",
     "ink-testing-library": "^4.0.0",
+    "prettier": "^3.8.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.0",

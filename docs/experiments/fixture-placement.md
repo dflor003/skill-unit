@@ -7,12 +7,14 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 ## Approach C: Copy to Repo Root (Phase 1 Default)
 
 **How it works:**
+
 1. Evaluator records current working directory state (list of files or `git status`).
 2. Copies fixture folder contents to repo root.
 3. Runs test-executor.
 4. Removes all fixture files, restoring original state.
 
 **Test procedure:**
+
 1. Create a fixture folder with 3-5 files (e.g., `package.json`, `src/index.ts`, `README.md`).
 2. Run a spec file that uses this fixture.
 3. Verify: test-executor can read/write fixture files normally.
@@ -25,12 +27,14 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 ## Approach B: Git Worktree
 
 **How it works:**
+
 1. Evaluator creates a git worktree.
 2. Copies fixtures into the worktree.
 3. Spawns test-executor with `isolation: "worktree"`.
 4. Worktree is cleaned up after the test.
 
 **Test procedure:**
+
 1. Same fixture folder as Approach C.
 2. Run a spec file using worktree isolation.
 3. Verify: test-executor operates in the worktree naturally.
@@ -43,12 +47,14 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 ## Approach D: Neutral Workspace Directory
 
 **How it works:**
+
 1. Evaluator creates `.workspace/` at repo root (`.gitignore`'d).
 2. Copies fixtures into `.workspace/`.
 3. Tells test-executor to operate in `.workspace/` as project root.
 4. Cleans up `.workspace/` after the test.
 
 **Test procedure:**
+
 1. Same fixture folder as Approach C.
 2. Run a spec file with workspace directory.
 3. Verify: test-executor operates in `.workspace/` without confusion.
@@ -60,10 +66,10 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 
 ## Evaluation Criteria
 
-| Criterion | Weight | Description |
-|-----------|--------|-------------|
-| Subagent realism | High | Does the subagent behave as it would in a real session? |
-| Cleanup reliability | High | Are all fixture files removed consistently? |
-| Performance | Medium | How much overhead does the approach add? |
-| Conflict safety | Medium | What happens if fixtures overlap with real files? |
-| Simplicity | Low | How complex is the implementation? |
+| Criterion           | Weight | Description                                             |
+| ------------------- | ------ | ------------------------------------------------------- |
+| Subagent realism    | High   | Does the subagent behave as it would in a real session? |
+| Cleanup reliability | High   | Are all fixture files removed consistently?             |
+| Performance         | Medium | How much overhead does the approach add?                |
+| Conflict safety     | Medium | What happens if fixtures overlap with real files?       |
+| Simplicity          | Low    | How complex is the implementation?                      |

@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { recordRun, loadIndex, rebuildIndex, cleanupRuns, createEmptyIndex } from '../../src/core/stats.js';
+import {
+  recordRun,
+  loadIndex,
+  rebuildIndex,
+  cleanupRuns,
+  createEmptyIndex,
+} from '../../src/core/stats.js';
 import type { RunResult } from '../../src/types/run.js';
 
 describe('stats', () => {
@@ -27,14 +33,30 @@ describe('stats', () => {
     tokens: 3000,
     tests: [
       {
-        id: 'TEST-1', name: 'basic', specName: 'runner', status: 'passed',
-        durationMs: 2000, passed: true, passedChecks: 2, failedChecks: 0,
-        totalChecks: 2, expectationLines: [], negativeExpectationLines: [],
+        id: 'TEST-1',
+        name: 'basic',
+        specName: 'runner',
+        status: 'passed',
+        durationMs: 2000,
+        passed: true,
+        passedChecks: 2,
+        failedChecks: 0,
+        totalChecks: 2,
+        expectationLines: [],
+        negativeExpectationLines: [],
       },
       {
-        id: 'TEST-2', name: 'error', specName: 'runner', status: 'failed',
-        durationMs: 3000, passed: false, passedChecks: 1, failedChecks: 1,
-        totalChecks: 2, expectationLines: [], negativeExpectationLines: [],
+        id: 'TEST-2',
+        name: 'error',
+        specName: 'runner',
+        status: 'failed',
+        durationMs: 3000,
+        passed: false,
+        passedChecks: 1,
+        failedChecks: 1,
+        totalChecks: 2,
+        expectationLines: [],
+        negativeExpectationLines: [],
       },
     ],
     ...overrides,
@@ -65,7 +87,10 @@ describe('stats', () => {
 
     it('updates existing index', () => {
       recordRun(makeRunResult(), tmpDir);
-      recordRun(makeRunResult({ id: '2026-04-07-11-00-00', passed: 2, failed: 0 }), tmpDir);
+      recordRun(
+        makeRunResult({ id: '2026-04-07-11-00-00', passed: 2, failed: 0 }),
+        tmpDir
+      );
 
       const index = loadIndex(tmpDir);
       expect(index.aggregate.totalRuns).toBe(2);
@@ -79,7 +104,9 @@ describe('stats', () => {
       const runDir = path.join(tmpDir, 'runs', result.id);
       expect(fs.existsSync(runDir)).toBe(true);
 
-      const runData = JSON.parse(fs.readFileSync(path.join(runDir, 'run.json'), 'utf-8'));
+      const runData = JSON.parse(
+        fs.readFileSync(path.join(runDir, 'run.json'), 'utf-8')
+      );
       expect(runData.testCount).toBe(2);
     });
 

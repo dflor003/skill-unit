@@ -38,14 +38,16 @@ function filterTests(tests: FlatTestCase[], query: string): FlatTestCase[] {
 
   if (query.startsWith('tag:')) {
     const tag = query.slice(4).trim().toLowerCase();
-    return tests.filter(t => t.tags.some(tg => tg.toLowerCase().includes(tag)));
+    return tests.filter((t) =>
+      t.tags.some((tg) => tg.toLowerCase().includes(tag))
+    );
   }
 
   const q = query.toLowerCase();
   return tests.filter(
-    t =>
+    (t) =>
       t.testCase.name.toLowerCase().includes(q) ||
-      t.testCase.id.toLowerCase().includes(q),
+      t.testCase.id.toLowerCase().includes(q)
   );
 }
 
@@ -63,18 +65,21 @@ export function Dashboard({ specs, onRunTests }: DashboardProps) {
   const visible = filterTests(allTests, query);
 
   useEffect(() => {
-    saveSelection({ selectedTests: selected, viewMode: 'primary' }, SELECTION_DIR);
+    saveSelection(
+      { selectedTests: selected, viewMode: 'primary' },
+      SELECTION_DIR
+    );
   }, [selected]);
 
   useInput((input, key) => {
     if (key.upArrow) {
-      setCursor(c => Math.max(0, c - 1));
+      setCursor((c) => Math.max(0, c - 1));
     } else if (key.downArrow) {
-      setCursor(c => Math.min(visible.length - 1, c + 1));
+      setCursor((c) => Math.min(visible.length - 1, c + 1));
     } else if (input === ' ') {
       const item = visible[cursor];
       if (!item) return;
-      setSelected(prev => {
+      setSelected((prev) => {
         const next = new Set(prev);
         if (next.has(item.key)) {
           next.delete(item.key);
@@ -87,17 +92,18 @@ export function Dashboard({ specs, onRunTests }: DashboardProps) {
       if (selected.size === visible.length) {
         setSelected(new Set());
       } else {
-        setSelected(new Set(visible.map(t => t.key)));
+        setSelected(new Set(visible.map((t) => t.key)));
       }
     } else if (key.return) {
-      const toRun = selected.size > 0
-        ? visible.filter(t => selected.has(t.key))
-        : visible;
+      const toRun =
+        selected.size > 0
+          ? visible.filter((t) => selected.has(t.key))
+          : visible;
       onRunTests(toRun);
     } else if (key.backspace || key.delete) {
-      setQuery(q => q.slice(0, -1));
+      setQuery((q) => q.slice(0, -1));
     } else if (input && !key.ctrl && !key.meta) {
-      setQuery(q => q + input);
+      setQuery((q) => q + input);
     }
   });
 
@@ -122,12 +128,8 @@ export function Dashboard({ specs, onRunTests }: DashboardProps) {
           return (
             <Box key={item.key}>
               <Text color={isActive ? 'blue' : undefined}>
-                {isActive ? '>' : ' '}
-                {' '}
-                {isChecked ? '[x]' : '[ ]'}
-                {' '}
-                <Text bold={isActive}>{item.testCase.name}</Text>
-                {' '}
+                {isActive ? '>' : ' '} {isChecked ? '[x]' : '[ ]'}{' '}
+                <Text bold={isActive}>{item.testCase.name}</Text>{' '}
                 <Text color="gray">({item.specName})</Text>
                 {item.tags.length > 0 && (
                   <Text color="cyan"> [{item.tags.join(', ')}]</Text>

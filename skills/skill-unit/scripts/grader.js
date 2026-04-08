@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-"use strict";
+'use strict';
 
-const fs = require("fs");
-const path = require("path");
-const { spawn } = require("child_process");
-const log = require("./logger")("grader");
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+const log = require('./logger')('grader');
 
 // ---------------------------------------------------------------------------
 // skill-unit grader — spawns grader CLI processes to evaluate test results
@@ -24,14 +24,17 @@ const log = require("./logger")("grader");
 // -- Grader prompt construction -----------------------------------------------
 
 function buildGraderPrompt(tc, specName, timestamp) {
-  const resultsDir = path.join(".workspace", "runs", timestamp, "results");
-  const transcriptPath = path.join(resultsDir, `${specName}.${tc.id}.transcript.md`);
+  const resultsDir = path.join('.workspace', 'runs', timestamp, 'results');
+  const transcriptPath = path.join(
+    resultsDir,
+    `${specName}.${tc.id}.transcript.md`
+  );
   const outputPath = path.join(resultsDir, `${specName}.${tc.id}.results.md`);
 
-  const expectations = (tc.expectations || []).map((e) => `- ${e}`).join("\n");
-  const negExpectations = (tc["negative-expectations"] || []).length
-    ? tc["negative-expectations"].map((e) => `- ${e}`).join("\n")
-    : "None";
+  const expectations = (tc.expectations || []).map((e) => `- ${e}`).join('\n');
+  const negExpectations = (tc['negative-expectations'] || []).length
+    ? tc['negative-expectations'].map((e) => `- ${e}`).join('\n')
+    : 'None';
 
   return `Grade this test case.
 
@@ -55,21 +58,25 @@ ${negExpectations}
 
 function resolveAgentPath() {
   // Look for agents/grader.md relative to repo root
-  const candidate = path.join(process.cwd(), "agents", "grader.md");
+  const candidate = path.join(process.cwd(), 'agents', 'grader.md');
   if (fs.existsSync(candidate)) return candidate;
   return null;
 }
 
 const GRADER_PROFILES = {
   claude: (agentPath) => [
-    "--print",
-    "--verbose",
-    "--output-format", "stream-json",
-    "--max-turns", "5",
-    "--permission-mode", "dontAsk",
-    "--no-chrome",
-    "--no-session-persistence",
-    "--agent", agentPath,
+    '--print',
+    '--verbose',
+    '--output-format',
+    'stream-json',
+    '--max-turns',
+    '5',
+    '--permission-mode',
+    'dontAsk',
+    '--no-chrome',
+    '--no-session-persistence',
+    '--agent',
+    agentPath,
   ],
 };
 
@@ -79,23 +86,27 @@ function spawnGrader(tool, cliArgs, prompt) {
   return new Promise((resolve) => {
     const proc = spawn(tool, cliArgs, {
       cwd: process.cwd(),
-      stdio: ["pipe", "pipe", "pipe"],
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
-    let stdout = "";
-    let stderr = "";
+    let stdout = '';
+    let stderr = '';
 
-    proc.stdout.on("data", (data) => { stdout += data.toString(); });
-    proc.stderr.on("data", (data) => { stderr += data.toString(); });
+    proc.stdout.on('data', (data) => {
+      stdout += data.toString();
+    });
+    proc.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
 
     proc.stdin.write(prompt);
     proc.stdin.end();
 
-    proc.on("close", (code) => {
+    proc.on('close', (code) => {
       resolve({ exitCode: code || 0, stdout, stderr });
     });
 
-    proc.on("error", (err) => {
+    proc.on('error', (err) => {
       resolve({ exitCode: 1, stdout, stderr: err.message });
     });
   });
@@ -116,18 +127,21 @@ async function runBatch(tasks, concurrency) {
 // -- Main grading function ----------------------------------------------------
 
 async function gradeSpecs(specs, config, timestamp) {
-  const tool = config.runner.tool || "claude";
-  const concurrency = (config.execution && config.execution["grader-concurrency"]) || 5;
+  const tool = config.runner.tool || 'claude';
+  const concurrency =
+    (config.execution && config.execution['grader-concurrency']) || 5;
 
   const buildArgs = GRADER_PROFILES[tool];
   if (!buildArgs) {
-    log.error(`Unsupported tool for grading: "${tool}". Supported: ${Object.keys(GRADER_PROFILES).join(", ")}`);
+    log.error(
+      `Unsupported tool for grading: "${tool}". Supported: ${Object.keys(GRADER_PROFILES).join(', ')}`
+    );
     return;
   }
 
   const agentPath = resolveAgentPath();
   if (!agentPath) {
-    log.error("Could not find agents/grader.md in the repository root.");
+    log.error('Could not find agents/grader.md in the repository root.');
     return;
   }
 
@@ -137,11 +151,15 @@ async function gradeSpecs(specs, config, timestamp) {
   const tasks = [];
 
   for (const spec of specs) {
-    const specName = spec.frontmatter.name || path.basename(spec.path, ".spec.md");
+    const specName =
+      spec.frontmatter.name || path.basename(spec.path, '.spec.md');
 
     for (const tc of spec.testCases) {
       const transcriptPath = path.join(
-        ".workspace", "runs", timestamp, "results",
+        '.workspace',
+        'runs',
+        timestamp,
+        'results',
         `${specName}.${tc.id}.transcript.md`
       );
 
@@ -162,11 +180,13 @@ async function gradeSpecs(specs, config, timestamp) {
   }
 
   if (tasks.length === 0) {
-    log.info("No test cases to grade.");
+    log.info('No test cases to grade.');
     return;
   }
 
-  log.info(`Grading ${tasks.length} test case(s) with concurrency ${concurrency}`);
+  log.info(
+    `Grading ${tasks.length} test case(s) with concurrency ${concurrency}`
+  );
 
   // Execute in batches
   for (let i = 0; i < tasks.length; i += concurrency) {
@@ -174,7 +194,9 @@ async function gradeSpecs(specs, config, timestamp) {
     const batchNum = Math.floor(i / concurrency) + 1;
     const totalBatches = Math.ceil(tasks.length / concurrency);
 
-    log.info(`Batch ${batchNum}/${totalBatches}: ${batch.map((t) => t.testId).join(", ")}`);
+    log.info(
+      `Batch ${batchNum}/${totalBatches}: ${batch.map((t) => t.testId).join(', ')}`
+    );
 
     const results = await Promise.all(batch.map((t) => t.run()));
 
@@ -186,19 +208,26 @@ async function gradeSpecs(specs, config, timestamp) {
         log.error(`  ${batch[j].testId}: FAIL(${exitCode})`);
         if (stderr) {
           const preview = stderr.substring(0, 500);
-          log.debug(`  ${batch[j].testId} stderr: ${preview}${stderr.length > 500 ? "..." : ""}`);
+          log.debug(
+            `  ${batch[j].testId} stderr: ${preview}${stderr.length > 500 ? '...' : ''}`
+          );
         }
       }
     }
 
-    log.info(`Graded ${Math.min(i + concurrency, tasks.length)}/${tasks.length} test cases`);
+    log.info(
+      `Graded ${Math.min(i + concurrency, tasks.length)}/${tasks.length} test cases`
+    );
   }
 
   // Verify results files exist
-  const resultsDir = path.join(".workspace", "runs", timestamp, "results");
+  const resultsDir = path.join('.workspace', 'runs', timestamp, 'results');
   let missing = 0;
   for (const task of tasks) {
-    const resultsPath = path.join(resultsDir, `${task.specName}.${task.testId}.results.md`);
+    const resultsPath = path.join(
+      resultsDir,
+      `${task.specName}.${task.testId}.results.md`
+    );
     if (!fs.existsSync(resultsPath)) {
       log.warn(`Missing results file for ${task.testId}: ${resultsPath}`);
       missing++;
@@ -208,7 +237,7 @@ async function gradeSpecs(specs, config, timestamp) {
   if (missing > 0) {
     log.warn(`${missing} result file(s) missing`);
   } else {
-    log.success("All result files written");
+    log.success('All result files written');
   }
 }
 

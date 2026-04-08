@@ -84,17 +84,17 @@ When introducing a new build, lint, or test tool, add an npm script for it in `p
 
 Available scripts:
 
-| Command | Description |
-|---|---|
-| `npm run su` | Run the skill-unit CLI via tsx (e.g., `npm run su -- ls`) |
-| `npm run dev` | Alias for `npm run su` |
-| `npm run build` | Compile TypeScript to `dist/` via tsc |
-| `npm run test` | Run unit tests via Vitest |
-| `npm run test:watch` | Run Vitest in watch mode |
-| `npm run test:coverage` | Run tests with V8 coverage report |
-| `npm run test:skills` | Run skill-unit spec tests (requires CLI harness, costs tokens) |
-| `npm run lint` | Lint `src/` with ESLint |
-| `npm run typecheck` | Type-check without emitting (tsc --noEmit) |
+| Command                 | Description                                                    |
+| ----------------------- | -------------------------------------------------------------- |
+| `npm run su`            | Run the skill-unit CLI via tsx (e.g., `npm run su -- ls`)      |
+| `npm run dev`           | Alias for `npm run su`                                         |
+| `npm run build`         | Compile TypeScript to `dist/` via tsc                          |
+| `npm run test`          | Run unit tests via Vitest                                      |
+| `npm run test:watch`    | Run Vitest in watch mode                                       |
+| `npm run test:coverage` | Run tests with V8 coverage report                              |
+| `npm run test:skills`   | Run skill-unit spec tests (requires CLI harness, costs tokens) |
+| `npm run lint`          | Lint `src/` with ESLint                                        |
+| `npm run typecheck`     | Type-check without emitting (tsc --noEmit)                     |
 
 ## Validation Commands
 

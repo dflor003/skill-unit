@@ -41,11 +41,11 @@ Visible lines are computed from the transcript based on the panel's measured hei
 
 **Key bindings (scoped to Runner screen):**
 
-| Key | Action |
-|---|---|
-| Up | Scroll up, disable follow |
-| Down | Scroll down, disable follow |
-| f | Snap to bottom, re-enable follow |
+| Key  | Action                           |
+| ---- | -------------------------------- |
+| Up   | Scroll up, disable follow        |
+| Down | Scroll down, disable follow      |
+| f    | Snap to bottom, re-enable follow |
 
 **File:** `src/tui/components/session-panel.tsx`
 
@@ -134,9 +134,9 @@ Execution | [Grading]          <- grading view active
 
 **Key bindings (scoped to Runner screen):**
 
-| Key | Action |
-|---|---|
-| t | Toggle between execution and grading transcript |
+| Key | Action                                          |
+| --- | ----------------------------------------------- |
+| t   | Toggle between execution and grading transcript |
 
 **Files:** `src/tui/components/session-panel.tsx`, `src/tui/hooks/use-test-run.ts`
 
@@ -189,17 +189,17 @@ A running test and a grading test each consume one slot. When a test finishes ex
 
 ## Keyboard Reference (Runner Screen, Updated)
 
-| Key | Context | Action |
-|---|---|---|
-| Left/Right | Primary view | Switch active session in ticker |
-| Up/Down | Primary view | Scroll transcript, disable follow |
-| f | Primary view | Snap to bottom, re-enable follow |
-| t | Primary view | Toggle execution/grading transcript |
-| v | Any | Toggle Primary+Ticker / Split Panes view |
-| Space | Completed run | Toggle test selection for re-run |
-| Enter | Completed run | Re-run selected tests |
-| 1-9 | Split view | Focus pane by number |
-| m | Split view | Maximize/restore focused pane |
+| Key        | Context       | Action                                   |
+| ---------- | ------------- | ---------------------------------------- |
+| Left/Right | Primary view  | Switch active session in ticker          |
+| Up/Down    | Primary view  | Scroll transcript, disable follow        |
+| f          | Primary view  | Snap to bottom, re-enable follow         |
+| t          | Primary view  | Toggle execution/grading transcript      |
+| v          | Any           | Toggle Primary+Ticker / Split Panes view |
+| Space      | Completed run | Toggle test selection for re-run         |
+| Enter      | Completed run | Re-run selected tests                    |
+| 1-9        | Split view    | Focus pane by number                     |
+| m          | Split view    | Maximize/restore focused pane            |
 
 ## Architecture Doc Updates
 

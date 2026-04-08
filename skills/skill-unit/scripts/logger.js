@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-"use strict";
+'use strict';
 
 // ---------------------------------------------------------------------------
 // skill-unit logger — colored, leveled logging for all scripts
@@ -23,20 +23,20 @@
 // -- ANSI codes ---------------------------------------------------------------
 
 const ANSI = {
-  reset:      "\x1b[0m",
-  bold:       "\x1b[1m",
-  dim:        "\x1b[2m",
-  italic:     "\x1b[3m",
-  underline:  "\x1b[4m",
-  red:        "\x1b[31m",
-  green:      "\x1b[32m",
-  yellow:     "\x1b[33m",
-  blue:       "\x1b[34m",
-  magenta:    "\x1b[35m",
-  cyan:       "\x1b[36m",
-  white:      "\x1b[37m",
-  gray:       "\x1b[90m",
-  brightWhite: "\x1b[97m",
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  italic: '\x1b[3m',
+  underline: '\x1b[4m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  gray: '\x1b[90m',
+  brightWhite: '\x1b[97m',
 };
 
 // Disable styling if NO_COLOR env is set or the target stream is not a TTY.
@@ -56,22 +56,22 @@ function c(color, text) {
 // -- Level definitions --------------------------------------------------------
 
 const LEVELS = {
-  debug:   { priority: 0, color: "gray",    badge: "DBG" },
-  verbose: { priority: 1, color: "dim",     badge: "VRB" },
-  info:    { priority: 2, color: "cyan",    badge: "INF" },
-  success: { priority: 3, color: "green",   badge: " OK" },
-  warn:    { priority: 4, color: "yellow",  badge: "WRN" },
-  error:   { priority: 5, color: "red",     badge: "ERR" },
+  debug: { priority: 0, color: 'gray', badge: 'DBG' },
+  verbose: { priority: 1, color: 'dim', badge: 'VRB' },
+  info: { priority: 2, color: 'cyan', badge: 'INF' },
+  success: { priority: 3, color: 'green', badge: ' OK' },
+  warn: { priority: 4, color: 'yellow', badge: 'WRN' },
+  error: { priority: 5, color: 'red', badge: 'ERR' },
 };
 
-const DEFAULT_LEVEL = "info";
+const DEFAULT_LEVEL = 'info';
 
 // Shared mutable state: all logger instances read from this.
 // Can be updated after creation via setLevel().
 let currentMinLevel = resolveLevel(process.env.LOG_LEVEL);
 
 function resolveLevel(value) {
-  const key = (value || "").toLowerCase();
+  const key = (value || '').toLowerCase();
   if (LEVELS[key]) return LEVELS[key].priority;
   return LEVELS[DEFAULT_LEVEL].priority;
 }
@@ -80,9 +80,9 @@ function resolveLevel(value) {
 
 function timestamp() {
   const d = new Date();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  const ss = String(d.getSeconds()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
   return `${hh}:${mm}:${ss}`;
 }
 
@@ -93,21 +93,21 @@ function createLogger(scope) {
     const def = LEVELS[level];
     if (def.priority < currentMinLevel) return;
 
-    const ts = c("gray", timestamp());
+    const ts = c('gray', timestamp());
     const badge = c(def.color, def.badge);
-    const scopeStr = c("magenta", scope);
+    const scopeStr = c('magenta', scope);
     const text = def.priority >= LEVELS.warn.priority ? c(def.color, msg) : msg;
 
     process.stderr.write(`${ts} ${badge} ${scopeStr} ${text}\n`);
   }
 
   return {
-    debug:   (msg) => write("debug", msg),
-    verbose: (msg) => write("verbose", msg),
-    info:    (msg) => write("info", msg),
-    success: (msg) => write("success", msg),
-    warn:    (msg) => write("warn", msg),
-    error:   (msg) => write("error", msg),
+    debug: (msg) => write('debug', msg),
+    verbose: (msg) => write('verbose', msg),
+    info: (msg) => write('info', msg),
+    success: (msg) => write('success', msg),
+    warn: (msg) => write('warn', msg),
+    error: (msg) => write('error', msg),
   };
 }
 
@@ -199,13 +199,13 @@ function formatMd(text, stream) {
   const useColor = stream === process.stderr ? useColorStderr : useColorStdout;
   if (!useColor) return text;
 
-  const lines = text.split("\n");
+  const lines = text.split('\n');
   const out = [];
   let inCode = false;
 
   for (const line of lines) {
     // Code fence toggle
-    if (line.trimStart().startsWith("```")) {
+    if (line.trimStart().startsWith('```')) {
       out.push(`${ANSI.dim}${line}${ANSI.reset}`);
       inCode = !inCode;
       continue;
@@ -214,7 +214,7 @@ function formatMd(text, stream) {
     out.push(formatLine(line, inCode, useColor));
   }
 
-  return out.join("\n");
+  return out.join('\n');
 }
 
 // Streaming markdown formatter. Buffers partial lines and tracks code block
@@ -231,14 +231,14 @@ class MdStream {
     this.stream = stream;
     this.useColor = stream === process.stderr ? useColorStderr : useColorStdout;
     this.inCodeBlock = false;
-    this.buffer = "";
+    this.buffer = '';
   }
 
   write(chunk) {
     this.buffer += chunk;
 
     // Process complete lines, keep any trailing partial line in the buffer
-    const lines = this.buffer.split("\n");
+    const lines = this.buffer.split('\n');
     this.buffer = lines.pop(); // last element is partial (or empty if chunk ended with \n)
 
     for (const line of lines) {
@@ -250,19 +250,21 @@ class MdStream {
     // Flush remaining buffer
     if (this.buffer) {
       this._emitLine(this.buffer);
-      this.buffer = "";
+      this.buffer = '';
     }
   }
 
   _emitLine(line) {
     // Code fence toggle
-    if (line.trimStart().startsWith("```")) {
-      this.stream.write(`${this.useColor ? ANSI.dim : ""}${line}${this.useColor ? ANSI.reset : ""}\n`);
+    if (line.trimStart().startsWith('```')) {
+      this.stream.write(
+        `${this.useColor ? ANSI.dim : ''}${line}${this.useColor ? ANSI.reset : ''}\n`
+      );
       this.inCodeBlock = !this.inCodeBlock;
       return;
     }
 
-    this.stream.write(formatLine(line, this.inCodeBlock, this.useColor) + "\n");
+    this.stream.write(formatLine(line, this.inCodeBlock, this.useColor) + '\n');
   }
 }
 

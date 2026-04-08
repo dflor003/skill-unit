@@ -7,6 +7,7 @@ The skill-unit pipeline currently requires the AI agent (SKILL.md) to parse `.sp
 ## Approach: Top-Level Entry Point + Compiler Module
 
 Create two new files:
+
 - **`scripts/cli.js`** -- top-level entry point with subcommands, delegates to compiler/runner/report
 - **`scripts/compiler.js`** -- the parsing/resolution/manifest-generation engine (also usable standalone)
 
@@ -107,6 +108,7 @@ When filtered with `--test`, only matching test cases are shown. When filtered w
 ### `cli.js` (~80 lines) -- Entry Point
 
 Parses `process.argv` for subcommand and options, then delegates:
+
 - `run` -> calls compiler to generate manifests, then spawns `runner.js` for each
 - `compile` -> calls compiler, writes manifests, exits
 - `ls` -> calls compiler's discovery + parsing (no manifest writing), prints listing
@@ -119,6 +121,7 @@ This is a thin dispatch layer. All real logic lives in `compiler.js`.
 Exports functions for programmatic use by `cli.js`, and also works standalone:
 
 **Exported API:**
+
 ```js
 module.exports = {
   loadConfig(configPath),           // Load + merge .skill-unit.yml with defaults
@@ -130,6 +133,7 @@ module.exports = {
 ```
 
 **Internal sections:**
+
 1. Config loading (`loadConfig`, `CONFIG_DEFAULTS`)
 2. YAML subset parser (`parseSimpleYaml`) -- handles frontmatter and `.skill-unit.yml`
 3. Spec file parser (`parseFrontmatter`, `parseTestCases`, `parseSpecFile`)
@@ -151,6 +155,7 @@ Reads grader results, generates consolidated report. Called by `cli.js report` o
 No npm packages. The project has no `package.json` and stays that way.
 
 **YAML frontmatter parser (~60 lines):**
+
 - Delimited by `---` markers
 - Scalar strings: `name: my-tests`
 - Inline lists: `tags: [a, b, c]`
@@ -158,10 +163,12 @@ No npm packages. The project has no `package.json` and stays that way.
 - No nested objects, anchors, or multi-line strings in frontmatter
 
 **`.skill-unit.yml` parser:**
+
 - Same subset but with one level of nesting (e.g., `runner:` with indented sub-keys)
 - Detect top-level keys (no indent) vs sub-keys (2-space indent)
 
 **Markdown test case parser (~80 lines):**
+
 - Split on `### ` headings
 - State machine scanning for `**Label:**` markers
 - Extract: ID (before colon), name (after colon), prompt (blockquote lines), expectations (bullet lines), negative expectations (bullet lines), fixtures (bullet lines)
@@ -169,6 +176,7 @@ No npm packages. The project has no `package.json` and stays that way.
 ## Tool Permission Resolution
 
 Pure function implementing the documented 3-level chain:
+
 1. Start with built-in defaults: `allowed = [Read, Write, Edit, Bash, Glob, Grep, Agent, Skill]`, `disallowed = [AskUserQuestion]`
 2. If `.skill-unit.yml` has `runner.allowed-tools`, fully replace allowed; same for disallowed
 3. Spec frontmatter: `allowed-tools` fully replaces (ignoring `-extra`); `allowed-tools-extra` unions; same for disallowed
@@ -183,6 +191,7 @@ Pure function implementing the documented 3-level chain:
 ## Manifest Output
 
 Identical schema to what the agent currently produces; `runner.js` needs zero changes:
+
 ```json
 {
   "spec-name": "string",
@@ -198,14 +207,14 @@ Identical schema to what the agent currently produces; `runner.js` needs zero ch
 
 ## Files Changed
 
-| File | Action | Description |
-|------|--------|-------------|
-| `skills/skill-unit/scripts/cli.js` | **Create** | ~80 lines: subcommand dispatch (run, compile, ls, report) |
-| `skills/skill-unit/scripts/compiler.js` | **Create** | ~350 lines: config loading, spec parsing, tool resolution, manifest generation |
-| `skills/skill-unit/scripts/runner.js` | **No change** | Manifest contract unchanged |
-| `skills/skill-unit/scripts/report.js` | **No change** | |
-| `skills/skill-unit/SKILL.md` | **Modify** | Replace Steps 2-4b with `cli.js run`; add to `allowed-tools` |
-| `docs/architecture/test-execution.md` | **Modify** | Document the new CLI layer in the pipeline |
+| File                                    | Action        | Description                                                                    |
+| --------------------------------------- | ------------- | ------------------------------------------------------------------------------ |
+| `skills/skill-unit/scripts/cli.js`      | **Create**    | ~80 lines: subcommand dispatch (run, compile, ls, report)                      |
+| `skills/skill-unit/scripts/compiler.js` | **Create**    | ~350 lines: config loading, spec parsing, tool resolution, manifest generation |
+| `skills/skill-unit/scripts/runner.js`   | **No change** | Manifest contract unchanged                                                    |
+| `skills/skill-unit/scripts/report.js`   | **No change** |                                                                                |
+| `skills/skill-unit/SKILL.md`            | **Modify**    | Replace Steps 2-4b with `cli.js run`; add to `allowed-tools`                   |
+| `docs/architecture/test-execution.md`   | **Modify**    | Document the new CLI layer in the pipeline                                     |
 
 ### SKILL.md Changes
 
@@ -218,6 +227,7 @@ node ${CLAUDE_SKILL_DIR}/scripts/cli.js run --timestamp {timestamp} [spec-paths 
 Steps 4c-4f (setup, graders, verify, teardown) and Step 5 (report) remain in SKILL.md since grader dispatch requires the Agent tool.
 
 Add to SKILL.md `allowed-tools`:
+
 ```
 Bash(node ${CLAUDE_SKILL_DIR}/scripts/cli.js *)
 ```

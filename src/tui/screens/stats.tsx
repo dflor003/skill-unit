@@ -3,9 +3,22 @@ import { Box, Text, useInput } from 'ink';
 import type { StatsIndex, TestStats } from '../../types/run.js';
 import { formatDate } from '../format.js';
 
-type SortField = 'name' | 'runCount' | 'passRate' | 'duration' | 'cost' | 'lastRun';
+type SortField =
+  | 'name'
+  | 'runCount'
+  | 'passRate'
+  | 'duration'
+  | 'cost'
+  | 'lastRun';
 
-const SORT_FIELDS: SortField[] = ['name', 'runCount', 'passRate', 'duration', 'cost', 'lastRun'];
+const SORT_FIELDS: SortField[] = [
+  'name',
+  'runCount',
+  'passRate',
+  'duration',
+  'cost',
+  'lastRun',
+];
 
 const SORT_LABELS: Record<SortField, string> = {
   name: 'Name',
@@ -36,7 +49,10 @@ function formatDuration(ms: number): string {
   return `${mins}m${rem}s`;
 }
 
-function sortTests(tests: Array<[string, TestStats]>, field: SortField): Array<[string, TestStats]> {
+function sortTests(
+  tests: Array<[string, TestStats]>,
+  field: SortField
+): Array<[string, TestStats]> {
   return [...tests].sort(([aKey, a], [bKey, b]) => {
     switch (field) {
       case 'name':
@@ -65,7 +81,7 @@ export function Statistics({ index }: StatisticsProps) {
 
   useInput((input) => {
     if (input === 's' || input === 'S') {
-      setSortField(current => {
+      setSortField((current) => {
         const idx = SORT_FIELDS.indexOf(current);
         return SORT_FIELDS[(idx + 1) % SORT_FIELDS.length]!;
       });
@@ -82,9 +98,16 @@ export function Statistics({ index }: StatisticsProps) {
       </Box>
 
       {/* Aggregate section */}
-      <Box flexDirection="column" marginBottom={1} borderStyle="single" paddingX={1}>
+      <Box
+        flexDirection="column"
+        marginBottom={1}
+        borderStyle="single"
+        paddingX={1}
+      >
         <Box marginBottom={0}>
-          <Text bold color="gray">Aggregate</Text>
+          <Text bold color="gray">
+            Aggregate
+          </Text>
         </Box>
         <Box>
           <Box width={18}>
@@ -102,7 +125,16 @@ export function Statistics({ index }: StatisticsProps) {
           <Box width={18}>
             <Text color="gray">Pass Rate:</Text>
           </Box>
-          <Text bold color={aggregate.passRate >= 0.8 ? 'green' : aggregate.passRate >= 0.5 ? 'yellow' : 'red'}>
+          <Text
+            bold
+            color={
+              aggregate.passRate >= 0.8
+                ? 'green'
+                : aggregate.passRate >= 0.5
+                  ? 'yellow'
+                  : 'red'
+            }
+          >
             {Math.round(aggregate.passRate * 100)}%
           </Text>
         </Box>
@@ -123,44 +155,85 @@ export function Statistics({ index }: StatisticsProps) {
       {/* Per-test table */}
       <Box marginBottom={1}>
         <Text bold>Per-Test Metrics</Text>
-        <Text color="gray">  (sort: </Text>
+        <Text color="gray"> (sort: </Text>
         <Text color="cyan">{SORT_LABELS[sortField]}</Text>
         <Text color="gray">)</Text>
       </Box>
 
       {testEntries.length === 0 ? (
         <Box>
-          <Text color="gray">No test data yet. Run some tests to populate statistics.</Text>
+          <Text color="gray">
+            No test data yet. Run some tests to populate statistics.
+          </Text>
         </Box>
       ) : (
         <Box flexDirection="column">
           {/* Table header */}
           <Box marginBottom={0}>
-            <Box width={30}><Text bold color="gray">Test Name</Text></Box>
-            <Box width={7}><Text bold color="gray">Runs</Text></Box>
-            <Box width={8}><Text bold color="gray">Pass%</Text></Box>
-            <Box width={9}><Text bold color="gray">Avg Dur</Text></Box>
-            <Box width={10}><Text bold color="gray">Avg Cost</Text></Box>
-            <Box><Text bold color="gray">Last Run</Text></Box>
+            <Box width={30}>
+              <Text bold color="gray">
+                Test Name
+              </Text>
+            </Box>
+            <Box width={7}>
+              <Text bold color="gray">
+                Runs
+              </Text>
+            </Box>
+            <Box width={8}>
+              <Text bold color="gray">
+                Pass%
+              </Text>
+            </Box>
+            <Box width={9}>
+              <Text bold color="gray">
+                Avg Dur
+              </Text>
+            </Box>
+            <Box width={10}>
+              <Text bold color="gray">
+                Avg Cost
+              </Text>
+            </Box>
+            <Box>
+              <Text bold color="gray">
+                Last Run
+              </Text>
+            </Box>
           </Box>
 
           {/* Table rows */}
           {testEntries.map(([key, stats]) => {
-            const passRate = stats.runCount > 0 ? stats.passCount / stats.runCount : 0;
-            const passRateColor = passRate >= 0.8 ? 'green' : passRate >= 0.5 ? 'yellow' : 'red';
+            const passRate =
+              stats.runCount > 0 ? stats.passCount / stats.runCount : 0;
+            const passRateColor =
+              passRate >= 0.8 ? 'green' : passRate >= 0.5 ? 'yellow' : 'red';
             const displayName = stats.name || key;
-            const truncated = displayName.length > 28
-              ? displayName.slice(0, 25) + '...'
-              : displayName;
+            const truncated =
+              displayName.length > 28
+                ? displayName.slice(0, 25) + '...'
+                : displayName;
 
             return (
               <Box key={key}>
-                <Box width={30}><Text>{truncated}</Text></Box>
-                <Box width={7}><Text>{stats.runCount}</Text></Box>
-                <Box width={8}><Text color={passRateColor}>{formatPassRate(passRate)}</Text></Box>
-                <Box width={9}><Text>{formatDuration(stats.avgDuration)}</Text></Box>
-                <Box width={10}><Text>{formatCost(stats.avgCost)}</Text></Box>
-                <Box><Text color="gray">{formatDate(stats.lastRun)}</Text></Box>
+                <Box width={30}>
+                  <Text>{truncated}</Text>
+                </Box>
+                <Box width={7}>
+                  <Text>{stats.runCount}</Text>
+                </Box>
+                <Box width={8}>
+                  <Text color={passRateColor}>{formatPassRate(passRate)}</Text>
+                </Box>
+                <Box width={9}>
+                  <Text>{formatDuration(stats.avgDuration)}</Text>
+                </Box>
+                <Box width={10}>
+                  <Text>{formatCost(stats.avgCost)}</Text>
+                </Box>
+                <Box>
+                  <Text color="gray">{formatDate(stats.lastRun)}</Text>
+                </Box>
               </Box>
             );
           })}
