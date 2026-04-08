@@ -2,21 +2,38 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseYaml } from '../config/loader.js';
 import type { SkillUnitConfig } from '../types/config.js';
-import type { Spec, SpecFrontmatter, TestCase, Manifest, ManifestTestCase } from '../types/spec.js';
+import type {
+  Spec,
+  SpecFrontmatter,
+  TestCase,
+  Manifest,
+  ManifestTestCase,
+} from '../types/spec.js';
 
 // -- Built-in defaults ---------------------------------------------------------
 
 export const BUILT_IN_ALLOWED: string[] = [
-  'Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'Agent', 'Skill',
+  'Read',
+  'Write',
+  'Edit',
+  'Bash',
+  'Glob',
+  'Grep',
+  'Agent',
+  'Skill',
 ];
 
 export const BUILT_IN_DISALLOWED: string[] = ['AskUserQuestion'];
 
 // -- Spec file parsing ---------------------------------------------------------
 
-export function parseFrontmatter(content: string): { frontmatter: SpecFrontmatter; body: string } {
+export function parseFrontmatter(content: string): {
+  frontmatter: SpecFrontmatter;
+  body: string;
+} {
   const lines = content.split('\n');
-  if (lines[0].trim() !== '---') return { frontmatter: { name: '', tags: [] }, body: content };
+  if (lines[0].trim() !== '---')
+    return { frontmatter: { name: '', tags: [] }, body: content };
 
   let endIdx = -1;
   for (let i = 1; i < lines.length; i++) {
@@ -36,14 +53,28 @@ export function parseFrontmatter(content: string): { frontmatter: SpecFrontmatte
     name: (parsed['name'] as string) ?? '',
     tags: (parsed['tags'] as string[]) ?? [],
     ...(parsed['skill'] !== undefined && { skill: parsed['skill'] as string }),
-    ...(parsed['timeout'] !== undefined && { timeout: parsed['timeout'] as string }),
-    ...(parsed['global-fixtures'] !== undefined && { 'global-fixtures': parsed['global-fixtures'] as string }),
+    ...(parsed['timeout'] !== undefined && {
+      timeout: parsed['timeout'] as string,
+    }),
+    ...(parsed['global-fixtures'] !== undefined && {
+      'global-fixtures': parsed['global-fixtures'] as string,
+    }),
     ...(parsed['setup'] !== undefined && { setup: parsed['setup'] as string }),
-    ...(parsed['teardown'] !== undefined && { teardown: parsed['teardown'] as string }),
-    ...(parsed['allowed-tools'] !== undefined && { 'allowed-tools': parsed['allowed-tools'] as string[] }),
-    ...(parsed['allowed-tools-extra'] !== undefined && { 'allowed-tools-extra': parsed['allowed-tools-extra'] as string[] }),
-    ...(parsed['disallowed-tools'] !== undefined && { 'disallowed-tools': parsed['disallowed-tools'] as string[] }),
-    ...(parsed['disallowed-tools-extra'] !== undefined && { 'disallowed-tools-extra': parsed['disallowed-tools-extra'] as string[] }),
+    ...(parsed['teardown'] !== undefined && {
+      teardown: parsed['teardown'] as string,
+    }),
+    ...(parsed['allowed-tools'] !== undefined && {
+      'allowed-tools': parsed['allowed-tools'] as string[],
+    }),
+    ...(parsed['allowed-tools-extra'] !== undefined && {
+      'allowed-tools-extra': parsed['allowed-tools-extra'] as string[],
+    }),
+    ...(parsed['disallowed-tools'] !== undefined && {
+      'disallowed-tools': parsed['disallowed-tools'] as string[],
+    }),
+    ...(parsed['disallowed-tools-extra'] !== undefined && {
+      'disallowed-tools-extra': parsed['disallowed-tools-extra'] as string[],
+    }),
   };
 
   // Ensure tags defaults to []
@@ -71,7 +102,12 @@ export function parseTestCases(body: string): TestCase[] {
     const name = heading.slice(colonIdx + 1).trim();
 
     // State machine for parsing sections
-    let state: 'fixtures' | 'prompt' | 'expectations' | 'negative-expectations' | null = null;
+    let state:
+      | 'fixtures'
+      | 'prompt'
+      | 'expectations'
+      | 'negative-expectations'
+      | null = null;
     const fixtures: string[] = [];
     const promptLines: string[] = [];
     const expectations: string[] = [];
@@ -82,10 +118,22 @@ export function parseTestCases(body: string): TestCase[] {
       const trimmed = line.trim();
 
       // Detect section labels
-      if (trimmed === '**Fixtures:**') { state = 'fixtures'; continue; }
-      if (trimmed === '**Prompt:**') { state = 'prompt'; continue; }
-      if (trimmed === '**Expectations:**') { state = 'expectations'; continue; }
-      if (trimmed === '**Negative Expectations:**') { state = 'negative-expectations'; continue; }
+      if (trimmed === '**Fixtures:**') {
+        state = 'fixtures';
+        continue;
+      }
+      if (trimmed === '**Prompt:**') {
+        state = 'prompt';
+        continue;
+      }
+      if (trimmed === '**Expectations:**') {
+        state = 'expectations';
+        continue;
+      }
+      if (trimmed === '**Negative Expectations:**') {
+        state = 'negative-expectations';
+        continue;
+      }
 
       // Horizontal rules are cosmetic
       if (/^---\s*$/.test(trimmed)) continue;
@@ -191,15 +239,23 @@ type SpecPermissionOverride = {
 
 export function resolveToolPermissions(
   config: ToolPermissionConfig,
-  specFrontmatter: SpecPermissionOverride,
+  specFrontmatter: SpecPermissionOverride
 ): { allowed: string[]; disallowed: string[] } {
   // Level 1: built-in defaults
   let allowed = [...BUILT_IN_ALLOWED];
   let disallowed = [...BUILT_IN_DISALLOWED];
 
   // Level 2: config overrides (support both flat and nested runner format)
-  const configAllowed = config.runner?.['allowed-tools'] ?? (config as Record<string, unknown>)['allowed-tools'] as string[] | undefined;
-  const configDisallowed = config.runner?.['disallowed-tools'] ?? (config as Record<string, unknown>)['disallowed-tools'] as string[] | undefined;
+  const configAllowed =
+    config.runner?.['allowed-tools'] ??
+    ((config as Record<string, unknown>)['allowed-tools'] as
+      | string[]
+      | undefined);
+  const configDisallowed =
+    config.runner?.['disallowed-tools'] ??
+    ((config as Record<string, unknown>)['disallowed-tools'] as
+      | string[]
+      | undefined);
 
   if (configAllowed) {
     allowed = [...configAllowed];
@@ -240,14 +296,17 @@ export function resolveToolPermissions(
 export function resolveFixturePath(
   fixturePath: string | null | undefined,
   specDir: string,
-  repoRoot: string,
+  repoRoot: string
 ): string | null {
   if (!fixturePath) return null;
   const absolute = path.resolve(specDir, fixturePath);
   return path.relative(repoRoot, absolute);
 }
 
-export function resolveSkillPath(skillName: string | null | undefined, repoRoot: string): string | null {
+export function resolveSkillPath(
+  skillName: string | null | undefined,
+  repoRoot: string
+): string | null {
   if (!skillName) return null;
 
   // Check .claude/skills/{name}/SKILL.md first, then skills/{name}/SKILL.md
@@ -275,11 +334,30 @@ export interface BuildManifestOptions {
 }
 
 export function buildManifest(
-  spec: Spec | { path: string; frontmatter: Partial<SpecFrontmatter> & Record<string, unknown>; testCases: Partial<TestCase>[] },
-  config: SkillUnitConfig | { runner: { tool: string; model: string | null; 'max-turns': number; 'runner-concurrency'?: number; 'allowed-tools'?: string[]; 'disallowed-tools'?: string[] }; execution: { timeout: string; 'grader-concurrency': number } },
-  options?: BuildManifestOptions,
+  spec:
+    | Spec
+    | {
+        path: string;
+        frontmatter: Partial<SpecFrontmatter> & Record<string, unknown>;
+        testCases: Partial<TestCase>[];
+      },
+  config:
+    | SkillUnitConfig
+    | {
+        runner: {
+          tool: string;
+          model: string | null;
+          'max-turns': number;
+          'runner-concurrency'?: number;
+          'allowed-tools'?: string[];
+          'disallowed-tools'?: string[];
+        };
+        execution: { timeout: string; 'grader-concurrency': number };
+      },
+  options?: BuildManifestOptions
 ): Manifest {
-  const { timestamp, modelOverride, timeoutOverride, maxTurnsOverride } = options ?? {};
+  const { timestamp, modelOverride, timeoutOverride, maxTurnsOverride } =
+    options ?? {};
   const fm = spec.frontmatter;
   const specDir = path.dirname(spec.path);
   const repoRoot = process.cwd();
@@ -289,24 +367,36 @@ export function buildManifest(
     ? resolveFixturePath(fm['global-fixtures'] as string, specDir, repoRoot)
     : null;
 
-  const skillPath = resolveSkillPath(fm['skill'] as string | undefined, repoRoot);
+  const skillPath = resolveSkillPath(
+    fm['skill'] as string | undefined,
+    repoRoot
+  );
 
   // Resolve tool permissions
-  const { allowed, disallowed } = resolveToolPermissions(config as ToolPermissionConfig, fm as SpecPermissionOverride);
+  const { allowed, disallowed } = resolveToolPermissions(
+    config as ToolPermissionConfig,
+    fm as SpecPermissionOverride
+  );
 
   // Resolve per-test fixture paths
   const testCases: ManifestTestCase[] = spec.testCases.map((tc) => {
-    const entry: ManifestTestCase = { id: tc.id ?? '', prompt: tc.prompt ?? '' };
+    const entry: ManifestTestCase = {
+      id: tc.id ?? '',
+      prompt: tc.prompt ?? '',
+    };
     if (tc['fixture-paths'] && (tc['fixture-paths'] as string[]).length) {
-      entry['fixture-paths'] = (tc['fixture-paths'] as string[]).map((fp: string) =>
-        resolveFixturePath(fp, specDir, repoRoot) ?? fp,
+      entry['fixture-paths'] = (tc['fixture-paths'] as string[]).map(
+        (fp: string) => resolveFixturePath(fp, specDir, repoRoot) ?? fp
       );
     }
     return entry;
   });
 
   // Determine timeout: CLI override > spec frontmatter > config
-  const timeout = timeoutOverride ?? (fm['timeout'] as string | undefined) ?? config.execution.timeout;
+  const timeout =
+    timeoutOverride ??
+    (fm['timeout'] as string | undefined) ??
+    config.execution.timeout;
 
   // Determine model and max-turns with CLI overrides
   const model = modelOverride ?? config.runner.model;

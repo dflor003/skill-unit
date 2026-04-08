@@ -44,7 +44,7 @@ As tests are run, there should be some way of viewing and managing past runs.
 
 ### Statistics
 
-Part of the reason for the TUI is to be able to bubble up aggregate test statistics to the user running the tests. I'm not quite sure yet how I want to store these across runs long term, so lets discuss some options, but I think the info will be valuable. We should have aggregate test data as well as as per-test data in here. At a bare minimum I want: 
+Part of the reason for the TUI is to be able to bubble up aggregate test statistics to the user running the tests. I'm not quite sure yet how I want to store these across runs long term, so lets discuss some options, but I think the info will be valuable. We should have aggregate test data as well as as per-test data in here. At a bare minimum I want:
 
 - Test duration
 - Test token cost

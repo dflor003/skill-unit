@@ -34,7 +34,9 @@ export function parseResultsFile(content: string): ParsedResult {
   //   # Results: TD-1 — Generated Test Case
   //   # Results: TD-2 -- Detects Existing Spec
   //   # Test Result: TD-2 -- Detects Existing Spec
-  const headingMatch = content.match(/^#\s+(?:Results|Test Result):\s*(\S+?)(?:\s*:\s*|\s+—\s*|\s+--\s+)(.+)$/m);
+  const headingMatch = content.match(
+    /^#\s+(?:Results|Test Result):\s*(\S+?)(?:\s*:\s*|\s+—\s*|\s+--\s+)(.+)$/m
+  );
   const testId = headingMatch ? headingMatch[1].trim() : 'unknown';
   const testName = headingMatch ? headingMatch[2].trim() : 'unknown';
 
@@ -43,8 +45,12 @@ export function parseResultsFile(content: string): ParsedResult {
   //   ## Verdict: PASS        (heading)
   //   ## Result: PASS         (heading, different keyword)
   //   **Result: PASS**        (bold wrapping the value)
-  const verdictMatch = content.match(/(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*(PASS|FAIL)\b/im);
-  const passed = verdictMatch ? verdictMatch[1].toUpperCase() === 'PASS' : false;
+  const verdictMatch = content.match(
+    /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*(PASS|FAIL)\b/im
+  );
+  const passed = verdictMatch
+    ? verdictMatch[1].toUpperCase() === 'PASS'
+    : false;
 
   // Extract expectation lines (checkmark and x lines, plus arrow continuation lines)
   const expectationLines: string[] = [];
@@ -61,7 +67,10 @@ export function parseResultsFile(content: string): ParsedResult {
       continue;
     }
     // Stop at next section heading or end
-    if (line.match(/^#/) || (line.match(/^\*\*/) && !line.match(/^\*\*(Expectations|Negative)/))) {
+    if (
+      line.match(/^#/) ||
+      (line.match(/^\*\*/) && !line.match(/^\*\*(Expectations|Negative)/))
+    ) {
       if (currentSection) currentSection = null;
       continue;
     }
@@ -69,11 +78,20 @@ export function parseResultsFile(content: string): ParsedResult {
     const trimmed = line.trimEnd();
     if (!trimmed) continue;
 
-    if (currentSection === 'expectations' && (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))) {
+    if (
+      currentSection === 'expectations' &&
+      (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))
+    ) {
       expectationLines.push(trimmed);
-    } else if (currentSection === 'negative' && (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))) {
+    } else if (
+      currentSection === 'negative' &&
+      (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))
+    ) {
       negativeExpectationLines.push(trimmed);
-    } else if (!currentSection && (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))) {
+    } else if (
+      !currentSection &&
+      (trimmed.match(/^- [✓✗]/) || trimmed.match(/^\s+→/))
+    ) {
       // Top-level check lines (no section header) -- count them as expectations
       expectationLines.push(trimmed);
     }
@@ -98,7 +116,9 @@ export function parseResultsFile(content: string): ParsedResult {
 
 // -- Parse a results file from disk ------------------------------------------
 
-function parseResultsFilePath(filePath: string): ParsedResult & { fileName: string } {
+function parseResultsFilePath(
+  filePath: string
+): ParsedResult & { fileName: string } {
   const content = fs.readFileSync(filePath, 'utf-8');
   const fileName = path.basename(filePath);
   return { fileName, ...parseResultsFile(content) };
@@ -139,7 +159,8 @@ export function generateReport(runDir: string): GenerateReportResult {
     };
   }
 
-  const resultsFiles = fs.readdirSync(resultsDir)
+  const resultsFiles = fs
+    .readdirSync(resultsDir)
     .filter((f) => f.endsWith('.results.md'))
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 
@@ -154,11 +175,16 @@ export function generateReport(runDir: string): GenerateReportResult {
     };
   }
 
-  const results = resultsFiles.map((f) => parseResultsFilePath(path.join(resultsDir, f)));
+  const results = resultsFiles.map((f) =>
+    parseResultsFilePath(path.join(resultsDir, f))
+  );
   const timestamp = path.basename(runDir);
 
   // Group by spec name
-  const grouped: Record<string, Array<ParsedResult & { fileName: string }>> = {};
+  const grouped: Record<
+    string,
+    Array<ParsedResult & { fileName: string }>
+  > = {};
   for (const r of results) {
     const specName = extractSpecName(r.fileName);
     if (!grouped[specName]) grouped[specName] = [];
@@ -175,7 +201,9 @@ export function generateReport(runDir: string): GenerateReportResult {
 
   fileLines.push(`# Test Run: ${timestamp}`);
   fileLines.push('');
-  fileLines.push(`**${totalPassed} passed** | **${totalFailed} failed** | ${totalTests} total`);
+  fileLines.push(
+    `**${totalPassed} passed** | **${totalFailed} failed** | ${totalTests} total`
+  );
   fileLines.push('');
   fileLines.push('---');
   fileLines.push('');
@@ -184,7 +212,9 @@ export function generateReport(runDir: string): GenerateReportResult {
     const specPassed = specResults.filter((r) => r.passed).length;
     const specFailed = specResults.filter((r) => !r.passed).length;
 
-    fileLines.push(`## ${specName} (${specPassed} passed, ${specFailed} failed)`);
+    fileLines.push(
+      `## ${specName} (${specPassed} passed, ${specFailed} failed)`
+    );
     fileLines.push('');
 
     for (const r of specResults) {
@@ -192,9 +222,13 @@ export function generateReport(runDir: string): GenerateReportResult {
       const resultsLink = r.fileName;
 
       if (r.passed) {
-        fileLines.push(`- \u2705 **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) \u2014 [transcript](${transcriptLink}) | [grading](${resultsLink})`);
+        fileLines.push(
+          `- \u2705 **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) \u2014 [transcript](${transcriptLink}) | [grading](${resultsLink})`
+        );
       } else {
-        fileLines.push(`- \u274c **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) \u2014 [transcript](${transcriptLink}) | [grading](${resultsLink})`);
+        fileLines.push(
+          `- \u274c **${r.testId}: ${r.testName}** (${r.passedChecks}/${r.totalChecks}) \u2014 [transcript](${transcriptLink}) | [grading](${resultsLink})`
+        );
         fileLines.push('');
         fileLines.push('  <details>');
         fileLines.push('  <summary>Failure details</summary>');
@@ -266,7 +300,9 @@ export function generateReport(runDir: string): GenerateReportResult {
   if (totalFailed === 0) {
     termLines.push(`**${totalPassed} passed**, ${totalTests} total`);
   } else {
-    termLines.push(`**${totalPassed} passed**, **${totalFailed} failed**, ${totalTests} total`);
+    termLines.push(
+      `**${totalPassed} passed**, **${totalFailed} failed**, ${totalTests} total`
+    );
   }
 
   termLines.push(`Report: \`${reportPath}\``);

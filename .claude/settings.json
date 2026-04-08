@@ -9,7 +9,7 @@
       "WebFetch",
       "WebSearch",
       "Skill",
-      
+
       "Bash(echo *)",
       "Bash(cat *)",
       "Bash(ls *)",
@@ -47,14 +47,14 @@
       "Bash(git cat-file *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      
+
       "Bash(docker *)",
       "Bash(docker compose *)",
       "Bash(gh *)",
-      
+
       "Bash(node -c *)",
       "Bash(node */skill-unit/scripts/*)",
-      
+
       "Bash(npm.cmd test *)",
       "Bash(npm.cmd run *)",
       "Bash(npm.cmd list *)",

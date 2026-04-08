@@ -32,6 +32,7 @@ disallowed-tools:
 ```
 
 Notably excluded from allowed-tools:
+
 - **`WebFetch` / `WebSearch`** — Test execution should be hermetic by default. Skills that need network access opt in explicitly.
 - **`AskUserQuestion`** — Test sessions are non-interactive. This is actively disallowed, not just omitted.
 - **MCP tools** — Not included in defaults. `--strict-mcp-config` already prevents MCP leakage.
@@ -54,7 +55,7 @@ runner:
     - Read
     - Write
     - Edit
-    - "Bash(git *)"
+    - 'Bash(git *)'
     - Glob
     - Grep
     - Agent
@@ -74,12 +75,12 @@ Note: The `-extra` suffix fields (`allowed-tools-extra`, `disallowed-tools-extra
 
 Four new optional fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `allowed-tools` | list | Fully replaces the resolved allowed tools list from global config |
-| `disallowed-tools` | list | Fully replaces the resolved disallowed tools list from global config |
-| `allowed-tools-extra` | list | Adds entries to the resolved allowed tools list (union) |
-| `disallowed-tools-extra` | list | Adds entries to the resolved disallowed tools list (union) |
+| Field                    | Type | Description                                                          |
+| ------------------------ | ---- | -------------------------------------------------------------------- |
+| `allowed-tools`          | list | Fully replaces the resolved allowed tools list from global config    |
+| `disallowed-tools`       | list | Fully replaces the resolved disallowed tools list from global config |
+| `allowed-tools-extra`    | list | Adds entries to the resolved allowed tools list (union)              |
+| `disallowed-tools-extra` | list | Adds entries to the resolved disallowed tools list (union)           |
 
 If both `allowed-tools` and `allowed-tools-extra` are present in the same frontmatter, `allowed-tools` wins (full replace; `-extra` is ignored). Same rule applies for the disallowed pair.
 
@@ -90,9 +91,9 @@ Example — a spec that needs Docker access without restating the full default l
 name: docker-skill-tests
 skill: docker-manager
 allowed-tools-extra:
-  - "Bash(docker *)"
+  - 'Bash(docker *)'
 disallowed-tools-extra:
-  - "Bash(rm -rf *)"
+  - 'Bash(rm -rf *)'
 ---
 ```
 
@@ -112,7 +113,7 @@ Final resolved lists
 
 1. **Built-in defaults** provide the base `allowed-tools` and `disallowed-tools` lists.
 2. **`.skill-unit.yml`**: If `allowed-tools` is present, it fully replaces the built-in allowed list. If `disallowed-tools` is present, it fully replaces the built-in disallowed list. Each field is independent.
-3. **Spec frontmatter**: 
+3. **Spec frontmatter**:
    - If `allowed-tools` is present, it fully replaces the resolved global allowed list (`allowed-tools-extra` is ignored).
    - If only `allowed-tools-extra` is present, its entries are unioned with the resolved global allowed list.
    - Same logic applies independently for `disallowed-tools` / `disallowed-tools-extra`.
@@ -148,13 +149,13 @@ File tools are dynamically scoped to the workspace's work directory at runtime. 
 
 These tools get path-scoped when they appear in the allowed list:
 
-| Tool | Rewritten to |
-|------|-------------|
-| `Read` | `Read({workspace-path}/**)` |
+| Tool    | Rewritten to                 |
+| ------- | ---------------------------- |
+| `Read`  | `Read({workspace-path}/**)`  |
 | `Write` | `Write({workspace-path}/**)` |
-| `Edit` | `Edit({workspace-path}/**)` |
-| `Glob` | `Glob({workspace-path}/**)` |
-| `Grep` | `Grep({workspace-path}/**)` |
+| `Edit`  | `Edit({workspace-path}/**)`  |
+| `Glob`  | `Glob({workspace-path}/**)`  |
+| `Grep`  | `Grep({workspace-path}/**)`  |
 
 Tools that already have an explicit path pattern (e.g., `Read(/some/specific/path/**)`), `Bash`, `Agent`, and any non-file tools are passed through unchanged.
 
@@ -167,10 +168,10 @@ Workspaces live at `.workspace/workspaces/{uuid}/work/` — inside the repo. Eac
 The runner applies path scoping after reading the manifest's resolved tool lists, just before building CLI arguments. This is a runner-level concern — the evaluator writes the unscoped tool names into the manifest, and the runner scopes them per workspace.
 
 ```js
-const FILE_TOOLS = new Set(["Read", "Write", "Edit", "Glob", "Grep"]);
+const FILE_TOOLS = new Set(['Read', 'Write', 'Edit', 'Glob', 'Grep']);
 
 function scopeToolsToWorkspace(allowedTools, workspacePath) {
-  return allowedTools.map(tool => {
+  return allowedTools.map((tool) => {
     // Only scope bare tool names (no existing path pattern)
     if (FILE_TOOLS.has(tool)) {
       return `${tool}(${workspacePath}/**)`;
@@ -208,22 +209,36 @@ The profile builder signature gains the two lists. `--dangerously-skip-permissio
 
 ```js
 const TOOL_PROFILES = {
-  claude: (model, maxTurns, pluginDir, allowedTools, disallowedTools, workspacePath) => [
-    "--print",
-    "--verbose",
-    "--output-format", "stream-json",
-    "--include-partial-messages",
-    "--max-turns", String(maxTurns),
-    "--permission-mode", "dontAsk",
-    ...(allowedTools.length ? ["--allowedTools", ...allowedTools] : []),
-    ...(disallowedTools.length ? ["--disallowedTools", ...disallowedTools] : []),
-    "--no-chrome",
-    "--no-session-persistence",
-    "--setting-sources", "local",
-    "--strict-mcp-config",
-    "--system-prompt", `You are working in the directory: ${workspacePath}...`,
-    ...(model ? ["--model", model] : []),
-    ...(pluginDir ? ["--plugin-dir", pluginDir] : []),
+  claude: (
+    model,
+    maxTurns,
+    pluginDir,
+    allowedTools,
+    disallowedTools,
+    workspacePath
+  ) => [
+    '--print',
+    '--verbose',
+    '--output-format',
+    'stream-json',
+    '--include-partial-messages',
+    '--max-turns',
+    String(maxTurns),
+    '--permission-mode',
+    'dontAsk',
+    ...(allowedTools.length ? ['--allowedTools', ...allowedTools] : []),
+    ...(disallowedTools.length
+      ? ['--disallowedTools', ...disallowedTools]
+      : []),
+    '--no-chrome',
+    '--no-session-persistence',
+    '--setting-sources',
+    'local',
+    '--strict-mcp-config',
+    '--system-prompt',
+    `You are working in the directory: ${workspacePath}...`,
+    ...(model ? ['--model', model] : []),
+    ...(pluginDir ? ['--plugin-dir', pluginDir] : []),
   ],
 };
 ```

@@ -12,7 +12,8 @@ import {
 
 describe('parseFrontmatter', () => {
   it('extracts YAML frontmatter from markdown', () => {
-    const content = '---\nname: my-tests\ntags: [a, b]\n---\n\n### TEST-1: hello';
+    const content =
+      '---\nname: my-tests\ntags: [a, b]\n---\n\n### TEST-1: hello';
     const { frontmatter, body } = parseFrontmatter(content);
     expect(frontmatter.name).toBe('my-tests');
     expect(frontmatter.tags).toEqual(['a', 'b']);
@@ -143,15 +144,28 @@ describe('buildManifest', () => {
       path: 'skill-tests/runner.spec.md',
       frontmatter: { name: 'runner', tags: ['test'], skill: 'my-skill' },
       testCases: [
-        { id: 'TEST-1', name: 'basic', prompt: 'do it', expectations: ['works'], 'negative-expectations': [] },
+        {
+          id: 'TEST-1',
+          name: 'basic',
+          prompt: 'do it',
+          expectations: ['works'],
+          'negative-expectations': [],
+        },
       ],
     };
     const config = {
-      runner: { tool: 'claude', model: null, 'max-turns': 10, 'runner-concurrency': 5 },
+      runner: {
+        tool: 'claude',
+        model: null,
+        'max-turns': 10,
+        'runner-concurrency': 5,
+      },
       execution: { timeout: '120s', 'grader-concurrency': 5 },
     };
 
-    const manifest = buildManifest(spec, config as any, { timestamp: '2026-04-07-10-00-00' });
+    const manifest = buildManifest(spec, config as any, {
+      timestamp: '2026-04-07-10-00-00',
+    });
     expect(manifest['spec-name']).toBe('runner');
     expect(manifest.timestamp).toBe('2026-04-07-10-00-00');
     expect(manifest['test-cases']).toHaveLength(1);

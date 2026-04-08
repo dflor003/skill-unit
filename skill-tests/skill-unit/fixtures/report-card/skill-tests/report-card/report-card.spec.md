@@ -10,14 +10,17 @@ global-fixtures: ./fixtures/basic-class
 Verifies that the skill reads student data and produces a formatted grade summary with averages and letter grades.
 
 **Prompt:**
+
 > How are the students doing?
 
 **Expectations:**
+
 - Output contains a markdown table with student names, averages, and letter grades
 - Students are sorted alphabetically by name
 - Averages are shown with one decimal place
 - A class average is included
 
 **Negative Expectations:**
+
 - Does not create or modify any files
 - Does not fabricate student data that is not in the input

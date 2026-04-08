@@ -49,9 +49,19 @@ function formatDuration(ms: number): string {
   return ` ${(ms / 1000).toFixed(1)}s`;
 }
 
-export function ProgressTree({ tests, elapsed, selectable, selected }: ProgressTreeProps) {
+export function ProgressTree({
+  tests,
+  elapsed,
+  selectable,
+  selected,
+}: ProgressTreeProps) {
   const completed = tests.filter(
-    t => t.status === 'passed' || t.status === 'failed' || t.status === 'timedout' || t.status === 'error' || t.status === 'cancelled',
+    (t) =>
+      t.status === 'passed' ||
+      t.status === 'failed' ||
+      t.status === 'timedout' ||
+      t.status === 'error' ||
+      t.status === 'cancelled'
   ).length;
   const total = tests.length;
 
@@ -63,14 +73,16 @@ export function ProgressTree({ tests, elapsed, selectable, selected }: ProgressT
           {completed}/{total} ({formatElapsed(elapsed)})
         </Text>
       </Box>
-      {tests.map(test => {
+      {tests.map((test) => {
         const { symbol, color } = statusIcon(test.status);
         const isRunning = test.status === 'running';
         const isSelected = selected?.has(test.id) ?? false;
         return (
           <Box key={test.id}>
             {selectable && (
-              <Text color={isSelected ? 'blue' : 'gray'}>{isSelected ? '[x]' : '[ ]'} </Text>
+              <Text color={isSelected ? 'blue' : 'gray'}>
+                {isSelected ? '[x]' : '[ ]'}{' '}
+              </Text>
             )}
             <Text color={color}>{symbol} </Text>
             <Text bold={isRunning}>{test.name}</Text>

@@ -37,16 +37,16 @@ Subagent APIs are harness-specific. Claude Code uses the `Agent` tool, Copilot a
 
 The runner is not a thin shell wrapper. It controls the full CLI invocation to ensure proper isolation:
 
-| Concern | How the runner handles it |
-|---------|--------------------------|
-| **Isolation** | Each test case gets its own workspace with a UUID-named directory. The agent's cwd is the `work/` subdirectory containing only fixture files. |
-| **Skill loading** | The skill under test is installed as a plugin in a sibling `plugin/` directory, passed via `--plugin-dir`. The agent cannot browse this directory. |
-| **File tool scoping** | Bare file tool names (Read, Write, Edit, Glob, Grep) are rewritten to include workspace path restrictions (e.g., `Read(/path/to/work/**)`). |
-| **System prompt boundary** | A system prompt instructs the agent to stay within its working directory — a soft guardrail complementing the hard tool scoping. |
-| **External influence** | `--setting-sources local` prevents the harness from discovering project-level settings outside the workspace. `--strict-mcp-config` blocks external MCP servers. |
-| **Permission mode** | `--permission-mode dontAsk` ensures the agent runs without interactive prompts. |
-| **Output capture** | `--output-format stream-json` with `--include-partial-messages` gives the runner structured events to parse, log, and extract the final response from. |
-| **Timeouts** | Configurable per-spec or globally, enforced via process-level SIGTERM. |
+| Concern                    | How the runner handles it                                                                                                                                        |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Isolation**              | Each test case gets its own workspace with a UUID-named directory. The agent's cwd is the `work/` subdirectory containing only fixture files.                    |
+| **Skill loading**          | The skill under test is installed as a plugin in a sibling `plugin/` directory, passed via `--plugin-dir`. The agent cannot browse this directory.               |
+| **File tool scoping**      | Bare file tool names (Read, Write, Edit, Glob, Grep) are rewritten to include workspace path restrictions (e.g., `Read(/path/to/work/**)`).                      |
+| **System prompt boundary** | A system prompt instructs the agent to stay within its working directory — a soft guardrail complementing the hard tool scoping.                                 |
+| **External influence**     | `--setting-sources local` prevents the harness from discovering project-level settings outside the workspace. `--strict-mcp-config` blocks external MCP servers. |
+| **Permission mode**        | `--permission-mode dontAsk` ensures the agent runs without interactive prompts.                                                                                  |
+| **Output capture**         | `--output-format stream-json` with `--include-partial-messages` gives the runner structured events to parse, log, and extract the final response from.           |
+| **Timeouts**               | Configurable per-spec or globally, enforced via process-level SIGTERM.                                                                                           |
 
 ## Tool Profiles
 
@@ -54,8 +54,18 @@ The runner uses tool profiles — functions that build the CLI argument array fo
 
 ```js
 const TOOL_PROFILES = {
-  claude: (model, maxTurns, pluginDir, allowedTools, disallowedTools, workspacePath) => [
-    "--print", "--verbose", "--output-format", "stream-json",
+  claude: (
+    model,
+    maxTurns,
+    pluginDir,
+    allowedTools,
+    disallowedTools,
+    workspacePath
+  ) => [
+    '--print',
+    '--verbose',
+    '--output-format',
+    'stream-json',
     // ... full argument list
   ],
   // Future: copilot, codex profiles

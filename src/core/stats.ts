@@ -37,7 +37,10 @@ export function recordRun(result: RunResult, baseDir: string): void {
   // Save run artifact
   const runDir = path.join(baseDir, 'runs', result.id);
   fs.mkdirSync(runDir, { recursive: true });
-  fs.writeFileSync(path.join(runDir, 'run.json'), JSON.stringify(result, null, 2));
+  fs.writeFileSync(
+    path.join(runDir, 'run.json'),
+    JSON.stringify(result, null, 2)
+  );
 
   // Update index
   const index = loadIndex(baseDir);
@@ -61,7 +64,9 @@ export function recordRun(result: RunResult, baseDir: string): void {
     if (existing) {
       existing.runCount += 1;
       existing.passCount += test.passed ? 1 : 0;
-      existing.avgDuration = ((existing.avgDuration * (existing.runCount - 1)) + test.durationMs) / existing.runCount;
+      existing.avgDuration =
+        (existing.avgDuration * (existing.runCount - 1) + test.durationMs) /
+        existing.runCount;
       existing.lastRun = result.timestamp;
       existing.lastResult = test.passed ? 'pass' : 'fail';
     } else {
@@ -85,8 +90,14 @@ export function recordRun(result: RunResult, baseDir: string): void {
   agg.totalCost += result.cost;
   agg.totalTokens += result.tokens;
 
-  const totalPassed = Object.values(index.tests).reduce((sum, t) => sum + t.passCount, 0);
-  const totalTestRuns = Object.values(index.tests).reduce((sum, t) => sum + t.runCount, 0);
+  const totalPassed = Object.values(index.tests).reduce(
+    (sum, t) => sum + t.passCount,
+    0
+  );
+  const totalTestRuns = Object.values(index.tests).reduce(
+    (sum, t) => sum + t.runCount,
+    0
+  );
   agg.passRate = totalTestRuns > 0 ? totalPassed / totalTestRuns : 0;
 
   saveIndex(baseDir, index);
@@ -115,14 +126,18 @@ export function cleanupRuns(baseDir: string, keepCount: number): void {
     const runDataPath = path.join(runDir, 'run.json');
     if (!fs.existsSync(runDataPath)) continue;
 
-    const runData: RunResult = JSON.parse(fs.readFileSync(runDataPath, 'utf-8')) as RunResult;
+    const runData: RunResult = JSON.parse(
+      fs.readFileSync(runDataPath, 'utf-8')
+    ) as RunResult;
     for (const test of runData.tests) {
       const key = `${test.specName}/${test.id}`;
       const existing = index.tests[key];
       if (existing) {
         existing.runCount += 1;
         existing.passCount += test.passed ? 1 : 0;
-        existing.avgDuration = ((existing.avgDuration * (existing.runCount - 1)) + test.durationMs) / existing.runCount;
+        existing.avgDuration =
+          (existing.avgDuration * (existing.runCount - 1) + test.durationMs) /
+          existing.runCount;
         existing.lastRun = runData.timestamp;
         existing.lastResult = test.passed ? 'pass' : 'fail';
       } else {
@@ -146,8 +161,14 @@ export function cleanupRuns(baseDir: string, keepCount: number): void {
   agg.totalTests = index.runs.reduce((sum, r) => sum + r.testCount, 0);
   agg.totalCost = index.runs.reduce((sum, r) => sum + r.cost, 0);
   agg.totalTokens = index.runs.reduce((sum, r) => sum + r.tokens, 0);
-  const totalPassed = Object.values(index.tests).reduce((sum, t) => sum + t.passCount, 0);
-  const totalTestRuns = Object.values(index.tests).reduce((sum, t) => sum + t.runCount, 0);
+  const totalPassed = Object.values(index.tests).reduce(
+    (sum, t) => sum + t.passCount,
+    0
+  );
+  const totalTestRuns = Object.values(index.tests).reduce(
+    (sum, t) => sum + t.runCount,
+    0
+  );
   agg.passRate = totalTestRuns > 0 ? totalPassed / totalTestRuns : 0;
 
   saveIndex(baseDir, index);
@@ -161,15 +182,18 @@ export function rebuildIndex(baseDir: string): void {
   }
 
   const index = createEmptyIndex();
-  const runDirs = fs.readdirSync(runsDir, { withFileTypes: true })
-    .filter(d => d.isDirectory())
+  const runDirs = fs
+    .readdirSync(runsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
     .sort((a, b) => a.name.localeCompare(b.name));
 
   for (const dir of runDirs) {
     const runDataPath = path.join(runsDir, dir.name, 'run.json');
     if (!fs.existsSync(runDataPath)) continue;
 
-    const runData: RunResult = JSON.parse(fs.readFileSync(runDataPath, 'utf-8')) as RunResult;
+    const runData: RunResult = JSON.parse(
+      fs.readFileSync(runDataPath, 'utf-8')
+    ) as RunResult;
 
     index.runs.push({
       id: runData.id,
@@ -188,7 +212,9 @@ export function rebuildIndex(baseDir: string): void {
       if (existing) {
         existing.runCount += 1;
         existing.passCount += test.passed ? 1 : 0;
-        existing.avgDuration = ((existing.avgDuration * (existing.runCount - 1)) + test.durationMs) / existing.runCount;
+        existing.avgDuration =
+          (existing.avgDuration * (existing.runCount - 1) + test.durationMs) /
+          existing.runCount;
         existing.lastRun = runData.timestamp;
         existing.lastResult = test.passed ? 'pass' : 'fail';
       } else {
@@ -212,8 +238,14 @@ export function rebuildIndex(baseDir: string): void {
   agg.totalTests = index.runs.reduce((sum, r) => sum + r.testCount, 0);
   agg.totalCost = index.runs.reduce((sum, r) => sum + r.cost, 0);
   agg.totalTokens = index.runs.reduce((sum, r) => sum + r.tokens, 0);
-  const totalPassed = Object.values(index.tests).reduce((sum, t) => sum + t.passCount, 0);
-  const totalTestRuns = Object.values(index.tests).reduce((sum, t) => sum + t.runCount, 0);
+  const totalPassed = Object.values(index.tests).reduce(
+    (sum, t) => sum + t.passCount,
+    0
+  );
+  const totalTestRuns = Object.values(index.tests).reduce(
+    (sum, t) => sum + t.runCount,
+    0
+  );
   agg.passRate = totalTestRuns > 0 ? totalPassed / totalTestRuns : 0;
 
   saveIndex(baseDir, index);

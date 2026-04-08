@@ -9,7 +9,10 @@ import {
 
 describe('formatToolCall', () => {
   it('formats Bash tool call', () => {
-    const result = formatToolCall('Bash', { command: 'ls -la', description: 'List files' });
+    const result = formatToolCall('Bash', {
+      command: 'ls -la',
+      description: 'List files',
+    });
     expect(result).toContain('List files');
     expect(result).toContain('ls -la');
   });
@@ -64,7 +67,11 @@ describe('formatTurnUsage', () => {
 
 describe('formatSessionInit', () => {
   it('formats session init event', () => {
-    const result = formatSessionInit({ model: 'opus', cwd: '/test', skills: ['s1'] });
+    const result = formatSessionInit({
+      model: 'opus',
+      cwd: '/test',
+      skills: ['s1'],
+    });
     expect(result).toContain('opus');
   });
 });
@@ -73,7 +80,7 @@ describe('formatUsageSummary', () => {
   it('formats aggregate usage with cost', () => {
     const result = formatUsageSummary(
       { input_tokens: 1000, output_tokens: 500 },
-      0.05,
+      0.05
     );
     expect(result).toContain('1000');
     expect(result).toContain('0.05');

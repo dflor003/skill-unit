@@ -7,7 +7,11 @@ describe('ConfirmDialog', () => {
   it('should render the message and yes/no options', () => {
     // Act
     const { lastFrame } = render(
-      <ConfirmDialog message="Cancel the run?" onConfirm={() => {}} onDismiss={() => {}} />,
+      <ConfirmDialog
+        message="Cancel the run?"
+        onConfirm={() => {}}
+        onDismiss={() => {}}
+      />
     );
 
     // Assert
@@ -22,7 +26,11 @@ describe('ConfirmDialog', () => {
       // Arrange
       const onConfirm = vi.fn();
       const { stdin } = render(
-        <ConfirmDialog message="Cancel?" onConfirm={onConfirm} onDismiss={() => {}} />,
+        <ConfirmDialog
+          message="Cancel?"
+          onConfirm={onConfirm}
+          onDismiss={() => {}}
+        />
       );
 
       // Act
@@ -38,7 +46,11 @@ describe('ConfirmDialog', () => {
       // Arrange
       const onDismiss = vi.fn();
       const { stdin } = render(
-        <ConfirmDialog message="Cancel?" onConfirm={() => {}} onDismiss={onDismiss} />,
+        <ConfirmDialog
+          message="Cancel?"
+          onConfirm={() => {}}
+          onDismiss={onDismiss}
+        />
       );
 
       // Act
@@ -55,7 +67,11 @@ describe('ConfirmDialog', () => {
       const onConfirm = vi.fn();
       const onDismiss = vi.fn();
       const { stdin } = render(
-        <ConfirmDialog message="Cancel?" onConfirm={onConfirm} onDismiss={onDismiss} />,
+        <ConfirmDialog
+          message="Cancel?"
+          onConfirm={onConfirm}
+          onDismiss={onDismiss}
+        />
       );
 
       // Act

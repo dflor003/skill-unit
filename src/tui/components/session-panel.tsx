@@ -19,7 +19,10 @@ interface SessionPanelProps {
   onScrollClamp?: (clampedOffset: number) => void;
 }
 
-function statusLabel(status: TestStatus | 'idle'): { label: string; color: string } {
+function statusLabel(status: TestStatus | 'idle'): {
+  label: string;
+  color: string;
+} {
   switch (status) {
     case 'idle':
       return { label: 'Idle', color: 'gray' };
@@ -74,13 +77,16 @@ export function SessionPanel({
   if (!testId) {
     return (
       <Box flexDirection="column" flexGrow={1} padding={1}>
-        <Text color="gray">No session selected. Use Left/Right arrows to switch sessions.</Text>
+        <Text color="gray">
+          No session selected. Use Left/Right arrows to switch sessions.
+        </Text>
       </Box>
     );
   }
 
   const { label, color } = statusLabel(status);
-  const activeTranscript = viewMode === 'grading' ? gradeTranscript : transcript;
+  const activeTranscript =
+    viewMode === 'grading' ? gradeTranscript : transcript;
   const allLines = activeTranscript.join('\n').split('\n');
 
   // Reserve ~4 lines for header + view mode indicator + follow indicator
@@ -125,16 +131,20 @@ export function SessionPanel({
       <Box paddingX={1}>
         {viewMode === 'execution' ? (
           <Text>
-            <Text bold color="cyan">[Execution]</Text>
+            <Text bold color="cyan">
+              [Execution]
+            </Text>
             <Text color="gray"> | Grading</Text>
           </Text>
         ) : (
           <Text>
             <Text color="gray">Execution | </Text>
-            <Text bold color="cyan">[Grading]</Text>
+            <Text bold color="cyan">
+              [Grading]
+            </Text>
           </Text>
         )}
-        <Text color="gray">  [t] toggle</Text>
+        <Text color="gray"> [t] toggle</Text>
       </Box>
       <Box flexDirection="row" flexGrow={1} overflow="hidden">
         <Box flexDirection="column" paddingX={1} flexGrow={1} overflow="hidden">

@@ -1,5 +1,5 @@
 ---
-paths: "tests/**"
+paths: 'tests/**'
 ---
 
 # Unit Test Conventions
@@ -49,16 +49,19 @@ Put reusable test utilities (e.g., CLI runner, fake stream factory) in `tests/he
 Every test body must use explicit `// Arrange`, `// Act`, and `// Assert` comment blocks. Omit `// Arrange` only when there is no setup (e.g., testing a null input).
 
 ```js
-it("should return the resolved path", () => {
+it('should return the resolved path', () => {
   // Arrange
-  const input = "./fixtures/base";
-  const specDir = path.resolve("skill-tests/my-skill");
+  const input = './fixtures/base';
+  const specDir = path.resolve('skill-tests/my-skill');
 
   // Act
   const result = resolveFixturePath(input, specDir, process.cwd());
 
   // Assert
-  assert.equal(result, path.join("skill-tests", "my-skill", "fixtures", "base"));
+  assert.equal(
+    result,
+    path.join('skill-tests', 'my-skill', 'fixtures', 'base')
+  );
 });
 ```
 

@@ -52,6 +52,7 @@ In CLI mode, `silent` defaults to `false` and output streams to stderr as usual.
 ### App Shell (`app.tsx`)
 
 The root component manages:
+
 - **Screen routing** -- `useState<Screen>` tracks the active screen. Keyboard shortcuts (D/R/S/O, Tab) switch screens.
 - **Back navigation** -- `previousScreen` state tracks where the user came from when entering the Runner screen. Escape and Backspace return to `previousScreen` when the run is idle or complete.
 - **Navigation lock** -- When `runState.status === 'running'` and the user is on the Runner screen, all global navigation keys (D/R/S/O, Tab, Q, Backspace) are disabled. Escape opens the cancel confirmation dialog instead.
@@ -65,13 +66,13 @@ The root component manages:
 
 Context-aware bar pinned to the bottom of every screen. Displays different content based on the current screen and run state:
 
-| Context | Display |
-|---|---|
-| Top-level screens (Dashboard, Runs, Stats, Options) | `[D]ashboard [R]uns [S]tats [O]ptions  Tab: next [Q]uit` |
-| Runner (running, primary view) | `Run in progress... [Esc] cancel  <- -> sessions  up/down scroll  [f] follow  [t] transcript  [v] split` |
-| Runner (running, split view) | `Run in progress... [Esc] cancel  [1-9] focus  [m] maximize  [v] primary` |
-| Runner (complete, primary view) | `[Space] select  [Enter] re-run  <- -> sessions  [Esc] back` |
-| Runner (complete, split view) | `[1-9] focus  [m] maximize  [v] primary  [Esc] back` |
+| Context                                             | Display                                                                                                  |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| Top-level screens (Dashboard, Runs, Stats, Options) | `[D]ashboard [R]uns [S]tats [O]ptions  Tab: next [Q]uit`                                                 |
+| Runner (running, primary view)                      | `Run in progress... [Esc] cancel  <- -> sessions  up/down scroll  [f] follow  [t] transcript  [v] split` |
+| Runner (running, split view)                        | `Run in progress... [Esc] cancel  [1-9] focus  [m] maximize  [v] primary`                                |
+| Runner (complete, primary view)                     | `[Space] select  [Enter] re-run  <- -> sessions  [Esc] back`                                             |
+| Runner (complete, split view)                       | `[1-9] focus  [m] maximize  [v] primary  [Esc] back`                                                     |
 
 The active screen is highlighted in white bold on top-level screens. During active runs, the bar shows a yellow "Run in progress..." indicator.
 
@@ -80,18 +81,20 @@ The active screen is highlighted in white bold on top-level screens. During acti
 **Dashboard (`dashboard.tsx`)** -- Landing screen. Scrollable list of all test cases with an auto-focused search box. Supports `tag:` prefix filtering and substring matching. Space toggles selection, `a` selects all, Enter runs selected tests. Selections persist to `.skill-unit/selection.json`.
 
 **Test Runner (`runner.tsx`)** -- Shown during test execution and historical run viewing. Session panel supports scrolling with Up/Down arrow keys to disable auto-follow mode, `[f]` to snap back to the bottom and re-enable auto-follow. A visual scrollbar (track + thumb) appears on the right edge when content overflows the panel. `[t]` toggles between execution and grading transcript views. Auto-switches to grading view when a test starts grading. When a run completes, the progress tree shows selection checkboxes; `[Space]` toggles selection for re-run, and `[Enter]` launches a new run with selected tests. Failed tests are pre-selected by default. Reports view mode changes to the app shell for bottom bar synchronization. Two view modes toggled with `[v]`:
-- *Primary + Ticker* -- Progress tree sidebar on the left, ticker strip at top showing active session tabs, primary panel showing the selected session's full transcript rendered as markdown.
-- *Split Panes* -- Grid layout of all active sessions. `[1-9]` focuses a pane, `[m]` maximizes/restores.
+
+- _Primary + Ticker_ -- Progress tree sidebar on the left, ticker strip at top showing active session tabs, primary panel showing the selected session's full transcript rendered as markdown.
+- _Split Panes_ -- Grid layout of all active sessions. `[1-9]` focuses a pane, `[m]` maximizes/restores.
 
 **Run Manager (`runs.tsx`)** -- Lists past runs from `.skill-unit/runs/`. Shows locale-formatted timestamps, test counts, pass/fail, duration, and cost. `[d]` deletes a run, `[c]` cleans up old runs (keeps last 10). `[Enter]` opens a historical run in the Runner view, loading transcripts and grading results from disk.
 
 **Statistics (`stats.tsx`)** -- Aggregate metrics (total runs, pass rate, cost, tokens) and a per-test table sortable by name, run count, success rate, duration, cost, or last run date. `[s]` cycles the sort field.
 
 **Options (`options.tsx`)** -- Interactive editor for `.skill-unit.yml` fields grouped by section (Runner, Output, Execution, Defaults). Cursor navigation with Up/Down. Press Enter to activate an inline editor for the focused field:
-- *Enum fields* (tool, format, log-level): `Select` dropdown from `@inkjs/ui`
-- *Boolean fields* (show-passing-details): Toggle on Enter
-- *Number fields* (max-turns, concurrency): `TextInput` from `@inkjs/ui`
-- *String fields* (model, timeout, setup, teardown): `TextInput` from `@inkjs/ui`
+
+- _Enum fields_ (tool, format, log-level): `Select` dropdown from `@inkjs/ui`
+- _Boolean fields_ (show-passing-details): Toggle on Enter
+- _Number fields_ (max-turns, concurrency): `TextInput` from `@inkjs/ui`
+- _String fields_ (model, timeout, setup, teardown): `TextInput` from `@inkjs/ui`
 
 Escape cancels editing. Edits are held in local state until `[s]` saves. An "(unsaved changes)" indicator appears when the draft differs from the saved config.
 
@@ -177,12 +180,12 @@ App
 
 ## Persistent State
 
-| File | Purpose |
-|---|---|
-| `.skill-unit/index.json` | Stats index (aggregate and per-test metrics, run history) |
-| `.skill-unit/selection.json` | Dashboard test selections and view mode preference |
-| `.skill-unit/runs/<timestamp>/` | Per-run artifacts (results, transcripts, reports) |
-| `.workspace/` | Ephemeral test execution sandboxes (anti-bias isolation layer, unchanged) |
+| File                            | Purpose                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `.skill-unit/index.json`        | Stats index (aggregate and per-test metrics, run history)                 |
+| `.skill-unit/selection.json`    | Dashboard test selections and view mode preference                        |
+| `.skill-unit/runs/<timestamp>/` | Per-run artifacts (results, transcripts, reports)                         |
+| `.workspace/`                   | Ephemeral test execution sandboxes (anti-bias isolation layer, unchanged) |
 
 ## Concurrency Configuration
 
@@ -191,48 +194,56 @@ The concurrency model has been unified into a single pool configured via `config
 ## TestStatus
 
 ```typescript
-type TestStatus = 'pending' | 'running' | 'grading' | 'passed' | 'failed' | 'timedout' | 'error' | 'cancelled';
+type TestStatus =
+  | 'pending'
+  | 'running'
+  | 'grading'
+  | 'passed'
+  | 'failed'
+  | 'timedout'
+  | 'error'
+  | 'cancelled';
 ```
 
-| Status | Icon | Color | Description |
-|---|---|---|---|
-| pending | `○` | gray | Queued, not yet started |
-| running | `⏳` | blue | Test execution in progress |
-| grading | `⚙` | yellow | Grader evaluating results |
-| passed | `✓` | green | All expectations met |
-| failed | `✗` | red | One or more expectations failed |
-| timedout | `⏰` | red | Execution exceeded timeout |
-| error | `✗` | red | Process error (non-zero exit, spawn failure) |
-| cancelled | `⊘` | gray | User cancelled the run before completion |
+| Status    | Icon | Color  | Description                                  |
+| --------- | ---- | ------ | -------------------------------------------- |
+| pending   | `○`  | gray   | Queued, not yet started                      |
+| running   | `⏳` | blue   | Test execution in progress                   |
+| grading   | `⚙`  | yellow | Grader evaluating results                    |
+| passed    | `✓`  | green  | All expectations met                         |
+| failed    | `✗`  | red    | One or more expectations failed              |
+| timedout  | `⏰` | red    | Execution exceeded timeout                   |
+| error     | `✗`  | red    | Process error (non-zero exit, spawn failure) |
+| cancelled | `⊘`  | gray   | User cancelled the run before completion     |
 
 ## Keyboard Navigation
 
-| Key | Context | Action |
-|---|---|---|
+| Key        | Context                        | Action                                    |
+| ---------- | ------------------------------ | ----------------------------------------- |
 | D, R, S, O | Global (not during active run) | Switch to Dashboard, Runs, Stats, Options |
-| Tab | Global (not during active run) | Cycle to next screen |
-| Q | Global (not during active run) | Quit (exit alternate screen buffer) |
-| Escape | Runner (active run) | Open cancel confirmation dialog |
-| Escape | Runner (idle/complete) | Return to previous screen |
-| Backspace | Runner (idle/complete) | Return to previous screen |
-| Y | Cancel dialog | Confirm cancellation |
-| N | Cancel dialog | Dismiss dialog |
-| Space | Dashboard | Toggle test selection |
-| a | Dashboard | Select/deselect all |
-| Enter | Dashboard | Run selected tests |
-| Left/Right | Runner (Primary) | Switch active session in ticker |
-| Up/Down | Runner (Primary) | Scroll transcript, disable auto-follow |
-| f | Runner (Primary) | Snap to bottom, re-enable auto-follow |
-| t | Runner (Primary) | Toggle execution/grading transcript |
-| v | Runner | Toggle Primary+Ticker / Split Panes view |
-| 1-9 | Runner (Split) | Focus pane by number |
-| m | Runner (Split) | Maximize/restore focused pane |
-| Space | Runner (complete) | Toggle test selection for re-run |
-| Enter | Runner (complete) | Re-run selected tests |
-| s | Stats | Cycle sort field |
-| d | Run Manager | Delete selected run |
-| c | Run Manager | Clean up old runs (keep last 10) |
-| Enter | Run Manager | View historical run details |
-| Enter | Options | Edit focused field |
-| Escape | Options (editing) | Cancel edit |
-| s | Options | Save config changes |
+| Tab        | Global (not during active run) | Cycle to next screen                      |
+| Q          | Global (not during active run) | Quit (exit alternate screen buffer)       |
+| Escape     | Runner (active run)            | Open cancel confirmation dialog           |
+| Escape     | Runner (idle/complete)         | Return to previous screen                 |
+| Backspace  | Runner (idle/complete)         | Return to previous screen                 |
+| Y          | Cancel dialog                  | Confirm cancellation                      |
+| N          | Cancel dialog                  | Dismiss dialog                            |
+| Space      | Dashboard                      | Toggle test selection                     |
+| a          | Dashboard                      | Select/deselect all                       |
+| Enter      | Dashboard                      | Run selected tests                        |
+| Left/Right | Runner (Primary)               | Switch active session in ticker           |
+| Up/Down    | Runner (Primary)               | Scroll transcript, disable auto-follow    |
+| f          | Runner (Primary)               | Snap to bottom, re-enable auto-follow     |
+| t          | Runner (Primary)               | Toggle execution/grading transcript       |
+| v          | Runner                         | Toggle Primary+Ticker / Split Panes view  |
+| 1-9        | Runner (Split)                 | Focus pane by number                      |
+| m          | Runner (Split)                 | Maximize/restore focused pane             |
+| Space      | Runner (complete)              | Toggle test selection for re-run          |
+| Enter      | Runner (complete)              | Re-run selected tests                     |
+| s          | Stats                          | Cycle sort field                          |
+| d          | Run Manager                    | Delete selected run                       |
+| c          | Run Manager                    | Clean up old runs (keep last 10)          |
+| Enter      | Run Manager                    | View historical run details               |
+| Enter      | Options                        | Edit focused field                        |
+| Escape     | Options (editing)              | Cancel edit                               |
+| s          | Options                        | Save config changes                       |

@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import fs from 'node:fs';
-import { loadConfig, parseYaml, CONFIG_DEFAULTS } from '../../src/config/loader.js';
+import {
+  loadConfig,
+  parseYaml,
+  CONFIG_DEFAULTS,
+} from '../../src/config/loader.js';
 
 describe('parseYaml', () => {
   it('parses scalar values', () => {
@@ -76,11 +80,17 @@ describe('CONFIG_DEFAULTS', () => {
 
   it('uses concurrency (not runner-concurrency) in runner defaults', () => {
     expect(CONFIG_DEFAULTS.runner.concurrency).toBe(5);
-    expect((CONFIG_DEFAULTS.runner as Record<string, unknown>)['runner-concurrency']).toBeUndefined();
+    expect(
+      (CONFIG_DEFAULTS.runner as Record<string, unknown>)['runner-concurrency']
+    ).toBeUndefined();
   });
 
   it('does not have grader-concurrency in execution defaults', () => {
-    expect((CONFIG_DEFAULTS.execution as Record<string, unknown>)['grader-concurrency']).toBeUndefined();
+    expect(
+      (CONFIG_DEFAULTS.execution as Record<string, unknown>)[
+        'grader-concurrency'
+      ]
+    ).toBeUndefined();
   });
 });
 

@@ -7,7 +7,10 @@ interface SearchBoxProps {
   placeholder?: string;
 }
 
-export function SearchBox({ value, placeholder = 'Search tests...' }: SearchBoxProps) {
+export function SearchBox({
+  value,
+  placeholder = 'Search tests...',
+}: SearchBoxProps) {
   return (
     <Box>
       <Text color="blue">{'> '}</Text>

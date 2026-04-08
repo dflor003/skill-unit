@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import path from 'node:path';
 import { Box, useInput, useStdout } from 'ink';
-import { BottomBar, type Screen, type RunViewMode } from './components/bottom-bar.js';
+import {
+  BottomBar,
+  type Screen,
+  type RunViewMode,
+} from './components/bottom-bar.js';
 import { ConfirmDialog } from './components/confirm-dialog.js';
 import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';
@@ -12,7 +16,11 @@ import { useTestRun, type TestRunState } from './hooks/use-test-run.js';
 import { loadHistoricalRun } from './hooks/use-historical-run.js';
 import { loadConfig } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
-import { parseSpecFile, buildManifest, formatTimestamp } from '../core/compiler.js';
+import {
+  parseSpecFile,
+  buildManifest,
+  formatTimestamp,
+} from '../core/compiler.js';
 import { loadIndex, cleanupRuns } from '../core/stats.js';
 import type { Spec } from '../types/spec.js';
 import type { StatsIndex } from '../types/run.js';
@@ -23,7 +31,11 @@ const STATS_BASE_DIR = '.skill-unit';
 const DEFAULT_CONFIG: SkillUnitConfig = {
   'test-dir': 'skill-tests',
   runner: { tool: 'claude', model: null, 'max-turns': 10, concurrency: 5 },
-  output: { format: 'interactive', 'show-passing-details': false, 'log-level': 'info' },
+  output: {
+    format: 'interactive',
+    'show-passing-details': false,
+    'log-level': 'info',
+  },
   execution: { timeout: '120s' },
   defaults: { setup: 'setup.sh', teardown: 'teardown.sh' },
 };
@@ -36,13 +48,22 @@ export function App() {
   const [statsIndex, setStatsIndex] = useState<StatsIndex>(() => ({
     version: 1,
     lastUpdated: new Date().toISOString(),
-    aggregate: { totalRuns: 0, totalTests: 0, passRate: 0, totalCost: 0, totalTokens: 0 },
+    aggregate: {
+      totalRuns: 0,
+      totalTests: 0,
+      passRate: 0,
+      totalCost: 0,
+      totalTokens: 0,
+    },
     tests: {},
     runs: [],
   }));
-  const [runState, { startRun, executeRun, selectTest, cancelRun }] = useTestRun();
+  const [runState, { startRun, executeRun, selectTest, cancelRun }] =
+    useTestRun();
   const [historicalRun, setHistoricalRun] = useState<TestRunState | null>(null);
-  const [historicalActiveTestId, setHistoricalActiveTestId] = useState<string | null>(null);
+  const [historicalActiveTestId, setHistoricalActiveTestId] = useState<
+    string | null
+  >(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [runnerViewMode, setRunnerViewMode] = useState<RunViewMode>('primary');
   const { stdout } = useStdout();
@@ -52,7 +73,9 @@ export function App() {
     if (!stdout) return;
     const onResize = () => setTermHeight(stdout.rows);
     stdout.on('resize', onResize);
-    return () => { stdout.off('resize', onResize); };
+    return () => {
+      stdout.off('resize', onResize);
+    };
   }, [stdout]);
 
   useEffect(() => {
@@ -60,7 +83,7 @@ export function App() {
       const config = loadConfig('.skill-unit.yml');
       setAppConfig(config);
       const paths = discoverSpecPaths(config['test-dir']);
-      const loaded = paths.map(p => parseSpecFile(p));
+      const loaded = paths.map((p) => parseSpecFile(p));
       setSpecs(loaded);
     } catch {
       // Non-fatal: leave specs empty if loading fails
@@ -86,7 +109,7 @@ export function App() {
 
   function handleRerunTests(testIds: string[]) {
     const currentTests = historicalRun?.tests ?? runState.tests;
-    const testsToRerun = currentTests.filter(t => testIds.includes(t.id));
+    const testsToRerun = currentTests.filter((t) => testIds.includes(t.id));
     if (testsToRerun.length === 0) return;
 
     setHistoricalRun(null);
@@ -94,26 +117,28 @@ export function App() {
     const selectedTestIds = new Set(testIds);
     const timestamp = formatTimestamp(new Date());
 
-    const matchedSpecNames = new Set(testsToRerun.map(t => t.specName));
-    const selectedSpecs = specs.filter(s => {
+    const matchedSpecNames = new Set(testsToRerun.map((t) => t.specName));
+    const selectedSpecs = specs.filter((s) => {
       const specName = s.frontmatter.name || path.basename(s.path, '.spec.md');
       return matchedSpecNames.has(specName);
     });
 
-    const manifests = selectedSpecs.map(spec => {
-      const manifest = buildManifest(spec, appConfig, { timestamp });
-      manifest['test-cases'] = manifest['test-cases'].filter(tc =>
-        selectedTestIds.has(tc.id),
-      );
-      return manifest;
-    }).filter(m => m['test-cases'].length > 0);
+    const manifests = selectedSpecs
+      .map((spec) => {
+        const manifest = buildManifest(spec, appConfig, { timestamp });
+        manifest['test-cases'] = manifest['test-cases'].filter((tc) =>
+          selectedTestIds.has(tc.id)
+        );
+        return manifest;
+      })
+      .filter((m) => m['test-cases'].length > 0);
 
     startRun(
-      testsToRerun.map(t => ({
+      testsToRerun.map((t) => ({
         id: t.id,
         name: t.name,
         specName: t.specName,
-      })),
+      }))
     );
 
     executeRun(manifests, selectedSpecs, appConfig, timestamp);
@@ -131,7 +156,7 @@ export function App() {
   function handleDeleteRun(id: string) {
     try {
       const index = loadIndex(STATS_BASE_DIR);
-      index.runs = index.runs.filter(r => r.id !== id);
+      index.runs = index.runs.filter((r) => r.id !== id);
       setStatsIndex({ ...index });
     } catch {
       // Non-fatal
@@ -184,7 +209,7 @@ export function App() {
     if (input === 's' || input === 'S') setScreen('stats');
     if (input === 'o' || input === 'O') setScreen('options');
     if (key.tab) {
-      setScreen(prev => {
+      setScreen((prev) => {
         const idx = NAV_SCREENS.indexOf(prev);
         return NAV_SCREENS[(idx + 1) % NAV_SCREENS.length];
       });
@@ -205,29 +230,37 @@ export function App() {
           {screen === 'dashboard' && (
             <Dashboard
               specs={specs}
-              onRunTests={tests => {
+              onRunTests={(tests) => {
                 setHistoricalRun(null);
                 setPreviousScreen('dashboard');
                 startRun(
-                  tests.map(t => ({
+                  tests.map((t) => ({
                     id: t.testCase.id,
                     name: t.testCase.name,
                     specName: t.specName,
-                  })),
+                  }))
                 );
                 setScreen('runner');
 
                 const timestamp = formatTimestamp(new Date());
-                const specPathSet = new Set(tests.map(t => t.specPath));
-                const selectedSpecs = specs.filter(s => specPathSet.has(s.path));
-                const selectedTestIds = new Set(tests.map(t => t.testCase.id));
-                const manifests = selectedSpecs.map(spec => {
-                  const manifest = buildManifest(spec, appConfig, { timestamp });
-                  manifest['test-cases'] = manifest['test-cases'].filter(tc =>
-                    selectedTestIds.has(tc.id),
-                  );
-                  return manifest;
-                }).filter(m => m['test-cases'].length > 0);
+                const specPathSet = new Set(tests.map((t) => t.specPath));
+                const selectedSpecs = specs.filter((s) =>
+                  specPathSet.has(s.path)
+                );
+                const selectedTestIds = new Set(
+                  tests.map((t) => t.testCase.id)
+                );
+                const manifests = selectedSpecs
+                  .map((spec) => {
+                    const manifest = buildManifest(spec, appConfig, {
+                      timestamp,
+                    });
+                    manifest['test-cases'] = manifest['test-cases'].filter(
+                      (tc) => selectedTestIds.has(tc.id)
+                    );
+                    return manifest;
+                  })
+                  .filter((m) => m['test-cases'].length > 0);
 
                 executeRun(manifests, selectedSpecs, appConfig, timestamp);
               }}
@@ -249,10 +282,16 @@ export function App() {
             <Runner
               runState={
                 historicalRun
-                  ? { ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId }
+                  ? {
+                      ...historicalRun,
+                      activeTestId:
+                        historicalActiveTestId ?? historicalRun.activeTestId,
+                    }
                   : runState
               }
-              onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
+              onSelectTest={
+                historicalRun ? setHistoricalActiveTestId : selectTest
+              }
               onRerunTests={handleRerunTests}
               onViewModeChange={setRunnerViewMode}
             />

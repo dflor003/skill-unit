@@ -17,14 +17,18 @@ describe('loadHistoricalRun', () => {
         'my-spec.TEST-2.transcript.md',
         'my-spec.TEST-2.results.md',
       ] as unknown as fs.Dirent[]);
-      vi.spyOn(fs, 'readFileSync').mockImplementation((filePath: fs.PathOrFileDescriptor) => {
-        const p = String(filePath);
-        if (p.includes('TEST-1.transcript')) return '## Turn 1\nHello world';
-        if (p.includes('TEST-1.results')) return '# Results: TEST-1: basic test\n\n**Verdict:** PASS';
-        if (p.includes('TEST-2.transcript')) return '## Turn 1\nGoodbye';
-        if (p.includes('TEST-2.results')) return '# Results: TEST-2: advanced test\n\n**Verdict:** FAIL';
-        return '';
-      });
+      vi.spyOn(fs, 'readFileSync').mockImplementation(
+        (filePath: fs.PathOrFileDescriptor) => {
+          const p = String(filePath);
+          if (p.includes('TEST-1.transcript')) return '## Turn 1\nHello world';
+          if (p.includes('TEST-1.results'))
+            return '# Results: TEST-1: basic test\n\n**Verdict:** PASS';
+          if (p.includes('TEST-2.transcript')) return '## Turn 1\nGoodbye';
+          if (p.includes('TEST-2.results'))
+            return '# Results: TEST-2: advanced test\n\n**Verdict:** FAIL';
+          return '';
+        }
+      );
 
       // Act
       const result = loadHistoricalRun('.workspace/runs/2026-04-07-10-00-00', {
@@ -34,7 +38,7 @@ describe('loadHistoricalRun', () => {
         passed: 1,
         failed: 1,
         duration: 30000,
-        cost: 0.10,
+        cost: 0.1,
         tokens: 5000,
       });
 

@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-"use strict";
+'use strict';
 
-const fs = require("fs");
-const path = require("path");
-const { spawn } = require("child_process");
-const compiler = require("./compiler");
-const grader = require("./grader");
-const report = require("./report");
-const logger = require("./logger");
-const log = logger("cli");
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+const compiler = require('./compiler');
+const grader = require('./grader');
+const report = require('./report');
+const logger = require('./logger');
+const log = logger('cli');
 const { formatMd } = logger;
 
 // ---------------------------------------------------------------------------
@@ -62,27 +62,42 @@ Report Options:
 
 function parseArgs(argv) {
   const args = argv.slice(2);
-  const command = args[0] && !args[0].startsWith("--") ? args[0] : null;
+  const command = args[0] && !args[0].startsWith('--') ? args[0] : null;
   const rest = command ? args.slice(1) : args;
 
   const opts = { names: [], specPaths: [] };
   let i = 0;
   while (i < rest.length) {
     const arg = rest[i];
-    if (arg === "--config" && rest[i + 1]) { opts.config = rest[++i]; }
-    else if (arg === "--tag" && rest[i + 1]) { opts.tags = rest[++i].split(",").map((s) => s.trim()); }
-    else if (arg === "--test" && rest[i + 1]) { opts.tests = rest[++i].split(",").map((s) => s.trim()); }
-    else if (arg === "-f" || arg === "--file") { if (rest[i + 1]) opts.specPaths.push(rest[++i]); }
-    else if (arg === "--model" && rest[i + 1]) { opts.model = rest[++i]; }
-    else if (arg === "--timeout" && rest[i + 1]) { opts.timeout = rest[++i]; }
-    else if (arg === "--max-turns" && rest[i + 1]) { opts.maxTurns = parseInt(rest[++i], 10); }
-    else if (arg === "--timestamp" && rest[i + 1]) { opts.timestamp = rest[++i]; }
-    else if (arg === "--out-dir" && rest[i + 1]) { opts.outDir = rest[++i]; }
-    else if (arg === "--run-dir" && rest[i + 1]) { opts.runDir = rest[++i]; }
-    else if (arg === "--keep-workspaces") { opts.keepWorkspaces = true; }
-    else if (arg === "--all") { opts.all = true; }
-    else if (!arg.startsWith("--")) { opts.names.push(arg); }
-    else { log.warn(`Unknown option: ${arg}`); }
+    if (arg === '--config' && rest[i + 1]) {
+      opts.config = rest[++i];
+    } else if (arg === '--tag' && rest[i + 1]) {
+      opts.tags = rest[++i].split(',').map((s) => s.trim());
+    } else if (arg === '--test' && rest[i + 1]) {
+      opts.tests = rest[++i].split(',').map((s) => s.trim());
+    } else if (arg === '-f' || arg === '--file') {
+      if (rest[i + 1]) opts.specPaths.push(rest[++i]);
+    } else if (arg === '--model' && rest[i + 1]) {
+      opts.model = rest[++i];
+    } else if (arg === '--timeout' && rest[i + 1]) {
+      opts.timeout = rest[++i];
+    } else if (arg === '--max-turns' && rest[i + 1]) {
+      opts.maxTurns = parseInt(rest[++i], 10);
+    } else if (arg === '--timestamp' && rest[i + 1]) {
+      opts.timestamp = rest[++i];
+    } else if (arg === '--out-dir' && rest[i + 1]) {
+      opts.outDir = rest[++i];
+    } else if (arg === '--run-dir' && rest[i + 1]) {
+      opts.runDir = rest[++i];
+    } else if (arg === '--keep-workspaces') {
+      opts.keepWorkspaces = true;
+    } else if (arg === '--all') {
+      opts.all = true;
+    } else if (!arg.startsWith('--')) {
+      opts.names.push(arg);
+    } else {
+      log.warn(`Unknown option: ${arg}`);
+    }
     i++;
   }
 
@@ -92,15 +107,15 @@ function parseArgs(argv) {
 // -- Shared helpers -----------------------------------------------------------
 
 function loadAndDiscover(opts) {
-  const configPath = opts.config || path.join(process.cwd(), ".skill-unit.yml");
+  const configPath = opts.config || path.join(process.cwd(), '.skill-unit.yml');
   const config = compiler.loadConfig(configPath);
 
   // Apply log level from config (env var LOG_LEVEL still takes precedence)
-  if (!process.env.LOG_LEVEL && config.output && config.output["log-level"]) {
-    logger.setLevel(config.output["log-level"]);
+  if (!process.env.LOG_LEVEL && config.output && config.output['log-level']) {
+    logger.setLevel(config.output['log-level']);
   }
 
-  const testDir = path.resolve(config["test-dir"]);
+  const testDir = path.resolve(config['test-dir']);
 
   const filters = {
     paths: opts.specPaths.length ? opts.specPaths : null,
@@ -131,14 +146,15 @@ function buildManifests(specs, config, opts) {
 }
 
 function writeManifests(manifests, timestamp, opts) {
-  const outDir = opts.outDir || path.join(".workspace", "runs", timestamp, "manifests");
+  const outDir =
+    opts.outDir || path.join('.workspace', 'runs', timestamp, 'manifests');
   fs.mkdirSync(outDir, { recursive: true });
 
   const paths = [];
   for (const manifest of manifests) {
-    const filename = `${manifest["spec-name"]}.manifest.json`;
+    const filename = `${manifest['spec-name']}.manifest.json`;
     const filePath = path.join(outDir, filename);
-    fs.writeFileSync(filePath, JSON.stringify(manifest, null, 2), "utf-8");
+    fs.writeFileSync(filePath, JSON.stringify(manifest, null, 2), 'utf-8');
     paths.push(filePath);
     log.verbose(`Wrote: ${filePath}`);
   }
@@ -152,41 +168,41 @@ function cmdLs(opts) {
   const { specs } = loadAndDiscover(opts);
 
   if (specs.length === 0) {
-    console.log("No spec files found.");
+    console.log('No spec files found.');
     return;
   }
 
   const total = specs.reduce((n, s) => n + s.testCases.length, 0);
-  const lines = [`# ${specs.length} spec(s), ${total} test case(s)`, ""];
+  const lines = [`# ${specs.length} spec(s), ${total} test case(s)`, ''];
 
   for (const spec of specs) {
     const fm = spec.frontmatter;
     const relPath = path.relative(process.cwd(), spec.path);
-    const name = fm.name || path.basename(spec.path, ".spec.md");
+    const name = fm.name || path.basename(spec.path, '.spec.md');
 
     lines.push(`## ${name}`);
     lines.push(`   \`${relPath}\``);
 
     if (fm.tags && fm.tags.length) {
-      lines.push(`   *${fm.tags.join(", ")}*`);
+      lines.push(`   *${fm.tags.join(', ')}*`);
     }
 
-    lines.push("");
+    lines.push('');
     for (const tc of spec.testCases) {
       lines.push(`   - **${tc.id}**: ${tc.name}`);
     }
 
-    lines.push("");
+    lines.push('');
   }
 
-  process.stdout.write(formatMd(lines.join("\n")) + "\n");
+  process.stdout.write(formatMd(lines.join('\n')) + '\n');
 }
 
 function cmdCompile(opts) {
   const { config, specs } = loadAndDiscover(opts);
 
   if (specs.length === 0) {
-    console.log("No spec files found.");
+    console.log('No spec files found.');
     return;
   }
 
@@ -200,16 +216,23 @@ function cmdCompile(opts) {
 }
 
 async function cmdTest(opts) {
-  const hasFilter = opts.all || opts.specPaths.length || opts.names.length || opts.tags || opts.tests;
+  const hasFilter =
+    opts.all ||
+    opts.specPaths.length ||
+    opts.names.length ||
+    opts.tags ||
+    opts.tests;
   if (!hasFilter) {
-    log.error("Specify specs to run, or use --name, --tag, --test to filter, or --all to run everything.");
+    log.error(
+      'Specify specs to run, or use --name, --tag, --test to filter, or --all to run everything.'
+    );
     process.exit(1);
   }
 
   const { config, specs } = loadAndDiscover(opts);
 
   if (specs.length === 0) {
-    console.log("No spec files found.");
+    console.log('No spec files found.');
     return;
   }
 
@@ -218,37 +241,37 @@ async function cmdTest(opts) {
 
   // Ensure gitignore entry
   const cwd = process.cwd();
-  const gitignorePath = path.join(cwd, ".gitignore");
-  const pattern = ".workspace/";
+  const gitignorePath = path.join(cwd, '.gitignore');
+  const pattern = '.workspace/';
   if (fs.existsSync(gitignorePath)) {
-    const contents = fs.readFileSync(gitignorePath, "utf-8");
-    if (!contents.split("\n").some((line) => line.trim() === pattern)) {
+    const contents = fs.readFileSync(gitignorePath, 'utf-8');
+    if (!contents.split('\n').some((line) => line.trim() === pattern)) {
       fs.appendFileSync(gitignorePath, `${pattern}\n`);
     }
   }
 
   // Execute runner for each manifest sequentially
-  const runnerScript = path.join(__dirname, "runner.js");
+  const runnerScript = path.join(__dirname, 'runner.js');
 
   for (const mp of manifestPaths) {
     log.info(`Running: ${mp}`);
 
     const runnerArgs = [runnerScript, mp];
-    if (opts.keepWorkspaces) runnerArgs.push("--keep-workspaces");
+    if (opts.keepWorkspaces) runnerArgs.push('--keep-workspaces');
 
-    const exitCode = await spawnAsync("node", runnerArgs, { cwd });
+    const exitCode = await spawnAsync('node', runnerArgs, { cwd });
     if (exitCode !== 0) {
       log.error(`Runner exited with code ${exitCode} for ${mp}`);
     }
   }
 
   // Grade results
-  log.info("Grading results");
+  log.info('Grading results');
   await grader.gradeSpecs(specs, config, timestamp);
 
   // Generate report
-  const runDir = path.join(".workspace", "runs", timestamp);
-  log.info("Generating report");
+  const runDir = path.join('.workspace', 'runs', timestamp);
+  log.info('Generating report');
   const result = report.generateReport(runDir);
 
   if (result.error) {
@@ -262,7 +285,7 @@ function cmdReport(opts) {
   const runDir = opts.runDir;
 
   if (!runDir) {
-    log.error("--run-dir is required for the report command.");
+    log.error('--run-dir is required for the report command.');
     process.exit(1);
   }
 
@@ -282,11 +305,11 @@ function spawnAsync(cmd, args, options) {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, {
       cwd: options.cwd,
-      stdio: "inherit",
+      stdio: 'inherit',
     });
 
-    child.on("close", (code) => resolve(code || 0));
-    child.on("error", (err) => {
+    child.on('close', (code) => resolve(code || 0));
+    child.on('error', (err) => {
       log.error(`Spawn error: ${err.message}`);
       resolve(1);
     });
@@ -299,16 +322,16 @@ async function main() {
   const { command, opts } = parseArgs(process.argv);
 
   switch (command) {
-    case "ls":
+    case 'ls':
       cmdLs(opts);
       break;
-    case "compile":
+    case 'compile':
       cmdCompile(opts);
       break;
-    case "test":
+    case 'test':
       await cmdTest(opts);
       break;
-    case "report":
+    case 'report':
       cmdReport(opts);
       break;
     default:

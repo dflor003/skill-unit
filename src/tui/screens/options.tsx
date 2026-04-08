@@ -22,56 +22,101 @@ interface FieldDef {
 
 const FIELDS: FieldDef[] = [
   {
-    section: 'Runner', key: 'tool', label: 'tool', type: 'enum',
+    section: 'Runner',
+    key: 'tool',
+    label: 'tool',
+    type: 'enum',
     options: ['claude'],
-    get: c => c.runner.tool,
+    get: (c) => c.runner.tool,
     set: (c, v) => ({ ...c, runner: { ...c.runner, tool: v } }),
   },
   {
-    section: 'Runner', key: 'model', label: 'model', type: 'string',
-    get: c => c.runner.model ?? '',
+    section: 'Runner',
+    key: 'model',
+    label: 'model',
+    type: 'string',
+    get: (c) => c.runner.model ?? '',
     set: (c, v) => ({ ...c, runner: { ...c.runner, model: v || null } }),
   },
   {
-    section: 'Runner', key: 'max-turns', label: 'max-turns', type: 'number',
-    get: c => String(c.runner['max-turns']),
-    set: (c, v) => ({ ...c, runner: { ...c.runner, 'max-turns': parseInt(v, 10) || 10 } }),
+    section: 'Runner',
+    key: 'max-turns',
+    label: 'max-turns',
+    type: 'number',
+    get: (c) => String(c.runner['max-turns']),
+    set: (c, v) => ({
+      ...c,
+      runner: { ...c.runner, 'max-turns': parseInt(v, 10) || 10 },
+    }),
   },
   {
-    section: 'Runner', key: 'concurrency', label: 'concurrency', type: 'number',
-    get: c => String(c.runner.concurrency),
-    set: (c, v) => ({ ...c, runner: { ...c.runner, concurrency: parseInt(v, 10) || 5 } }),
+    section: 'Runner',
+    key: 'concurrency',
+    label: 'concurrency',
+    type: 'number',
+    get: (c) => String(c.runner.concurrency),
+    set: (c, v) => ({
+      ...c,
+      runner: { ...c.runner, concurrency: parseInt(v, 10) || 5 },
+    }),
   },
   {
-    section: 'Output', key: 'format', label: 'format', type: 'enum',
+    section: 'Output',
+    key: 'format',
+    label: 'format',
+    type: 'enum',
     options: ['interactive', 'json'],
-    get: c => c.output.format,
-    set: (c, v) => ({ ...c, output: { ...c.output, format: v as 'interactive' | 'json' } }),
+    get: (c) => c.output.format,
+    set: (c, v) => ({
+      ...c,
+      output: { ...c.output, format: v as 'interactive' | 'json' },
+    }),
   },
   {
-    section: 'Output', key: 'show-passing-details', label: 'show-passing-details', type: 'boolean',
-    get: c => String(c.output['show-passing-details']),
-    set: (c, v) => ({ ...c, output: { ...c.output, 'show-passing-details': v === 'true' } }),
+    section: 'Output',
+    key: 'show-passing-details',
+    label: 'show-passing-details',
+    type: 'boolean',
+    get: (c) => String(c.output['show-passing-details']),
+    set: (c, v) => ({
+      ...c,
+      output: { ...c.output, 'show-passing-details': v === 'true' },
+    }),
   },
   {
-    section: 'Output', key: 'log-level', label: 'log-level', type: 'enum',
+    section: 'Output',
+    key: 'log-level',
+    label: 'log-level',
+    type: 'enum',
     options: ['debug', 'verbose', 'info', 'success', 'warn', 'error'],
-    get: c => c.output['log-level'],
-    set: (c, v) => ({ ...c, output: { ...c.output, 'log-level': v as LogLevel } }),
+    get: (c) => c.output['log-level'],
+    set: (c, v) => ({
+      ...c,
+      output: { ...c.output, 'log-level': v as LogLevel },
+    }),
   },
   {
-    section: 'Execution', key: 'timeout', label: 'timeout', type: 'string',
-    get: c => c.execution.timeout,
+    section: 'Execution',
+    key: 'timeout',
+    label: 'timeout',
+    type: 'string',
+    get: (c) => c.execution.timeout,
     set: (c, v) => ({ ...c, execution: { ...c.execution, timeout: v } }),
   },
   {
-    section: 'Defaults', key: 'setup', label: 'setup', type: 'string',
-    get: c => c.defaults.setup,
+    section: 'Defaults',
+    key: 'setup',
+    label: 'setup',
+    type: 'string',
+    get: (c) => c.defaults.setup,
     set: (c, v) => ({ ...c, defaults: { ...c.defaults, setup: v } }),
   },
   {
-    section: 'Defaults', key: 'teardown', label: 'teardown', type: 'string',
-    get: c => c.defaults.teardown,
+    section: 'Defaults',
+    key: 'teardown',
+    label: 'teardown',
+    type: 'string',
+    get: (c) => c.defaults.teardown,
     set: (c, v) => ({ ...c, defaults: { ...c.defaults, teardown: v } }),
   },
 ];
@@ -93,9 +138,9 @@ export function Options({ config, onSave }: OptionsProps) {
     }
 
     if (key.upArrow) {
-      setCursor(c => Math.max(0, c - 1));
+      setCursor((c) => Math.max(0, c - 1));
     } else if (key.downArrow) {
-      setCursor(c => Math.min(FIELDS.length - 1, c + 1));
+      setCursor((c) => Math.min(FIELDS.length - 1, c + 1));
     } else if (key.return) {
       const field = FIELDS[cursor];
       if (field.type === 'boolean') {
@@ -132,7 +177,9 @@ export function Options({ config, onSave }: OptionsProps) {
           <Box key={field.key} flexDirection="column">
             {sectionHeader && (
               <Box marginTop={idx === 0 ? 0 : 1}>
-                <Text bold color="cyan">{field.section}</Text>
+                <Text bold color="cyan">
+                  {field.section}
+                </Text>
               </Box>
             )}
             <Box>
@@ -184,7 +231,7 @@ function FieldEditor({
   if (field.type === 'enum' && field.options) {
     return (
       <Select
-        options={field.options.map(o => ({ label: o, value: o }))}
+        options={field.options.map((o) => ({ label: o, value: o }))}
         defaultValue={value}
         onChange={onSubmit}
       />

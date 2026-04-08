@@ -6,7 +6,12 @@ import { gradeTest, type GradeHandle } from '../../core/grader.js';
 import { generateReport } from '../../core/reporter.js';
 import { recordRun } from '../../core/stats.js';
 import type { TestStatus, RunResult, TestResult } from '../../types/run.js';
-import type { Manifest, ManifestTestCase, Spec, TestCase } from '../../types/spec.js';
+import type {
+  Manifest,
+  ManifestTestCase,
+  Spec,
+  TestCase,
+} from '../../types/spec.js';
 import type { SkillUnitConfig } from '../../types/config.js';
 
 const STATS_BASE_DIR = '.skill-unit';
@@ -30,12 +35,14 @@ export interface TestRunState {
 }
 
 export interface TestRunActions {
-  startRun: (tests: Array<{ id: string; name: string; specName: string }>) => void;
+  startRun: (
+    tests: Array<{ id: string; name: string; specName: string }>
+  ) => void;
   executeRun: (
     manifests: Manifest[],
     specs: Spec[],
     config: SkillUnitConfig,
-    timestamp: string,
+    timestamp: string
   ) => void;
   selectTest: (id: string) => void;
   updateTest: (id: string, patch: Partial<TestRunEntry>) => void;
@@ -80,9 +87,9 @@ export function useTestRun(): [TestRunState, TestRunActions] {
   }, []);
 
   const updateTest = useCallback((id: string, patch: Partial<TestRunEntry>) => {
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
-      tests: prev.tests.map(t => (t.id === id ? { ...t, ...patch } : t)),
+      tests: prev.tests.map((t) => (t.id === id ? { ...t, ...patch } : t)),
     }));
   }, []);
 
@@ -95,11 +102,11 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       clearInterval(flushTimerRef.current);
       flushTimerRef.current = null;
     }
-    setState(prev => ({ ...prev, status: 'complete' }));
+    setState((prev) => ({ ...prev, status: 'complete' }));
   }, []);
 
   const selectTest = useCallback((id: string) => {
-    setState(prev => ({ ...prev, activeTestId: id }));
+    setState((prev) => ({ ...prev, activeTestId: id }));
   }, []);
 
   // Flush buffered transcript lines into state
@@ -108,17 +115,26 @@ export function useTestRun(): [TestRunState, TestRunActions] {
     const gradeBuffers = gradeTranscriptBuffers.current;
     if (buffers.size === 0 && gradeBuffers.size === 0) return;
 
-    setState(prev => {
+    setState((prev) => {
       let changed = false;
-      const updatedTests = prev.tests.map(t => {
+      const updatedTests = prev.tests.map((t) => {
         const pending = buffers.get(t.id);
         const gradePending = gradeBuffers.get(t.id);
-        if ((pending && pending.length > 0) || (gradePending && gradePending.length > 0)) {
+        if (
+          (pending && pending.length > 0) ||
+          (gradePending && gradePending.length > 0)
+        ) {
           changed = true;
           return {
             ...t,
-            transcript: pending && pending.length > 0 ? [...t.transcript, ...pending] : t.transcript,
-            gradeTranscript: gradePending && gradePending.length > 0 ? [...t.gradeTranscript, ...gradePending] : t.gradeTranscript,
+            transcript:
+              pending && pending.length > 0
+                ? [...t.transcript, ...pending]
+                : t.transcript,
+            gradeTranscript:
+              gradePending && gradePending.length > 0
+                ? [...t.gradeTranscript, ...gradePending]
+                : t.gradeTranscript,
           };
         }
         return t;
@@ -140,11 +156,15 @@ export function useTestRun(): [TestRunState, TestRunActions] {
     activeHandles.current.clear();
 
     // Transition all non-terminal tests to cancelled
-    setState(prev => ({
+    setState((prev) => ({
       ...prev,
       status: 'complete',
-      tests: prev.tests.map(t => {
-        if (t.status === 'pending' || t.status === 'running' || t.status === 'grading') {
+      tests: prev.tests.map((t) => {
+        if (
+          t.status === 'pending' ||
+          t.status === 'running' ||
+          t.status === 'grading'
+        ) {
           return { ...t, status: 'cancelled' as const, activity: '' };
         }
         return t;
@@ -178,7 +198,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       gradeTranscriptBuffers.current.clear();
       activeHandles.current.clear();
 
-      const entries: TestRunEntry[] = tests.map(t => ({
+      const entries: TestRunEntry[] = tests.map((t) => ({
         id: t.id,
         name: t.name,
         specName: t.specName,
@@ -192,7 +212,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       startTimeRef.current = Date.now();
       timerRef.current = setInterval(() => {
         if (startTimeRef.current !== null) {
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             elapsed: Date.now() - startTimeRef.current!,
           }));
@@ -200,7 +220,10 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       }, 250);
 
       // Periodically flush buffered transcript lines
-      flushTimerRef.current = setInterval(flushTranscripts, TRANSCRIPT_FLUSH_MS);
+      flushTimerRef.current = setInterval(
+        flushTranscripts,
+        TRANSCRIPT_FLUSH_MS
+      );
 
       setState({
         status: 'running',
@@ -209,7 +232,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
         elapsed: 0,
       });
     },
-    [flushTranscripts],
+    [flushTranscripts]
   );
 
   const executeRun = useCallback(
@@ -217,7 +240,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       manifests: Manifest[],
       specs: Spec[],
       config: SkillUnitConfig,
-      timestamp: string,
+      timestamp: string
     ) => {
       const maxConcurrency = config.runner.concurrency || 5;
 
@@ -225,9 +248,10 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       const allTasks: RunTask[] = [];
       for (const manifest of manifests) {
         for (const tc of manifest['test-cases']) {
-          const spec = specs.find(s =>
-            s.frontmatter.name === manifest['spec-name'] ||
-            path.basename(s.path, '.spec.md') === manifest['spec-name'],
+          const spec = specs.find(
+            (s) =>
+              s.frontmatter.name === manifest['spec-name'] ||
+              path.basename(s.path, '.spec.md') === manifest['spec-name']
           );
           if (spec) allTasks.push({ manifest, testCase: tc, spec });
         }
@@ -249,16 +273,23 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           const reportResult = generateReport(runDir);
 
           // Build RunResult for stats recording
-          const testResults: TestResult[] = allTasks.map(task => {
+          const testResults: TestResult[] = allTasks.map((task) => {
             const specName = task.manifest['spec-name'];
             const specGroup = reportResult.grouped[specName];
-            const graded = specGroup?.find(r => r.testId === task.testCase.id);
+            const graded = specGroup?.find(
+              (r) => r.testId === task.testCase.id
+            );
             const passed = graded ? graded.passed : false;
 
             let testName = task.testCase.id;
             for (const spec of specs) {
-              const tc = spec.testCases.find((c: TestCase) => c.id === task.testCase.id);
-              if (tc) { testName = tc.name; break; }
+              const tc = spec.testCases.find(
+                (c: TestCase) => c.id === task.testCase.id
+              );
+              if (tc) {
+                testName = tc.name;
+                break;
+              }
             }
 
             return {
@@ -276,9 +307,11 @@ export function useTestRun(): [TestRunState, TestRunActions] {
             };
           });
 
-          const totalPassed = testResults.filter(t => t.passed).length;
-          const totalFailed = testResults.filter(t => !t.passed).length;
-          const totalDuration = startTimeRef.current ? Date.now() - startTimeRef.current : 0;
+          const totalPassed = testResults.filter((t) => t.passed).length;
+          const totalFailed = testResults.filter((t) => !t.passed).length;
+          const totalDuration = startTimeRef.current
+            ? Date.now() - startTimeRef.current
+            : 0;
 
           const runResult: RunResult = {
             id: timestamp,
@@ -293,15 +326,24 @@ export function useTestRun(): [TestRunState, TestRunActions] {
             reportPath: reportResult.reportPath,
           };
 
-          try { recordRun(runResult, STATS_BASE_DIR); } catch { /* Non-fatal */ }
+          try {
+            recordRun(runResult, STATS_BASE_DIR);
+          } catch {
+            /* Non-fatal */
+          }
           completeRun();
         }
       }
 
       function startGrading(task: RunTask): void {
-        const fullTestCase = task.spec.testCases.find((tc: TestCase) => tc.id === task.testCase.id);
+        const fullTestCase = task.spec.testCases.find(
+          (tc: TestCase) => tc.id === task.testCase.id
+        );
         if (!fullTestCase) {
-          updateTest(task.testCase.id, { status: 'error', activity: 'Test case not found' });
+          updateTest(task.testCase.id, {
+            status: 'error',
+            activity: 'Test case not found',
+          });
           completedCount++;
           active--;
           tryNext();
@@ -309,19 +351,32 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           return;
         }
 
-        updateTest(task.testCase.id, { status: 'grading', activity: 'Grading...' });
+        updateTest(task.testCase.id, {
+          status: 'grading',
+          activity: 'Grading...',
+        });
 
         const specName = task.manifest['spec-name'];
         const transcriptPath = path.join(
-          '.workspace', 'runs', timestamp, 'results',
-          `${specName}.${task.testCase.id}.transcript.md`,
+          '.workspace',
+          'runs',
+          timestamp,
+          'results',
+          `${specName}.${task.testCase.id}.transcript.md`
         );
 
-        const gradeHandle = gradeTest(fullTestCase, transcriptPath, config, specName, timestamp);
+        const gradeHandle = gradeTest(
+          fullTestCase,
+          transcriptPath,
+          config,
+          specName,
+          timestamp
+        );
         activeHandles.current.set(task.testCase.id, gradeHandle);
 
         gradeHandle.on('output', (chunk: string) => {
-          const buf = gradeTranscriptBuffers.current.get(task.testCase.id) ?? [];
+          const buf =
+            gradeTranscriptBuffers.current.get(task.testCase.id) ?? [];
           buf.push(chunk);
           gradeTranscriptBuffers.current.set(task.testCase.id, buf);
         });
@@ -330,13 +385,19 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           // Parse the results file to determine pass/fail (exit code only indicates
           // whether the grader process ran successfully, not the test verdict)
           const resultsPath = path.join(
-            '.workspace', 'runs', timestamp, 'results',
-            `${specName}.${task.testCase.id}.results.md`,
+            '.workspace',
+            'runs',
+            timestamp,
+            'results',
+            `${specName}.${task.testCase.id}.results.md`
           );
           let passed: boolean;
           try {
             const resultsContent = fs.readFileSync(resultsPath, 'utf-8');
-            passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(resultsContent);
+            passed =
+              /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(
+                resultsContent
+              );
           } catch {
             // If results file can't be read, fall back to grader exit code
             passed = result.exitCode === 0;
@@ -360,9 +421,14 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           const task = allTasks[taskIdx];
           active++;
 
-          updateTest(task.testCase.id, { status: 'running', activity: 'Starting...' });
+          updateTest(task.testCase.id, {
+            status: 'running',
+            activity: 'Starting...',
+          });
 
-          const handle = runTest(task.manifest, task.testCase, config, { silent: true });
+          const handle = runTest(task.manifest, task.testCase, config, {
+            silent: true,
+          });
           activeHandles.current.set(task.testCase.id, handle);
 
           handle.on('output', (chunk: string) => {
@@ -376,9 +442,13 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           });
 
           handle.on('complete', (result) => {
-            updateTest(task.testCase.id, { durationMs: result.durationMs, activity: '' });
+            updateTest(task.testCase.id, {
+              durationMs: result.durationMs,
+              activity: '',
+            });
             totalCost += result.costUsd ?? 0;
-            totalTokens += (result.inputTokens ?? 0) + (result.outputTokens ?? 0);
+            totalTokens +=
+              (result.inputTokens ?? 0) + (result.outputTokens ?? 0);
             activeHandles.current.delete(task.testCase.id);
             active--; // Release execution slot
 
@@ -402,7 +472,10 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           });
 
           handle.on('error', (err: Error) => {
-            updateTest(task.testCase.id, { status: 'error', activity: err.message });
+            updateTest(task.testCase.id, {
+              status: 'error',
+              activity: err.message,
+            });
             activeHandles.current.delete(task.testCase.id);
             completedCount++;
             active--;
@@ -421,9 +494,16 @@ export function useTestRun(): [TestRunState, TestRunActions] {
 
       tryNext();
     },
-    [updateTest, completeRun, flushTranscripts],
+    [updateTest, completeRun, flushTranscripts]
   );
 
-  const actions: TestRunActions = { startRun, executeRun, selectTest, updateTest, completeRun, cancelRun };
+  const actions: TestRunActions = {
+    startRun,
+    executeRun,
+    selectTest,
+    updateTest,
+    completeRun,
+    cancelRun,
+  };
   return [state, actions];
 }

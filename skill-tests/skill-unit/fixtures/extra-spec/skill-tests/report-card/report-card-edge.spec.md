@@ -10,7 +10,9 @@ global-fixtures: ./fixtures/basic-class
 Verifies the skill handles a missing students.json gracefully.
 
 **Prompt:**
+
 > Show me the grades
 
 **Expectations:**
+
 - Informs the user that no student data was found

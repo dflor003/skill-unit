@@ -1,4 +1,12 @@
-export type TestStatus = 'pending' | 'running' | 'grading' | 'passed' | 'failed' | 'timedout' | 'error' | 'cancelled';
+export type TestStatus =
+  | 'pending'
+  | 'running'
+  | 'grading'
+  | 'passed'
+  | 'failed'
+  | 'timedout'
+  | 'error'
+  | 'cancelled';
 
 export interface TestResult {
   id: string;

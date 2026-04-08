@@ -21,7 +21,9 @@ describe('createLogger', () => {
 
   it('respects log level filtering', () => {
     createLogger.setLevel('warn');
-    const log = createLogger('test', { stream: { write: writeSpy, isTTY: false } as any });
+    const log = createLogger('test', {
+      stream: { write: writeSpy, isTTY: false } as any,
+    });
 
     log.info('should be hidden');
     expect(writeSpy).not.toHaveBeenCalled();
@@ -31,7 +33,9 @@ describe('createLogger', () => {
   });
 
   it('includes scope in output', () => {
-    const log = createLogger('myScope', { stream: { write: writeSpy, isTTY: false } as any });
+    const log = createLogger('myScope', {
+      stream: { write: writeSpy, isTTY: false } as any,
+    });
     log.info('hello');
     expect(writeSpy).toHaveBeenCalledTimes(1);
     const output = writeSpy.mock.calls[0][0] as string;
@@ -44,7 +48,9 @@ describe('setLevel', () => {
   it('updates global log level', () => {
     createLogger.setLevel('debug');
     const writeSpy = vi.fn();
-    const log = createLogger('test', { stream: { write: writeSpy, isTTY: false } as any });
+    const log = createLogger('test', {
+      stream: { write: writeSpy, isTTY: false } as any,
+    });
     log.debug('visible');
     expect(writeSpy).toHaveBeenCalledTimes(1);
   });

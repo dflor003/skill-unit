@@ -24,16 +24,21 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(3)}`;
 }
 
-export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManagerProps) {
+export function RunManager({
+  runs,
+  onCleanup,
+  onDeleteRun,
+  onViewRun,
+}: RunManagerProps) {
   const [cursor, setCursor] = useState(0);
 
   useInput((input, key) => {
     if (runs.length === 0) return;
 
     if (key.upArrow) {
-      setCursor(c => Math.max(0, c - 1));
+      setCursor((c) => Math.max(0, c - 1));
     } else if (key.downArrow) {
-      setCursor(c => Math.min(runs.length - 1, c + 1));
+      setCursor((c) => Math.min(runs.length - 1, c + 1));
     } else if (input === 'd' || input === 'D') {
       const run = runs[cursor];
       if (run) onDeleteRun(run.id);
@@ -47,8 +52,15 @@ export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManag
 
   if (runs.length === 0) {
     return (
-      <Box flexDirection="column" flexGrow={1} alignItems="center" justifyContent="center">
-        <Text color="gray">No runs yet. Go to Dashboard and run some tests.</Text>
+      <Box
+        flexDirection="column"
+        flexGrow={1}
+        alignItems="center"
+        justifyContent="center"
+      >
+        <Text color="gray">
+          No runs yet. Go to Dashboard and run some tests.
+        </Text>
       </Box>
     );
   }
@@ -67,13 +79,41 @@ export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManag
 
       {/* Header row */}
       <Box marginBottom={1}>
-        <Box width={22}><Text bold color="gray">Timestamp</Text></Box>
-        <Box width={7}><Text bold color="gray">Tests</Text></Box>
-        <Box width={7}><Text bold color="gray">Pass</Text></Box>
-        <Box width={7}><Text bold color="gray">Fail</Text></Box>
-        <Box width={8}><Text bold color="gray">Duration</Text></Box>
-        <Box width={9}><Text bold color="gray">Cost</Text></Box>
-        <Box><Text bold color="gray">Tokens</Text></Box>
+        <Box width={22}>
+          <Text bold color="gray">
+            Timestamp
+          </Text>
+        </Box>
+        <Box width={7}>
+          <Text bold color="gray">
+            Tests
+          </Text>
+        </Box>
+        <Box width={7}>
+          <Text bold color="gray">
+            Pass
+          </Text>
+        </Box>
+        <Box width={7}>
+          <Text bold color="gray">
+            Fail
+          </Text>
+        </Box>
+        <Box width={8}>
+          <Text bold color="gray">
+            Duration
+          </Text>
+        </Box>
+        <Box width={9}>
+          <Text bold color="gray">
+            Cost
+          </Text>
+        </Box>
+        <Box>
+          <Text bold color="gray">
+            Tokens
+          </Text>
+        </Box>
       </Box>
 
       {/* Run rows */}
@@ -83,8 +123,7 @@ export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManag
           return (
             <Box key={run.id}>
               <Text color={isActive ? 'blue' : undefined}>
-                {isActive ? '>' : ' '}
-                {' '}
+                {isActive ? '>' : ' '}{' '}
               </Text>
               <Box width={22}>
                 <Text bold={isActive} color={isActive ? 'blue' : undefined}>
@@ -98,7 +137,9 @@ export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManag
                 <Text color="green">{run.passed}</Text>
               </Box>
               <Box width={7}>
-                <Text color={run.failed > 0 ? 'red' : 'gray'}>{run.failed}</Text>
+                <Text color={run.failed > 0 ? 'red' : 'gray'}>
+                  {run.failed}
+                </Text>
               </Box>
               <Box width={8}>
                 <Text>{formatDuration(run.duration)}</Text>
@@ -116,7 +157,10 @@ export function RunManager({ runs, onCleanup, onDeleteRun, onViewRun }: RunManag
 
       {/* Footer help */}
       <Box marginTop={1}>
-        <Text color="gray">up/down navigate  [Enter] view run  [d] delete selected  [c] cleanup old runs</Text>
+        <Text color="gray">
+          up/down navigate [Enter] view run [d] delete selected [c] cleanup old
+          runs
+        </Text>
       </Box>
     </Box>
   );

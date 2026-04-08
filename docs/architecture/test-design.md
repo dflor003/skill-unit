@@ -60,17 +60,17 @@ Prefix expectations with the specific section being checked: "Inside the generat
 
 The test-design tests are organized across multiple spec files by concern:
 
-| File | Prefix | Concern |
-|------|--------|---------|
-| `test-design.spec.md` | `TD` | Core functionality: test case quality, existing spec detection, malformed skills, fixture neutrality |
-| `test-design-pdd.spec.md` | `PDD` | Prompt-driven development: nonexistent skills, capability mismatches, redundant questions |
+| File                      | Prefix | Concern                                                                                              |
+| ------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| `test-design.spec.md`     | `TD`   | Core functionality: test case quality, existing spec detection, malformed skills, fixture neutrality |
+| `test-design-pdd.spec.md` | `PDD`  | Prompt-driven development: nonexistent skills, capability mismatches, redundant questions            |
 
 All files use `global-fixtures: ./fixtures/csv-skill` or no fixture as the base, with per-test fixtures layered for specific scenarios.
 
 ### Fixtures
 
-| Fixture | Purpose |
-|---------|---------|
-| `csv-skill` | A minimal skill with one SKILL.md. Base state for most tests. |
-| `csv-existing-spec` | Adds a pre-existing spec file for the csv skill. Layered on top of csv-skill for edit-mode tests. |
-| `malformed-skill` | A skill with broken YAML frontmatter. Uses a neutral name ("inventory") so the agent does not know the file is intentionally malformed. |
+| Fixture             | Purpose                                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `csv-skill`         | A minimal skill with one SKILL.md. Base state for most tests.                                                                           |
+| `csv-existing-spec` | Adds a pre-existing spec file for the csv skill. Layered on top of csv-skill for edit-mode tests.                                       |
+| `malformed-skill`   | A skill with broken YAML frontmatter. Uses a neutral name ("inventory") so the agent does not know the file is intentionally malformed. |

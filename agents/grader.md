@@ -25,7 +25,7 @@ You will receive:
 
 Use the Read tool to read the transcript file at the path provided. The transcript is a markdown file with this structure:
 
-```
+````
 # Transcript: {test-id}
 
 **Prompt:** {the original prompt}
@@ -45,9 +45,10 @@ Use the Read tool to read the transcript file at the path provided. The transcri
 **Tool call:** `{tool name}`
 ```json
 {tool input JSON}
-```
+````
 
 **Tool result:**
+
 ```
 {tool output}
 ```
@@ -55,7 +56,8 @@ Use the Read tool to read the transcript file at the path provided. The transcri
 ---
 
 **Result:** {success|error}
-```
+
+````
 
 The transcript captures the agent's complete behavioral trajectory: every turn of text, every tool call with its input, and every tool result. This is your primary evidence.
 
@@ -102,7 +104,7 @@ Use the Write tool to write the results to the output path in this exact format:
 - ✓ {negative expectation text}
 - ✗ {negative expectation text}
   → {specific reason with evidence from transcript}
-```
+````
 
 ### Output Rules
 

@@ -38,22 +38,15 @@ function statusIcon(status: TestStatus): { symbol: string; color: string } {
 export function Ticker({ sessions, activeId }: TickerProps) {
   return (
     <Box flexDirection="row" flexWrap="wrap" marginBottom={1}>
-      {sessions.map(session => {
+      {sessions.map((session) => {
         const isActive = session.id === activeId;
         const { symbol, color } = statusIcon(session.status);
         return (
           <Box key={session.id} marginRight={2}>
-            <Text
-              bold={isActive}
-              color={isActive ? 'blue' : 'gray'}
-            >
-              <Text color={color}>{symbol}</Text>
-              {' '}
-              {session.name}
+            <Text bold={isActive} color={isActive ? 'blue' : 'gray'}>
+              <Text color={color}>{symbol}</Text> {session.name}
             </Text>
-            {!isActive && (
-              <Text color="gray"> {session.activity}</Text>
-            )}
+            {!isActive && <Text color="gray"> {session.activity}</Text>}
           </Box>
         );
       })}

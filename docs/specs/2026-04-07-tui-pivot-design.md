@@ -6,17 +6,17 @@ Skill Unit pivots from a skill-driven workflow to a dual-use CLI/TUI tool. Human
 
 ## Technology Decisions
 
-| Decision | Choice | Rationale |
-|---|---|---|
-| Language | TypeScript (strict mode) | Type safety, better tooling, required by constraints |
-| Runtime | Node.js 18+ | Universal; consumers already have it |
-| Dev runner | tsx | Run `.ts` directly during development, no build step |
-| Build | tsc | Standard TypeScript compiler, outputs to `dist/` |
-| CLI framework | Citty | TypeScript-first, commands-as-data design, excellent testability |
-| TUI framework | Ink (React for terminals) | Component model maps to screens, flexbox layout, proven at scale (used by Claude Code) |
-| Test framework | Vitest + ink-testing-library | Fast, TypeScript-native, coverage built in, ink-testing-library for component tests |
-| Markdown rendering | marked + marked-terminal | Most complete parser, terminal-formatted output |
-| Package name | `skill-unit` (unscoped) | Available on npm, clean `npx skill-unit` invocation |
+| Decision           | Choice                       | Rationale                                                                              |
+| ------------------ | ---------------------------- | -------------------------------------------------------------------------------------- |
+| Language           | TypeScript (strict mode)     | Type safety, better tooling, required by constraints                                   |
+| Runtime            | Node.js 18+                  | Universal; consumers already have it                                                   |
+| Dev runner         | tsx                          | Run `.ts` directly during development, no build step                                   |
+| Build              | tsc                          | Standard TypeScript compiler, outputs to `dist/`                                       |
+| CLI framework      | Citty                        | TypeScript-first, commands-as-data design, excellent testability                       |
+| TUI framework      | Ink (React for terminals)    | Component model maps to screens, flexbox layout, proven at scale (used by Claude Code) |
+| Test framework     | Vitest + ink-testing-library | Fast, TypeScript-native, coverage built in, ink-testing-library for component tests    |
+| Markdown rendering | marked + marked-terminal     | Most complete parser, terminal-formatted output                                        |
+| Package name       | `skill-unit` (unscoped)      | Available on npm, clean `npx skill-unit` invocation                                    |
 
 ## Project Structure
 
@@ -100,12 +100,12 @@ skill-unit (no args, no TTY)        →  CLI mode        →  Print help text an
 
 ### Commands
 
-| Command | Description | Key Flags |
-|---|---|---|
-| `test` | Compile + run + grade + report | `--all`, `--name`, `--tag`, `--test`, `--file`, `--model`, `--timeout`, `--max-turns`, `--keep-workspaces`, `--ci`, `--no-stream` |
-| `compile` | Parse specs and build manifests only | `--all`, `--name`, `--tag`, `--test`, `--file` |
-| `ls` | List discovered specs and test cases | `--tag`, `--file` |
-| `report` | Generate report from a completed run | `--run-dir` |
+| Command   | Description                          | Key Flags                                                                                                                         |
+| --------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `test`    | Compile + run + grade + report       | `--all`, `--name`, `--tag`, `--test`, `--file`, `--model`, `--timeout`, `--max-turns`, `--keep-workspaces`, `--ci`, `--no-stream` |
+| `compile` | Parse specs and build manifests only | `--all`, `--name`, `--tag`, `--test`, `--file`                                                                                    |
+| `ls`      | List discovered specs and test cases | `--tag`, `--file`                                                                                                                 |
+| `report`  | Generate report from a completed run | `--run-dir`                                                                                                                       |
 
 ### Override Flags
 
@@ -214,30 +214,36 @@ This avoids the complexity of rendering `<details>` blocks in the terminal and l
 ### Module Responsibilities
 
 **`discovery.ts`** -- Finds and filters spec files.
+
 - `discoverSpecs(config)` returns all discovered spec file paths
 - `filterSpecs(specs, { name?, tag?, test?, file? })` applies filters
 - Used by Dashboard (list all), CLI `ls` command, and pre-run filtering
 
 **`compiler.ts`** -- Parses specs into typed manifests. Ported from current `compiler.js`.
+
 - `parseSpec(filePath)` returns a typed `Spec` object
 - `buildManifest(spec, config)` produces a `Manifest` with resolved paths and tool permissions
 - YAML/markdown parser logic carries over (proven, dependency-free)
 
 **`runner.ts`** -- Executes tests in isolated CLI processes. Ported from current `runner.js`.
+
 - `runTest(manifest, testCase, config)` spawns an isolated process, returns a `RunHandle`
 - `RunHandle` exposes an event emitter: `on('output', ...)`, `on('complete', ...)`, `on('error', ...)`
 - TUI subscribes to events for live transcript streaming; CLI writes to stdout
 - Concurrency managed by semaphore based on `runner-concurrency` config
 
 **`grader.ts`** -- Dispatches grader agents. Ported from current `grader.js`.
+
 - `gradeTest(testCase, transcriptPath, config)` returns a `GradeResult`
 - Exposes events for TUI to stream grader progress
 
 **`reporter.ts`** -- Generates reports.
+
 - `generateReport(runResult)` writes the full markdown report file
 - `generateSummary(runResult)` returns a compact summary for terminal display
 
 **`stats.ts`** -- Statistics collection and index management.
+
 - `recordRun(runResult)` saves run data and updates the index
 - `loadIndex()` reads `.skill-unit/index.json`
 - `rebuildIndex()` reconstructs the index from all run files (recovery path)
@@ -247,12 +253,12 @@ This avoids the complexity of rendering `<details>` blocks in the terminal and l
 
 ### Directory Responsibilities
 
-| Directory | Purpose | Lifecycle |
-|---|---|---|
-| `.workspace/` | Ephemeral test execution sandboxes (anti-bias isolation layer) | Created per test, cleaned up after run |
-| `.skill-unit/runs/` | Completed run artifacts (results, transcripts, reports) | Persistent, managed by Run Manager cleanup |
-| `.skill-unit/index.json` | Stats index (aggregate and per-test metrics) | Persistent, updated after each run, rebuildable |
-| `.skill-unit/selection.json` | Dashboard selection state and view preferences | Persistent, user preference |
+| Directory                    | Purpose                                                        | Lifecycle                                       |
+| ---------------------------- | -------------------------------------------------------------- | ----------------------------------------------- |
+| `.workspace/`                | Ephemeral test execution sandboxes (anti-bias isolation layer) | Created per test, cleaned up after run          |
+| `.skill-unit/runs/`          | Completed run artifacts (results, transcripts, reports)        | Persistent, managed by Run Manager cleanup      |
+| `.skill-unit/index.json`     | Stats index (aggregate and per-test metrics)                   | Persistent, updated after each run, rebuildable |
+| `.skill-unit/selection.json` | Dashboard selection state and view preferences                 | Persistent, user preference                     |
 
 **Critical:** `.workspace/` is the anti-bias isolation layer. It remains exactly as-is. UUID-named per-test workspaces, scoped tool permissions, ephemeral lifecycle. The TUI pivot does not touch this boundary.
 
@@ -261,6 +267,7 @@ This avoids the complexity of rendering `<details>` blocks in the terminal and l
 ### Stats Index Format
 
 `.skill-unit/index.json`:
+
 ```json
 {
   "version": 1,
@@ -396,10 +403,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['src/**'],
-      exclude: ['src/types/**']
-    }
-  }
-})
+      exclude: ['src/types/**'],
+    },
+  },
+});
 ```
 
 ### Dev Scripts
@@ -420,20 +427,20 @@ export default defineConfig({
 
 ### Dependencies
 
-| Package | Type | Purpose |
-|---|---|---|
-| `ink` | Production | TUI framework |
-| `react` | Production | Required by Ink |
-| `citty` | Production | CLI argument parsing |
-| `marked` | Production | Markdown parser |
-| `marked-terminal` | Production | Terminal markdown renderer |
-| `typescript` | Dev | Compiler |
-| `tsx` | Dev | Run TS directly during development |
-| `vitest` | Dev | Test runner |
-| `@vitest/coverage-v8` | Dev | Coverage provider |
-| `@inkjs/ui` | Production | Ink UI components (spinners, text input) |
-| `ink-testing-library` | Dev | Component testing |
-| `eslint` | Dev | Linting |
+| Package               | Type       | Purpose                                  |
+| --------------------- | ---------- | ---------------------------------------- |
+| `ink`                 | Production | TUI framework                            |
+| `react`               | Production | Required by Ink                          |
+| `citty`               | Production | CLI argument parsing                     |
+| `marked`              | Production | Markdown parser                          |
+| `marked-terminal`     | Production | Terminal markdown renderer               |
+| `typescript`          | Dev        | Compiler                                 |
+| `tsx`                 | Dev        | Run TS directly during development       |
+| `vitest`              | Dev        | Test runner                              |
+| `@vitest/coverage-v8` | Dev        | Coverage provider                        |
+| `@inkjs/ui`           | Production | Ink UI components (spinners, text input) |
+| `ink-testing-library` | Dev        | Component testing                        |
+| `eslint`              | Dev        | Linting                                  |
 
 ## Plugin Companion Role
 

@@ -9,8 +9,10 @@ global-fixtures: ./fixtures/basic-class
 Verifies the skill generates a formatted grade report from student data.
 
 **Prompt:**
+
 > Summarize the class grades
 
 **Expectations:**
+
 - Output contains a markdown table with student names and grades
 - A class average is included

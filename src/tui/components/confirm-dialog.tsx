@@ -7,7 +7,11 @@ interface ConfirmDialogProps {
   onDismiss: () => void;
 }
 
-export function ConfirmDialog({ message, onConfirm, onDismiss }: ConfirmDialogProps) {
+export function ConfirmDialog({
+  message,
+  onConfirm,
+  onDismiss,
+}: ConfirmDialogProps) {
   useInput((input, key) => {
     if (input === 'y' || input === 'Y') {
       onConfirm();

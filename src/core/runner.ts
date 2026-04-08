@@ -60,7 +60,10 @@ Always use the Write or Edit tools for writing files. DO NOT fall back to the Ba
  * Tools with existing path patterns (e.g., "Read(/some/path/**)") pass through unchanged.
  * Bash is not scoped.
  */
-export function scopeToolsToWorkspace(allowedTools: string[], workspacePath: string): string[] {
+export function scopeToolsToWorkspace(
+  allowedTools: string[],
+  workspacePath: string
+): string[] {
   return allowedTools.map((tool) => {
     if (FILE_TOOLS.has(tool)) {
       return `${tool}(${workspacePath}/**)`;
@@ -90,26 +93,40 @@ type ArgBuilder = (
   pluginDir: string | null,
   allowedTools: string[],
   disallowedTools: string[],
-  workspacePath: string,
+  workspacePath: string
 ) => string[];
 
 export const TOOL_PROFILES: Record<string, ArgBuilder> = {
-  claude: (model, maxTurns, pluginDir, allowedTools, disallowedTools, workspacePath) => [
+  claude: (
+    model,
+    maxTurns,
+    pluginDir,
+    allowedTools,
+    disallowedTools,
+    workspacePath
+  ) => [
     '--print',
     '--verbose',
-    '--output-format', 'stream-json',
+    '--output-format',
+    'stream-json',
     '--include-partial-messages',
-    '--max-turns', String(maxTurns),
-    '--permission-mode', 'dontAsk',
+    '--max-turns',
+    String(maxTurns),
+    '--permission-mode',
+    'dontAsk',
     '--no-chrome',
     '--no-session-persistence',
-    '--setting-sources', 'local',
+    '--setting-sources',
+    'local',
     '--strict-mcp-config',
-    '--system-prompt', buildSystemPrompt(workspacePath),
+    '--system-prompt',
+    buildSystemPrompt(workspacePath),
     ...(model ? ['--model', model] : []),
     ...(pluginDir ? ['--plugin-dir', pluginDir] : []),
     ...(allowedTools.length ? ['--allowedTools', ...allowedTools] : []),
-    ...(disallowedTools.length ? ['--disallowedTools', ...disallowedTools] : []),
+    ...(disallowedTools.length
+      ? ['--disallowedTools', ...disallowedTools]
+      : []),
   ],
   // Future: add copilot, codex profiles here
 };
@@ -158,7 +175,10 @@ function uuid(): string {
  *   {pluginPath}/.claude-plugin/plugin.json -- bare plugin manifest
  * Returns the plugin dir path to pass via --plugin-dir, or null if skill not found.
  */
-export function installSkillPlugin(skillSrcPath: string, pluginPath: string): string | null {
+export function installSkillPlugin(
+  skillSrcPath: string,
+  pluginPath: string
+): string | null {
   if (!skillSrcPath || !fs.existsSync(skillSrcPath)) {
     log.warn(`Skill path not found: ${skillSrcPath}`);
     return null;
@@ -180,7 +200,7 @@ export function installSkillPlugin(skillSrcPath: string, pluginPath: string): st
   fs.writeFileSync(
     path.join(pluginMetaDir, 'plugin.json'),
     JSON.stringify(pluginJson, null, 2),
-    'utf-8',
+    'utf-8'
   );
 
   return pluginPath;
@@ -192,7 +212,17 @@ export interface RunHandle extends EventEmitter {
   on(event: 'output', listener: (chunk: string) => void): this;
   on(event: 'tool-use', listener: (name: string, input: unknown) => void): this;
   on(event: 'progress', listener: (progress: RunProgress) => void): this;
-  on(event: 'complete', listener: (result: { exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }) => void): this;
+  on(
+    event: 'complete',
+    listener: (result: {
+      exitCode: number;
+      timedOut: boolean;
+      durationMs: number;
+      costUsd: number;
+      inputTokens: number;
+      outputTokens: number;
+    }) => void
+  ): this;
   on(event: 'error', listener: (error: Error) => void): this;
   kill(): void;
 }
@@ -218,7 +248,12 @@ interface StreamEvent {
   type: string;
   subtype?: string;
   message?: {
-    content?: Array<{ type: string; text?: string; name?: string; input?: unknown }>;
+    content?: Array<{
+      type: string;
+      text?: string;
+      name?: string;
+      input?: unknown;
+    }>;
     usage?: {
       input_tokens?: number;
       output_tokens?: number;
@@ -244,7 +279,18 @@ interface StreamEvent {
 /**
  * Run a CLI command and pipe events through the handle emitter.
  */
-function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<{ exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }> {
+function runAsync(
+  cmd: string,
+  cliArgs: string[],
+  options: RunOptions
+): Promise<{
+  exitCode: number;
+  timedOut: boolean;
+  durationMs: number;
+  costUsd: number;
+  inputTokens: number;
+  outputTokens: number;
+}> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
     const { handle } = options;
@@ -336,7 +382,10 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
             for (const tu of toolUses) {
               const toolName = tu.name ?? '';
               const toolInput = tu.input ?? {};
-              const toolText = formatToolCall(toolName, toolInput as Record<string, unknown>);
+              const toolText = formatToolCall(
+                toolName,
+                toolInput as Record<string, unknown>
+              );
               handle.emit('output', toolText);
               handle.emit('tool-use', toolName, toolInput);
               if (mdOut) {
@@ -354,7 +403,7 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
             const preview = output.substring(0, 200);
             const resultText = formatToolResult(
               preview + (output.length > 200 ? '...' : ''),
-              isError,
+              isError
             );
             handle.emit('output', resultText);
             if (mdOut) {
@@ -367,17 +416,22 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
           } else if (event.type === 'result') {
             if (event.total_cost_usd) costUsd = event.total_cost_usd;
             if (event.usage) {
-              inputTokens = (event.usage.input_tokens ?? 0)
-                + (event.usage.cache_read_input_tokens ?? 0)
-                + (event.usage.cache_creation_input_tokens ?? 0);
+              inputTokens =
+                (event.usage.input_tokens ?? 0) +
+                (event.usage.cache_read_input_tokens ?? 0) +
+                (event.usage.cache_creation_input_tokens ?? 0);
               outputTokens = event.usage.output_tokens ?? 0;
             }
             const summaryText = `---\n**Result:** ${event.subtype || 'unknown'}\n${formatUsageSummary(event.usage, event.total_cost_usd)}`;
             handle.emit('output', summaryText);
             if (mdLogStream) {
               mdLogStream.write(`---\n\n`);
-              mdLogStream.write(`**Result:** ${event.subtype || 'unknown'}\n\n`);
-              mdLogStream.write(formatUsageSummary(event.usage, event.total_cost_usd));
+              mdLogStream.write(
+                `**Result:** ${event.subtype || 'unknown'}\n\n`
+              );
+              mdLogStream.write(
+                formatUsageSummary(event.usage, event.total_cost_usd)
+              );
             }
           }
         } catch {
@@ -425,9 +479,16 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
       if (!options.silent) process.stderr.write('\n');
 
       const durationMs = Date.now() - startTime;
-      const exitCode = timedOut ? 124 : (code || 0);
+      const exitCode = timedOut ? 124 : code || 0;
 
-      resolve({ exitCode, timedOut, durationMs, costUsd, inputTokens, outputTokens });
+      resolve({
+        exitCode,
+        timedOut,
+        durationMs,
+        costUsd,
+        inputTokens,
+        outputTokens,
+      });
     });
 
     proc.on('error', (err: Error) => {
@@ -454,7 +515,7 @@ export function runTest(
   manifest: Manifest,
   testCase: ManifestTestCase,
   config: SkillUnitConfig,
-  options?: RunTestOptions,
+  options?: RunTestOptions
 ): RunHandle {
   const handle = new EventEmitter() as RunHandle;
   const silent = options?.silent ?? false;
@@ -468,7 +529,9 @@ export function runTest(
 
   // Run asynchronously so callers can attach listeners before events fire
   setImmediate(() => {
-    _runTestAsync(manifest, testCase, config, handle, silent, (p) => { proc = p; }).catch((err: Error) => {
+    _runTestAsync(manifest, testCase, config, handle, silent, (p) => {
+      proc = p;
+    }).catch((err: Error) => {
       handle.emit('error', err);
     });
   });
@@ -482,13 +545,20 @@ async function _runTestAsync(
   config: SkillUnitConfig,
   handle: RunHandle,
   silent: boolean,
-  setProcRef?: (proc: ChildProcess) => void,
+  setProcRef?: (proc: ChildProcess) => void
 ): Promise<void> {
   const cwd = process.cwd();
 
   // In silent/TUI mode, create a no-op logger to prevent stderr writes
   const runLog = silent
-    ? { debug: () => {}, verbose: () => {}, info: () => {}, success: () => {}, warn: () => {}, error: () => {} }
+    ? {
+        debug: () => {},
+        verbose: () => {},
+        info: () => {},
+        success: () => {},
+        warn: () => {},
+        error: () => {},
+      }
     : log;
 
   const specName = manifest['spec-name'];
@@ -512,7 +582,9 @@ async function _runTestAsync(
 
   const buildArgs = TOOL_PROFILES[tool];
   if (!buildArgs) {
-    throw new Error(`Unsupported runner tool: "${tool}". Supported: ${Object.keys(TOOL_PROFILES).join(', ')}`);
+    throw new Error(
+      `Unsupported runner tool: "${tool}". Supported: ${Object.keys(TOOL_PROFILES).join(', ')}`
+    );
   }
 
   // All workspace artifacts live under .workspace/ at the repo root.
@@ -556,7 +628,9 @@ async function _runTestAsync(
     copyDirSync(globalFixturePath, workspacePath);
     runLog.debug(`[${testId}]: Global fixture copied`);
   } else if (globalFixturePath) {
-    runLog.warn(`[${testId}]: Global fixture path not found: ${globalFixturePath}`);
+    runLog.warn(
+      `[${testId}]: Global fixture path not found: ${globalFixturePath}`
+    );
   }
 
   // Layer per-test fixtures on top of global
@@ -576,18 +650,32 @@ async function _runTestAsync(
   }
 
   // Install skill under test as a plugin (sibling to work dir)
-  const pluginDir = skillPath ? installSkillPlugin(skillPath, pluginPath) : null;
+  const pluginDir = skillPath
+    ? installSkillPlugin(skillPath, pluginPath)
+    : null;
 
   // Scope file tools to this test case's workspace path
   const scopedAllowed = scopeToolsToWorkspace(allowedTools, workspacePath);
-  const cmdArgs = buildArgs(model, maxTurns, pluginDir, scopedAllowed, disallowedTools, workspacePath);
+  const cmdArgs = buildArgs(
+    model,
+    maxTurns,
+    pluginDir,
+    scopedAllowed,
+    disallowedTools,
+    workspacePath
+  );
 
   runLog.info(`[${testId}]: Executing prompt via ${tool}`);
-  runLog.verbose(`[${testId}]: Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`);
+  runLog.verbose(
+    `[${testId}]: Prompt: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"`
+  );
 
   // Log files
   const logPath = path.join(logsDir, `${specName}.${testId}.log.jsonl`);
-  const mdLogPath = path.join(resultsDir, `${specName}.${testId}.transcript.md`);
+  const mdLogPath = path.join(
+    resultsDir,
+    `${specName}.${testId}.transcript.md`
+  );
 
   const keepWorkspaces = false; // controlled by config in the future
 
@@ -637,7 +725,9 @@ async function _runTestAsync(
 
   const status = exitCode === 0 ? 'OK' : `FAIL(${exitCode})`;
   if (exitCode === 0) {
-    runLog.success(`[${testId}]: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
+    runLog.success(
+      `[${testId}]: ${status} (${(durationMs / 1000).toFixed(1)}s)`
+    );
   } else {
     runLog.error(`[${testId}]: ${status} (${(durationMs / 1000).toFixed(1)}s)`);
   }
@@ -649,8 +739,17 @@ async function _runTestAsync(
     total: 1,
     completed: 1,
     current: null,
-    results: [{ id: testId, status: exitCode === 0 ? 'running' : 'error', durationMs }],
+    results: [
+      { id: testId, status: exitCode === 0 ? 'running' : 'error', durationMs },
+    ],
   } satisfies RunProgress);
 
-  handle.emit('complete', { exitCode, timedOut, durationMs, costUsd, inputTokens, outputTokens });
+  handle.emit('complete', {
+    exitCode,
+    timedOut,
+    durationMs,
+    costUsd,
+    inputTokens,
+    outputTokens,
+  });
 }

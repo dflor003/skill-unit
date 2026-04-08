@@ -62,7 +62,6 @@ In either case, the agent MUST:
    > "I can help you use **prompt-driven development** — we'll define what the skill should do by writing test cases first, then you can build (or extend) the skill to pass them."
 
 2. **Ask discovery questions** to understand the intended behavior. These replace the targeted questions in Step 4. Ask one at a time:
-
    - "What should this skill do? Describe it in a sentence or two."
    - "How should users invoke it — slash command, natural language, or auto-activation?"
    - "What inputs does it need from the user or environment?"
@@ -72,7 +71,7 @@ In either case, the agent MUST:
 
    Stop asking when you have enough context to write meaningful test cases. Do not ask questions whose answers would be obvious from what the user already said.
 
-3. **Proceed to Step 5** (ID Prefix) and continue through the normal generation flow. The test cases now define the *intended* behavior of a skill that doesn't exist yet (or intended new behavior for an existing skill).
+3. **Proceed to Step 5** (ID Prefix) and continue through the normal generation flow. The test cases now define the _intended_ behavior of a skill that doesn't exist yet (or intended new behavior for an existing skill).
 
 4. **After writing the spec file**, remind the user of the next step:
 
@@ -116,6 +115,7 @@ Proceed to **New Spec Creation**.
 Read the target skill's SKILL.md using the Read tool.
 
 **Validate the frontmatter first.** Before extracting content, check that the YAML frontmatter between the `---` delimiters is valid:
+
 - Every key-value pair must have a colon separator (e.g., `name: my-skill`, not `name my-skill`)
 - Lists must have matching brackets (e.g., `tags: [a, b]`, not `tags: [a, b`)
 - Strings with special characters must be properly quoted
@@ -157,13 +157,13 @@ Ask questions **one at a time**. Wait for each answer before asking the next. St
 
 Auto-generate a 2-4 letter prefix from the skill name by taking uppercase initials or a short abbreviation:
 
-| Skill Name | Prefix |
-|------------|--------|
-| commit | `COM` |
-| report-card | `RC` |
-| brainstorming | `BRN` |
-| skill-unit | `SU` |
-| test-design | `TD` |
+| Skill Name    | Prefix |
+| ------------- | ------ |
+| commit        | `COM`  |
+| report-card   | `RC`   |
+| brainstorming | `BRN`  |
+| skill-unit    | `SU`   |
+| test-design   | `TD`   |
 
 Check for collisions: use the Glob tool to find all `*.spec.md` files in the test directory and read their `###` headings to collect existing prefixes. If the auto-generated prefix matches an existing one from a different skill, prompt the user:
 
@@ -188,6 +188,7 @@ tags: [{inferred-tags}]
 ```
 
 Infer tags from the skill's characteristics:
+
 - `slash-command` if the skill has a slash command
 - `activation` if the skill has auto-activation triggers
 - `fixtures` if fixture folders are needed
@@ -201,14 +202,14 @@ Wait for approval before proceeding to test case generation.
 
 Generate test cases one category at a time, in this order:
 
-| Order | Category | Purpose | When to Include |
-|-------|----------|---------|-----------------|
-| 1 | Activation tests | Verify the skill triggers (and doesn't trigger) on expected prompts | Always for auto-activating skills; slash-command-only skills test the command |
-| 2 | Happy path tests | Core functionality with realistic, well-formed inputs | Always |
-| 3 | Failure mode tests | Missing files, bad input, conflicting state, empty data | Always |
-| 4 | Boundary tests | Edge cases at the limits of the skill's scope | When the skill has identifiable scope boundaries |
-| 5 | Graceful decline tests | Requests adjacent to but outside the skill's purpose | Always |
-| 6 | Interaction style tests | Tone, format, clarifying questions | When the skill has specific interaction expectations |
+| Order | Category                | Purpose                                                             | When to Include                                                               |
+| ----- | ----------------------- | ------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 1     | Activation tests        | Verify the skill triggers (and doesn't trigger) on expected prompts | Always for auto-activating skills; slash-command-only skills test the command |
+| 2     | Happy path tests        | Core functionality with realistic, well-formed inputs               | Always                                                                        |
+| 3     | Failure mode tests      | Missing files, bad input, conflicting state, empty data             | Always                                                                        |
+| 4     | Boundary tests          | Edge cases at the limits of the skill's scope                       | When the skill has identifiable scope boundaries                              |
+| 5     | Graceful decline tests  | Requests adjacent to but outside the skill's purpose                | Always                                                                        |
+| 6     | Interaction style tests | Tone, format, clarifying questions                                  | When the skill has specific interaction expectations                          |
 
 **For each category:**
 
@@ -222,16 +223,20 @@ Generate test cases one category at a time, in this order:
 {Plain-text purpose statement explaining why this test exists and what risk it guards against.}
 
 **Fixtures:**
+
 - {./path/to/fixture — only if this test needs fixtures beyond global-fixtures}
 
 **Prompt:**
+
 > {natural, human-sounding prompt}
 
 **Expectations:**
+
 - {observable outcome}
 - {observable outcome}
 
 **Negative Expectations:**
+
 - {specific prohibited behavior}
 ```
 
@@ -323,13 +328,16 @@ Used when the user asks for a review without specific instructions.
 > "Here's what I found in `{spec-file}`:
 >
 > **Missing coverage:**
+>
 > - No failure mode tests (minimum: 1)
 > - No graceful decline tests (minimum: 1)
 >
 > **Prompt quality issues:**
+>
 > - {PREFIX}-{N}: Prompt mentions the skill name — rewrite to be more natural
 >
 > **Expectation quality issues:**
+>
 > - {PREFIX}-{N}: Expectation 'Ran `git commit -m ...`' tests implementation detail — rewrite as behavioral assertion
 > - {PREFIX}-{N}: Expectation combines two checks — split into separate bullets
 >
@@ -361,15 +369,15 @@ This guide is used during both new spec creation and gap analysis. It defines th
 
 Minimum coverage requirements by category. Use this during gap analysis to identify missing or thin categories.
 
-| Category | Minimum | Applies When |
-|----------|---------|--------------|
-| Activation (positive) | 1 | Skill has auto-activation or slash command |
-| Activation (negative) | 1 | Skill has auto-activation |
-| Happy path | 1 | Always |
-| Failure mode | 1 | Always |
-| Boundary | 0 | Skill has identifiable scope boundaries |
-| Graceful decline | 1 | Always |
-| Interaction style | 0 | Skill has specific tone/format expectations |
+| Category              | Minimum | Applies When                                |
+| --------------------- | ------- | ------------------------------------------- |
+| Activation (positive) | 1       | Skill has auto-activation or slash command  |
+| Activation (negative) | 1       | Skill has auto-activation                   |
+| Happy path            | 1       | Always                                      |
+| Failure mode          | 1       | Always                                      |
+| Boundary              | 0       | Skill has identifiable scope boundaries     |
+| Graceful decline      | 1       | Always                                      |
+| Interaction style     | 0       | Skill has specific tone/format expectations |
 
 ### Prompt Patterns
 
@@ -431,15 +439,15 @@ All generated spec files must follow this exact structure.
 
 **Frontmatter:** YAML block delimited by `---` at the top of the file.
 
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| `name` | Yes | string | Human-readable name for the test suite |
-| `skill` | No | string | Skill being tested (always emitted during generation; used for spec detection) |
-| `tags` | No | list | Tags for filtering test runs |
-| `timeout` | No | duration | Per-test timeout (e.g., `90s`) |
-| `global-fixtures` | No | path | Path to fixture folder copied for every test case, relative to spec file directory |
-| `setup` | No | filename | Script to run before tests |
-| `teardown` | No | filename | Script to run after tests |
+| Field             | Required | Type     | Description                                                                        |
+| ----------------- | -------- | -------- | ---------------------------------------------------------------------------------- |
+| `name`            | Yes      | string   | Human-readable name for the test suite                                             |
+| `skill`           | No       | string   | Skill being tested (always emitted during generation; used for spec detection)     |
+| `tags`            | No       | list     | Tags for filtering test runs                                                       |
+| `timeout`         | No       | duration | Per-test timeout (e.g., `90s`)                                                     |
+| `global-fixtures` | No       | path     | Path to fixture folder copied for every test case, relative to spec file directory |
+| `setup`           | No       | filename | Script to run before tests                                                         |
+| `teardown`        | No       | filename | Script to run after tests                                                          |
 
 **Test case structure:**
 
@@ -451,15 +459,19 @@ and what risk or gap it guards against. This goes before the Prompt so the reade
 understands the test's intent before seeing the mechanics.}
 
 **Fixtures:**
+
 - {./path/to/fixture — optional, only when this test needs additional fixtures}
 
 **Prompt:**
+
 > {prompt text — multi-line prompts use continued blockquote lines}
 
 **Expectations:**
+
 - {observable outcome — one per bullet}
 
 **Negative Expectations:**
+
 - {specific prohibited behavior — one per bullet}
 ```
 
@@ -468,7 +480,7 @@ understands the test's intent before seeing the mechanics.}
 - Test cases are delimited by `###` headings.
 - ID is everything before the first colon in the heading; name is everything after (trimmed).
 - **Test names** use natural, human-readable titles in Title Case — not `lower-kebab-case`. The title should convey the test's purpose at a glance (e.g., "Asks the User Before Overwriting an Existing Spec" not `asks-before-overwriting`).
-- **Purpose statement** is required for every test case. It appears as plain text between the heading and the `**Prompt:**` label. It explains *why* the test exists — what behavior it validates, what failure it prevents, or what design intent it captures.
+- **Purpose statement** is required for every test case. It appears as plain text between the heading and the `**Prompt:**` label. It explains _why_ the test exists — what behavior it validates, what failure it prevents, or what design intent it captures.
 - **Fixtures** section is optional per test case. It is a bullet list of fixture paths, layered on top of `global-fixtures` from frontmatter. Paths are relative to the spec file's directory.
 - Prompt is the blockquote content under `**Prompt:**`. Leading `> ` markers are stripped.
 - Expectations and Negative Expectations are bullet lists under their respective `**bold labels**`.

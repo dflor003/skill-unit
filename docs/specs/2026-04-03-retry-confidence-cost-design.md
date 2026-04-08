@@ -26,8 +26,8 @@ Two layers: framework defaults in `.skill-unit.yml` and per-spec overrides in fr
 
 ```yaml
 # Retry & confidence settings
-attempts: 3                # max times to run each test case
-pass-threshold: 2          # minimum passing attempts to consider "pass"
+attempts: 3 # max times to run each test case
+pass-threshold: 2 # minimum passing attempts to consider "pass"
 retry-strategy: early-exit # "early-exit" | "full"
 ```
 
@@ -58,8 +58,8 @@ Spec-level values completely replace the framework defaults for that spec file �
 Two modes:
 
 - **`early-exit`** (default) — stop as soon as the result is statistically determined. Two exit conditions:
-  - *Success:* `attempts_passed >= pass-threshold` — no need to keep going.
-  - *Futility:* Even if every remaining attempt passes, can't reach `pass-threshold` — fail fast.
+  - _Success:_ `attempts_passed >= pass-threshold` — no need to keep going.
+  - _Futility:_ Even if every remaining attempt passes, can't reach `pass-threshold` — fail fast.
 - **`full`** — always run all attempts regardless. Produces complete confidence data for every test case. Useful for CI trend analysis, costly for interactive use.
 
 ### Execution Flow Change
@@ -117,18 +117,18 @@ The CLI runner's `--output-format json` provides rich usage data per test execut
 
 The evaluator extracts this metadata from each CLI invocation and aggregates it. No estimation or price tables — real cost from the runner.
 
-**Runner config change:** The evaluator internally uses `--output-format json` regardless of the user's configured args, since it needs both the response text (from the `result` field) and the usage metadata. If the user's `args` in `.skill-unit.yml` include an `--output-format` flag, the evaluator strips it before appending `--output-format json`. The user's `output.format` setting controls the *results presentation*, not the runner invocation format.
+**Runner config change:** The evaluator internally uses `--output-format json` regardless of the user's configured args, since it needs both the response text (from the `result` field) and the usage metadata. If the user's `args` in `.skill-unit.yml` include an `--output-format` flag, the evaluator strips it before appending `--output-format json`. The user's `output.format` setting controls the _results presentation_, not the runner invocation format.
 
 **What gets tracked per test case:**
 
-| Field | Source |
-|-------|--------|
-| `total_cost_usd` | JSON response root |
-| `input_tokens` | `usage.input_tokens` |
-| `output_tokens` | `usage.output_tokens` |
+| Field               | Source                          |
+| ------------------- | ------------------------------- |
+| `total_cost_usd`    | JSON response root              |
+| `input_tokens`      | `usage.input_tokens`            |
+| `output_tokens`     | `usage.output_tokens`           |
 | `cache_read_tokens` | `usage.cache_read_input_tokens` |
-| `duration_ms` | JSON response root |
-| `num_turns` | JSON response root |
+| `duration_ms`       | JSON response root              |
+| `num_turns`         | JSON response root              |
 
 When a test case has multiple attempts, these values are summed across attempts.
 
@@ -142,9 +142,11 @@ When a test case has multiple attempts, these values are summed across attempts.
 ## COM-1: basic-commit — PASS
 
 **Prompt:**
+
 > Create a commit for the staged changes
 
 **Expectations:**
+
 - ✓ Ran `git commit`
 - ✓ Commit message references the nature of the changes
 
@@ -157,16 +159,20 @@ When a test case has multiple attempts, these values are summed across attempts.
 ## COM-3: nothing-to-commit — PASS (2/3, 67%)
 
 **Prompt:**
+
 > Commit my changes
 
 **Expectations:**
+
 - ✓ Agent detected there was nothing to commit (3/3)
 - ✓ Informed the user clearly (2/3)
 
 **Negative Expectations:**
+
 - ✓ Did not create an empty commit (3/3)
 
 **Attempts:**
+
 1. PASS — $0.08 | 980 tokens | 3.1s | 2 turns
 2. FAIL — $0.14 | 1,420 tokens | 5.8s | 4 turns
    → "Informed the user clearly" not met: agent silently exited without messaging
@@ -176,6 +182,7 @@ When a test case has multiple attempts, these values are summed across attempts.
 ```
 
 Key formatting rules:
+
 - Single-attempt tests show no confidence fraction (backward compatible with current format).
 - Multi-attempt tests show confidence in the header: `PASS (2/3, 67%)`.
 - Per-expectation confidence shown in parentheses only when `attempts > 1`.
@@ -214,11 +221,12 @@ For CI pipelines that need a go/no-go exit code:
 
 ```yaml
 ci:
-  min-confidence: 67%          # tests below this are "fail" for CI purposes
+  min-confidence: 67% # tests below this are "fail" for CI purposes
   fail-on-low-confidence: true # false = warn only (exit 0), true = exit 1
 ```
 
 Behavior:
+
 - A test at `3/3 (100%)` — passes CI.
 - A test at `2/3 (67%)` with `min-confidence: 67%` — passes CI.
 - A test at `1/3 (33%)` with `min-confidence: 67%` — fails CI.

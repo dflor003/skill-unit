@@ -15,19 +15,19 @@ The file extension is always `.spec.md` — it is not configurable. Test files a
 
 Frontmatter is a YAML block delimited by `---` at the top of the file.
 
-| Field | Required | Type | Description |
-|-------|----------|------|-------------|
-| `name` | Yes | string | Human-readable name for the test suite. Shown in results output. |
-| `skill` | No | string | Skill being tested. Informational — not used for filtering or execution. |
-| `tags` | No | list | Tags for filtering test runs (e.g., `[happy-path, slash-command]`). |
-| `timeout` | No | duration | Per-test timeout for this suite. Overrides the global default from `.skill-unit.yml`. Example: `90s`. |
-| `global-fixtures` | No | path | Path to a fixture folder copied into the working directory for every test case in this file. Relative paths are resolved from the spec file's directory. Per-test fixtures (see below) are layered on top. |
-| `setup` | No | filename | Script to run before the test cases in this file execute. Overrides the global default. |
-| `teardown` | No | filename | Script to run after all test cases in this file have run. Runs even if tests fail. |
-| `allowed-tools` | No | list | Fully replaces the resolved allowed tools list from global config. |
-| `disallowed-tools` | No | list | Fully replaces the resolved disallowed tools list from global config. |
-| `allowed-tools-extra` | No | list | Adds entries to the resolved allowed tools list (union). Ignored if `allowed-tools` is also present. |
-| `disallowed-tools-extra` | No | list | Adds entries to the resolved disallowed tools list (union). Ignored if `disallowed-tools` is also present. |
+| Field                    | Required | Type     | Description                                                                                                                                                                                                |
+| ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`                   | Yes      | string   | Human-readable name for the test suite. Shown in results output.                                                                                                                                           |
+| `skill`                  | No       | string   | Skill being tested. Informational — not used for filtering or execution.                                                                                                                                   |
+| `tags`                   | No       | list     | Tags for filtering test runs (e.g., `[happy-path, slash-command]`).                                                                                                                                        |
+| `timeout`                | No       | duration | Per-test timeout for this suite. Overrides the global default from `.skill-unit.yml`. Example: `90s`.                                                                                                      |
+| `global-fixtures`        | No       | path     | Path to a fixture folder copied into the working directory for every test case in this file. Relative paths are resolved from the spec file's directory. Per-test fixtures (see below) are layered on top. |
+| `setup`                  | No       | filename | Script to run before the test cases in this file execute. Overrides the global default.                                                                                                                    |
+| `teardown`               | No       | filename | Script to run after all test cases in this file have run. Runs even if tests fail.                                                                                                                         |
+| `allowed-tools`          | No       | list     | Fully replaces the resolved allowed tools list from global config.                                                                                                                                         |
+| `disallowed-tools`       | No       | list     | Fully replaces the resolved disallowed tools list from global config.                                                                                                                                      |
+| `allowed-tools-extra`    | No       | list     | Adds entries to the resolved allowed tools list (union). Ignored if `allowed-tools` is also present.                                                                                                       |
+| `disallowed-tools-extra` | No       | list     | Adds entries to the resolved disallowed tools list (union). Ignored if `disallowed-tools` is also present.                                                                                                 |
 
 ### Tool Permissions
 
@@ -48,9 +48,9 @@ File tools (`Read`, `Write`, `Edit`, `Glob`, `Grep`) are automatically scoped to
 name: docker-skill-tests
 skill: docker-manager
 allowed-tools-extra:
-  - "Bash(docker *)"
+  - 'Bash(docker *)'
 disallowed-tools-extra:
-  - "Bash(rm -rf *)"
+  - 'Bash(rm -rf *)'
 ---
 ```
 
@@ -93,6 +93,7 @@ An optional list of fixture paths specific to this test case. These are copied i
 
 ```markdown
 **Fixtures:**
+
 - ./fixtures/existing-spec
 ```
 
@@ -106,6 +107,7 @@ The prompt is a blockquote directly below the `**Prompt:**` label:
 
 ```markdown
 **Prompt:**
+
 > The text of the prompt sent to the isolated CLI session.
 ```
 
@@ -113,6 +115,7 @@ Multi-line prompts use continued blockquote lines:
 
 ```markdown
 **Prompt:**
+
 > First line of the prompt.
 > Second line of the prompt.
 ```
@@ -125,6 +128,7 @@ A bullet list directly below the `**Expectations:**` label. Each bullet is one i
 
 ```markdown
 **Expectations:**
+
 - Outcome A was observable in the response
 - Outcome B occurred
 - The agent informed the user of X
@@ -138,6 +142,7 @@ An optional bullet list directly below the `**Negative Expectations:**` label. E
 
 ```markdown
 **Negative Expectations:**
+
 - Did not do X
 - Did not invoke Y
 ```
@@ -175,14 +180,17 @@ teardown: teardown.sh
 ### COM-1: basic-commit
 
 **Prompt:**
+
 > Create a commit for the staged changes
 
 **Expectations:**
+
 - Ran `git commit`
 - Commit message references the nature of the changes
 - No files left in a dirty state after the commit
 
 **Negative Expectations:**
+
 - Did not run `git push`
 - Did not amend an existing commit
 
@@ -191,13 +199,16 @@ teardown: teardown.sh
 ### COM-2: nothing-to-commit
 
 **Prompt:**
+
 > Commit my changes
 
 **Expectations:**
+
 - Agent detected there was nothing to commit
 - Informed the user clearly that there was nothing to stage or commit
 
 **Negative Expectations:**
+
 - Did not create an empty commit
 - Did not fabricate or stage any changes
 ```
@@ -218,12 +229,14 @@ The grader reads the agent's response and decides whether each expectation was m
 Each bullet should check exactly one thing. Do not combine multiple checks into one expectation — if a combined expectation fails, you will not know which condition was unmet.
 
 Good:
+
 ```
 - Commit message is present and non-empty
 - Commit message references the nature of the changes
 ```
 
 Avoid:
+
 ```
 - Commit message is present, non-empty, and references the nature of the changes
 ```

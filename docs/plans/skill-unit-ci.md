@@ -11,6 +11,7 @@ Create `.github/workflows/ci.yml` with two parallel jobs.
 ### Job 1: `build` (runs on every push and PR)
 
 **Steps:**
+
 1. `actions/checkout@v4`
 2. `actions/setup-node@v4` with `node-version: lts/*`
 3. **Validate JS syntax** -- `find` all `.js` files under `skills/skill-unit/scripts/` and `tests/` and run `node -c` on them
@@ -19,12 +20,14 @@ Create `.github/workflows/ci.yml` with two parallel jobs.
 ### Job 2: `skill-tests` (opt-in only)
 
 **Trigger conditions (any one):**
+
 - `workflow_dispatch` with `run-skill-tests` input set to `true`
 - PR has the `run-skill-tests` label
 
 This job does NOT depend on the `build` job (they run in parallel). If the build fails, skill-test results are still useful for debugging.
 
 **Steps:**
+
 1. `actions/checkout@v4`
 2. `actions/setup-node@v4` with `node-version: lts/*`
 3. **Install Claude CLI** -- `curl -fsSL https://claude.ai/install.sh | bash` then add `$HOME/.claude/bin` to `GITHUB_PATH`. Note: no official Anthropic marketplace action exists for CLI installation; `anthropics/claude-code-action` is for PR/issue automation only, not CLI setup. The curl installer is Anthropic's recommended method.

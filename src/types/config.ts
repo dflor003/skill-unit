@@ -30,4 +30,10 @@ export interface SkillUnitConfig {
   defaults: DefaultsConfig;
 }
 
-export type LogLevel = 'debug' | 'verbose' | 'info' | 'success' | 'warn' | 'error';
+export type LogLevel =
+  | 'debug'
+  | 'verbose'
+  | 'info'
+  | 'success'
+  | 'warn'
+  | 'error';

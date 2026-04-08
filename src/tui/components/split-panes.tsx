@@ -75,7 +75,9 @@ function Pane({ session, focused, fullWidth }: PaneProps) {
           <Text color="gray">Waiting for output...</Text>
         ) : (
           session.transcript.slice(-10).map((line, idx) => (
-            <Text key={idx} wrap="truncate">{line}</Text>
+            <Text key={idx} wrap="truncate">
+              {line}
+            </Text>
           ))
         )}
       </Box>
@@ -83,14 +85,22 @@ function Pane({ session, focused, fullWidth }: PaneProps) {
   );
 }
 
-export function SplitPanes({ sessions, focusedId, maximizedId }: SplitPanesProps) {
+export function SplitPanes({
+  sessions,
+  focusedId,
+  maximizedId,
+}: SplitPanesProps) {
   // Maximized mode: show only one pane full-size
   if (maximizedId !== null) {
-    const session = sessions.find(s => s.id === maximizedId);
+    const session = sessions.find((s) => s.id === maximizedId);
     if (session) {
       return (
         <Box flexDirection="column" flexGrow={1}>
-          <Pane session={session} focused={session.id === focusedId} fullWidth />
+          <Pane
+            session={session}
+            focused={session.id === focusedId}
+            fullWidth
+          />
         </Box>
       );
     }
@@ -103,7 +113,7 @@ export function SplitPanes({ sessions, focusedId, maximizedId }: SplitPanesProps
   if (count <= 2) {
     return (
       <Box flexDirection="column" flexGrow={1}>
-        {sessions.map(s => (
+        {sessions.map((s) => (
           <Pane key={s.id} session={s} focused={s.id === focusedId} fullWidth />
         ))}
       </Box>
@@ -120,7 +130,7 @@ export function SplitPanes({ sessions, focusedId, maximizedId }: SplitPanesProps
       <Box flexDirection="column" flexGrow={1}>
         {rows.map((row, rowIdx) => (
           <Box key={rowIdx} flexDirection="row" flexGrow={1}>
-            {row.map(s => (
+            {row.map((s) => (
               <Pane key={s.id} session={s} focused={s.id === focusedId} />
             ))}
           </Box>
@@ -139,7 +149,7 @@ export function SplitPanes({ sessions, focusedId, maximizedId }: SplitPanesProps
     <Box flexDirection="column" flexGrow={1}>
       {rows.map((row, rowIdx) => (
         <Box key={rowIdx} flexDirection="row" flexGrow={1}>
-          {row.map(s => (
+          {row.map((s) => (
             <Pane key={s.id} session={s} focused={s.id === focusedId} />
           ))}
         </Box>

@@ -71,6 +71,7 @@ Fixtures are copied into a temp directory (`/tmp/skill-unit-workspace-XXXXXX/`) 
 ### Task 1: Plugin Scaffold
 
 **Files:**
+
 - Create: `.claude-plugin/plugin.json`
 
 This is the foundation — the manifest that makes this a valid Claude Code plugin.
@@ -107,6 +108,7 @@ git commit -m "feat: add plugin manifest for skill-unit"
 ### Task 2: Anti-Bias Hook
 
 **Files:**
+
 - Create: `hooks/scripts/block-test-access.sh`
 - Create: `hooks/hooks.json`
 
@@ -251,6 +253,7 @@ git commit -m "feat: add anti-bias PreToolUse hook to block test file access"
 ### Task 3: Test-Executor Agent
 
 **Files:**
+
 - Create: `agents/test-executor.md`
 
 The test-executor receives only a raw prompt and executes it as if it were a normal user request. It has restricted tools and the PreToolUse hook blocks access to test files.
@@ -275,12 +278,13 @@ description: |
   </example>
 model: inherit
 color: cyan
-tools: ["Read", "Write", "Edit", "Bash", "Glob", "Grep", "Skill"]
+tools: ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'Skill']
 ---
 
 You are a helpful AI assistant. The user has given you a task. Complete it to the best of your ability using the tools available to you.
 
 Focus on:
+
 - Understanding what the user is asking
 - Using appropriate tools to accomplish the task
 - Providing clear, helpful responses
@@ -290,6 +294,7 @@ Do your best work. Be thorough but concise.
 ```
 
 **Key design decisions:**
+
 - `tools` explicitly lists allowed tools — no `Agent` (cannot spawn sub-subagents)
 - `Skill` is included so skills can activate naturally (this is what we're testing)
 - The system prompt is deliberately generic — no mention of testing, evaluation, or expected behavior
@@ -307,6 +312,7 @@ git commit -m "feat: add test-executor subagent with restricted tool access"
 ### Task 4: Grader Agent
 
 **Files:**
+
 - Create: `agents/grader.md`
 
 The grader receives subagent responses + expectations for an entire spec file, evaluates each test case with binary pass/fail per expectation, and writes the results to a timestamped file on disk.
@@ -331,12 +337,13 @@ description: |
   </example>
 model: inherit
 color: yellow
-tools: ["Read", "Write", "Bash"]
+tools: ['Read', 'Write', 'Bash']
 ---
 
 You are a strict, objective test grader. You receive a set of test case results to evaluate and a file path to write the results to.
 
 **Your input will contain:**
+
 1. A results file path where you must write your evaluation
 2. The spec file name being graded
 3. A list of test cases, each containing:
@@ -349,12 +356,14 @@ You are a strict, objective test grader. You receive a set of test case results 
 **Grading Process:**
 
 For each test case:
+
 1. Read the test-executor's response carefully.
 2. For each Expectation, determine if the response satisfies it. An expectation is MET if the response clearly demonstrates the described behavior or outcome. An expectation is NOT MET if the response does not demonstrate it or contradicts it.
 3. For each Negative Expectation, determine if the response violates it. A negative expectation PASSES if the described behavior did NOT occur. It FAILS if the response demonstrates the prohibited behavior.
 4. A test case PASSES only if ALL expectations are met AND ALL negative expectations pass.
 
 **Grading Standards:**
+
 - Be strict and literal. Do not give credit for partial matches unless the expectation explicitly allows it.
 - Base your evaluation only on what is observable in the response. Do not infer or assume behavior that is not evident.
 - When an expectation is not met, provide a brief, specific reason explaining what was expected vs. what actually happened.
@@ -362,8 +371,8 @@ For each test case:
 **Results File Format:**
 
 Write the results file in this exact markdown format:
-
 ```
+
 # Results: {spec file name}
 
 **Timestamp:** {timestamp provided by evaluator}
@@ -372,14 +381,17 @@ Write the results file in this exact markdown format:
 ## {Test ID}: {Test Name} — {PASS|FAIL}
 
 **Prompt:**
+
 > {the original prompt}
 
 **Expectations:**
+
 - ✓ {expectation text}
 - ✗ {expectation text}
   → {brief reason for failure}
 
 **Negative Expectations:**
+
 - ✓ {negative expectation text}
 - ✗ {negative expectation text}
   → {brief reason for failure}
@@ -387,6 +399,7 @@ Write the results file in this exact markdown format:
 ---
 
 ## {Next test case...}
+
 ```
 
 **Rules:**
@@ -410,6 +423,7 @@ git commit -m "feat: add grader subagent for evaluating responses and writing re
 ### Task 5: Reference Documents
 
 **Files:**
+
 - Create: `skills/skill-unit/references/spec-format.md`
 - Create: `skills/skill-unit/references/testing-guidelines.md`
 
@@ -428,25 +442,26 @@ Each `*.spec.md` file contains multiple test cases for a skill or skill mode. YA
 
 ## Frontmatter Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Human-readable name for this test suite |
-| `skill` | No | Skill being tested (informational, not used for routing) |
-| `tags` | No | Array of tags for filtering test runs |
-| `timeout` | No | Per-test timeout (e.g., `60s`, `120s`), overrides global default |
-| `fixtures` | No | Relative path to fixture folder, copied into working directory before tests |
-| `setup` | No | Script filename to run before tests (e.g., `setup.sh`, `setup.js`) |
-| `teardown` | No | Script filename to run after tests |
+| Field      | Required | Description                                                                 |
+| ---------- | -------- | --------------------------------------------------------------------------- |
+| `name`     | Yes      | Human-readable name for this test suite                                     |
+| `skill`    | No       | Skill being tested (informational, not used for routing)                    |
+| `tags`     | No       | Array of tags for filtering test runs                                       |
+| `timeout`  | No       | Per-test timeout (e.g., `60s`, `120s`), overrides global default            |
+| `fixtures` | No       | Relative path to fixture folder, copied into working directory before tests |
+| `setup`    | No       | Script filename to run before tests (e.g., `setup.sh`, `setup.js`)          |
+| `teardown` | No       | Script filename to run after tests                                          |
 
 ## Test Case Structure
 
 Each test case is a `###` headed section with this structure:
 
 ### Heading Format
+```
 
-```
 ### {ID}: {descriptive-name}
-```
+
+````
 
 - **ID**: Unique identifier within the spec file (e.g., `COM-1`, `BRN-3`). Used in results output.
 - **Name**: Human-readable description in kebab-case or natural language.
@@ -459,12 +474,13 @@ Each test case is a `###` headed section with this structure:
 **Prompt:**
 > The user's request goes here. This is passed verbatim.
 > Multi-line prompts are supported.
-```
+````
 
 **Expectations** (required): Bulleted list of positive assertions. Each bullet is graded independently as pass/fail.
 
 ```markdown
 **Expectations:**
+
 - Observable outcome 1
 - Observable outcome 2
 - Observable outcome 3
@@ -474,6 +490,7 @@ Each test case is a `###` headed section with this structure:
 
 ```markdown
 **Negative Expectations:**
+
 - Thing that should not have happened
 - Another prohibited behavior
 ```
@@ -506,14 +523,17 @@ teardown: teardown.sh
 ### COM-1: basic-commit
 
 **Prompt:**
+
 > Create a commit for the staged changes
 
 **Expectations:**
+
 - Ran `git commit`
 - Commit message references the nature of the changes
 - No files left in dirty state after the commit
 
 **Negative Expectations:**
+
 - Did not run `git push`
 - Did not amend an existing commit
 
@@ -522,13 +542,16 @@ teardown: teardown.sh
 ### COM-2: nothing-to-commit
 
 **Prompt:**
+
 > Commit my changes
 
 **Expectations:**
+
 - Agent detected there was nothing to commit
 - Informed the user clearly
 
 **Negative Expectations:**
+
 - Did not create an empty commit
 ```
 
@@ -545,7 +568,8 @@ teardown: teardown.sh
 - Do NOT include skill names, tool names, or implementation hints.
 - Do NOT lead the subagent toward the expected answer.
 - Simulate what a real user would actually type.
-```
+
+````
 
 - [ ] **Step 2: Create testing-guidelines.md**
 
@@ -626,7 +650,7 @@ For any skill, the test suite should include at minimum:
 3. At least one activation test (if auto-activated).
 4. At least one negative activation test (if auto-activated).
 5. At least one graceful-decline test for out-of-scope requests.
-```
+````
 
 - [ ] **Step 3: Commit**
 
@@ -640,6 +664,7 @@ git commit -m "feat: add spec format and testing guidelines reference docs"
 ### Task 6: Templates
 
 **Files:**
+
 - Create: `skills/skill-unit/templates/example.spec.md`
 - Create: `skills/skill-unit/templates/.skill-unit.yml`
 
@@ -663,13 +688,16 @@ tags: [happy-path]
 ### TEST-1: basic-usage
 
 **Prompt:**
+
 > Describe what a typical user would say to invoke this skill.
 
 **Expectations:**
+
 - Describe what the skill should do in response
 - Each bullet is graded independently as pass or fail
 
 **Negative Expectations:**
+
 - Describe something the skill should NOT do
 
 ---
@@ -677,9 +705,11 @@ tags: [happy-path]
 ### TEST-2: activation-test
 
 **Prompt:**
+
 > A realistic, vague prompt that should trigger the skill naturally.
 
 **Expectations:**
+
 - The skill activated and handled the request
 - The response addresses the user's intent
 
@@ -688,13 +718,16 @@ tags: [happy-path]
 ### TEST-3: negative-activation-test
 
 **Prompt:**
+
 > A prompt that is adjacent to the skill's domain but should NOT trigger it.
 
 **Expectations:**
+
 - The skill did not activate
 - The response was handled by general-purpose behavior
 
 **Negative Expectations:**
+
 - The skill did not activate for this unrelated request
 ```
 
@@ -742,6 +775,7 @@ git commit -m "feat: add spec file and config templates for new projects"
 ### Task 7: Setup Script
 
 **Files:**
+
 - Create: `skills/skill-unit/scripts/setup-tests.sh`
 
 A helper script that scaffolds the test directory structure in a user's project.
@@ -823,6 +857,7 @@ git commit -m "feat: add test directory scaffolding script"
 ### Task 8: SKILL.md — The Evaluator
 
 **Files:**
+
 - Create: `skills/skill-unit/SKILL.md`
 
 This is the core of the plugin — the evaluator/orchestrator that runs as the main thread. It handles test discovery, spec parsing, fixture management, subagent dispatch, and results presentation.
@@ -831,7 +866,7 @@ This is the core of the plugin — the evaluator/orchestrator that runs as the m
 
 Create `skills/skill-unit/SKILL.md`:
 
-```markdown
+````markdown
 ---
 name: Skill Unit
 description: This skill should be used when the user asks to "test my skill", "run skill tests", "evaluate a skill", "run the test suite", "check skill quality", "/skill-unit", or mentions skill testing, skill evaluation, or running spec files. It provides a structured unit testing framework for AI agent skills with anti-bias evaluation.
@@ -870,6 +905,7 @@ defaults:
   setup: setup.sh
   teardown: teardown.sh
 ```
+````
 
 ### Step 3: Discover Test Files
 
@@ -929,6 +965,7 @@ For each test case in the spec file:
 3. Store the response paired with its test case ID for grading.
 
 **Critical anti-bias rules:**
+
 - NEVER include expectations, test IDs, or test metadata in the prompt sent to the test-executor.
 - NEVER mention "test", "evaluation", "expected", or "spec" in the prompt.
 - Pass the prompt EXACTLY as written in the blockquote — do not modify, rephrase, or add context.
@@ -984,6 +1021,7 @@ After all spec files have been processed:
 ```
 
 **Rules for the summary:**
+
 - Group results by directory path, then by spec file.
 - Passing tests show on one line with expectation counts.
 - Failing tests expand to show each expectation with ✓/✗ and failure reasons.
@@ -1012,20 +1050,22 @@ The framework reads `.skill-unit.yml` from the repository root. See `templates/.
 ```bash
 cp ${CLAUDE_PLUGIN_ROOT}/skills/skill-unit/templates/.skill-unit.yml .skill-unit.yml
 ```
-```
+
+````
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add skills/skill-unit/SKILL.md
 git commit -m "feat: add SKILL.md evaluator/orchestrator — core of the plugin"
-```
+````
 
 ---
 
 ### Task 9: Self-Test Spec Files
 
 **Files:**
+
 - Create: `skill-tests/skill-unit/spec-parsing.spec.md`
 - Create: `skill-tests/skill-unit/results/` (directory)
 
@@ -1045,9 +1085,11 @@ tags: [self-test, parsing]
 ### SU-1: activation-via-slash-command
 
 **Prompt:**
+
 > /skill-unit
 
 **Expectations:**
+
 - The skill-unit skill activated
 - The agent attempted to discover and run test spec files
 - The agent presented results or indicated no tests were found
@@ -1057,13 +1099,16 @@ tags: [self-test, parsing]
 ### SU-2: activation-via-natural-language
 
 **Prompt:**
+
 > Can you test my skills for me?
 
 **Expectations:**
+
 - The skill-unit skill activated
 - The agent attempted to discover test spec files
 
 **Negative Expectations:**
+
 - The agent did not ask what programming language to use
 - The agent did not try to write unit tests in a programming language
 
@@ -1072,13 +1117,16 @@ tags: [self-test, parsing]
 ### SU-3: negative-activation
 
 **Prompt:**
+
 > Write a unit test for my login function in Jest
 
 **Expectations:**
+
 - The agent treated this as a standard coding request
 - The agent attempted to write JavaScript/TypeScript tests
 
 **Negative Expectations:**
+
 - The skill-unit skill did not activate
 - The agent did not look for spec.md files
 
@@ -1087,13 +1135,16 @@ tags: [self-test, parsing]
 ### SU-4: handles-no-tests-found
 
 **Prompt:**
+
 > Run the skill tests in the empty-project directory
 
 **Expectations:**
+
 - The agent reported that no test spec files were found
 - The agent suggested how to create test spec files or run the setup script
 
 **Negative Expectations:**
+
 - The agent did not crash or error out
 - The agent did not fabricate test results
 ```
@@ -1118,6 +1169,7 @@ git commit -m "feat: add self-test spec files for skill-unit"
 ### Task 10: Fixture Placement Experiments
 
 **Files:**
+
 - Create: `docs/experiments/fixture-placement.md`
 
 Document the three fixture placement approaches (C, B, D) with specific test procedures so they can be evaluated during manual testing.
@@ -1136,12 +1188,14 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 ## Approach C: Copy to Repo Root (Phase 1 Default)
 
 **How it works:**
+
 1. Evaluator records current working directory state (list of files or `git status`).
 2. Copies fixture folder contents to repo root.
 3. Runs test-executor.
 4. Removes all fixture files, restoring original state.
 
 **Test procedure:**
+
 1. Create a fixture folder with 3-5 files (e.g., `package.json`, `src/index.ts`, `README.md`).
 2. Run a spec file that uses this fixture.
 3. Verify: test-executor can read/write fixture files normally.
@@ -1154,12 +1208,14 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 ## Approach B: Git Worktree
 
 **How it works:**
+
 1. Evaluator creates a git worktree.
 2. Copies fixtures into the worktree.
 3. Spawns test-executor with `isolation: "worktree"`.
 4. Worktree is cleaned up after the test.
 
 **Test procedure:**
+
 1. Same fixture folder as Approach C.
 2. Run a spec file using worktree isolation.
 3. Verify: test-executor operates in the worktree naturally.
@@ -1172,12 +1228,14 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 ## Approach D: Neutral Workspace Directory
 
 **How it works:**
+
 1. Evaluator creates `.workspace/` at repo root (`.gitignore`'d).
 2. Copies fixtures into `.workspace/`.
 3. Tells test-executor to operate in `.workspace/` as project root.
 4. Cleans up `.workspace/` after the test.
 
 **Test procedure:**
+
 1. Same fixture folder as Approach C.
 2. Run a spec file with workspace directory.
 3. Verify: test-executor operates in `.workspace/` without confusion.
@@ -1189,13 +1247,13 @@ Test fixtures need to be placed somewhere the test-executor subagent can operate
 
 ## Evaluation Criteria
 
-| Criterion | Weight | Description |
-|-----------|--------|-------------|
-| Subagent realism | High | Does the subagent behave as it would in a real session? |
-| Cleanup reliability | High | Are all fixture files removed consistently? |
-| Performance | Medium | How much overhead does the approach add? |
-| Conflict safety | Medium | What happens if fixtures overlap with real files? |
-| Simplicity | Low | How complex is the implementation? |
+| Criterion           | Weight | Description                                             |
+| ------------------- | ------ | ------------------------------------------------------- |
+| Subagent realism    | High   | Does the subagent behave as it would in a real session? |
+| Cleanup reliability | High   | Are all fixture files removed consistently?             |
+| Performance         | Medium | How much overhead does the approach add?                |
+| Conflict safety     | Medium | What happens if fixtures overlap with real files?       |
+| Simplicity          | Low    | How complex is the implementation?                      |
 ```
 
 - [ ] **Step 2: Commit**
@@ -1256,6 +1314,7 @@ Expected: A timestamped results file exists (e.g., `2026-03-31-15-00-00.spec-par
 - [ ] **Step 6: Verify results format**
 
 Read the results file and verify it matches the expected format:
+
 - Has a header with spec file name and timestamp.
 - Each test case has a PASS/FAIL verdict.
 - Expectations are listed with ✓/✗ markers.

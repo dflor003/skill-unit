@@ -8,8 +8,20 @@ const mockSpecs = [
     path: 'skill-tests/runner.spec.md',
     frontmatter: { name: 'runner', tags: ['integration'], skill: 'skill-unit' },
     testCases: [
-      { id: 'TEST-1', name: 'basic-usage', prompt: 'test', expectations: [], 'negative-expectations': [] },
-      { id: 'TEST-2', name: 'error-case', prompt: 'test', expectations: [], 'negative-expectations': [] },
+      {
+        id: 'TEST-1',
+        name: 'basic-usage',
+        prompt: 'test',
+        expectations: [],
+        'negative-expectations': [],
+      },
+      {
+        id: 'TEST-2',
+        name: 'error-case',
+        prompt: 'test',
+        expectations: [],
+        'negative-expectations': [],
+      },
     ],
   },
 ];

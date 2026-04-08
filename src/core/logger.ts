@@ -20,19 +20,19 @@
 // -- ANSI codes ---------------------------------------------------------------
 
 const ANSI = {
-  reset:       '\x1b[0m',
-  bold:        '\x1b[1m',
-  dim:         '\x1b[2m',
-  italic:      '\x1b[3m',
-  underline:   '\x1b[4m',
-  red:         '\x1b[31m',
-  green:       '\x1b[32m',
-  yellow:      '\x1b[33m',
-  blue:        '\x1b[34m',
-  magenta:     '\x1b[35m',
-  cyan:        '\x1b[36m',
-  white:       '\x1b[37m',
-  gray:        '\x1b[90m',
+  reset: '\x1b[0m',
+  bold: '\x1b[1m',
+  dim: '\x1b[2m',
+  italic: '\x1b[3m',
+  underline: '\x1b[4m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  gray: '\x1b[90m',
   brightWhite: '\x1b[97m',
 } as const;
 
@@ -57,12 +57,12 @@ interface LevelDef {
 }
 
 const LEVELS: Record<string, LevelDef> = {
-  debug:   { priority: 0, color: 'gray',    badge: 'DBG' },
-  verbose: { priority: 1, color: 'dim',     badge: 'VRB' },
-  info:    { priority: 2, color: 'cyan',    badge: 'INF' },
-  success: { priority: 3, color: 'green',   badge: ' OK' },
-  warn:    { priority: 4, color: 'yellow',  badge: 'WRN' },
-  error:   { priority: 5, color: 'red',     badge: 'ERR' },
+  debug: { priority: 0, color: 'gray', badge: 'DBG' },
+  verbose: { priority: 1, color: 'dim', badge: 'VRB' },
+  info: { priority: 2, color: 'cyan', badge: 'INF' },
+  success: { priority: 3, color: 'green', badge: ' OK' },
+  warn: { priority: 4, color: 'yellow', badge: 'WRN' },
+  error: { priority: 5, color: 'red', badge: 'ERR' },
 };
 
 const DEFAULT_LEVEL = 'info';
@@ -124,18 +124,19 @@ function createLoggerImpl(scope: string, options?: LoggerOptions): Logger {
     const ts = applyColor('gray', timestamp());
     const badge = applyColor(def.color, def.badge);
     const scopeStr = applyColor('magenta', scope);
-    const text = def.priority >= LEVELS.warn.priority ? applyColor(def.color, msg) : msg;
+    const text =
+      def.priority >= LEVELS.warn.priority ? applyColor(def.color, msg) : msg;
 
     stream.write(`${ts} ${badge} ${scopeStr} ${text}\n`);
   }
 
   return {
-    debug:   (msg) => write('debug', msg),
+    debug: (msg) => write('debug', msg),
     verbose: (msg) => write('verbose', msg),
-    info:    (msg) => write('info', msg),
+    info: (msg) => write('info', msg),
     success: (msg) => write('success', msg),
-    warn:    (msg) => write('warn', msg),
-    error:   (msg) => write('error', msg),
+    warn: (msg) => write('warn', msg),
+    error: (msg) => write('error', msg),
   };
 }
 
@@ -178,7 +179,11 @@ function formatInline(text: string, useColor: boolean): string {
   return result;
 }
 
-function formatLine(line: string, inCodeBlock: boolean, useColor: boolean): string {
+function formatLine(
+  line: string,
+  inCodeBlock: boolean,
+  useColor: boolean
+): string {
   if (!useColor) return line;
 
   // Inside a code block: render content in cyan, no inline formatting
@@ -279,7 +284,7 @@ export class MdStream {
     // Code fence toggle
     if (line.trimStart().startsWith('```')) {
       this.stream.write(
-        `${this.useColor ? ANSI.dim : ''}${line}${this.useColor ? ANSI.reset : ''}\n`,
+        `${this.useColor ? ANSI.dim : ''}${line}${this.useColor ? ANSI.reset : ''}\n`
       );
       this.inCodeBlock = !this.inCodeBlock;
       return;
