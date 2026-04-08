@@ -15,6 +15,7 @@ interface SessionPanelProps {
   viewMode: TranscriptViewMode;
   scrollOffset?: number;
   following?: boolean;
+  onScrollClamp?: (clampedOffset: number) => void;
 }
 
 function statusLabel(status: TestStatus | 'idle'): { label: string; color: string } {
@@ -55,6 +56,7 @@ export function SessionPanel({
   viewMode,
   scrollOffset = 0,
   following = true,
+  onScrollClamp,
 }: SessionPanelProps) {
   const ref = useRef<DOMElement>(null);
   const [panelHeight, setPanelHeight] = useState(24);
@@ -81,15 +83,26 @@ export function SessionPanel({
   // Reserve ~4 lines for header + view mode indicator + follow indicator
   const visibleLines = Math.max(1, panelHeight - 4);
 
+  // Clamp offset so it never exceeds the scrollable range
+  const maxOffset = Math.max(0, allLines.length - visibleLines);
+  const effectiveOffset = Math.min(scrollOffset, maxOffset);
+
+  // Sync clamped offset back to parent so stored state doesn't drift
+  useEffect(() => {
+    if (scrollOffset > maxOffset && onScrollClamp) {
+      onScrollClamp(maxOffset);
+    }
+  }, [scrollOffset, maxOffset, onScrollClamp]);
+
   let slicedLines: string[];
-  if (scrollOffset === 0) {
+  if (effectiveOffset === 0) {
     slicedLines = allLines.slice(-visibleLines);
   } else {
-    const startLine = Math.max(0, allLines.length - visibleLines - scrollOffset);
+    const startLine = allLines.length - visibleLines - effectiveOffset;
     slicedLines = allLines.slice(startLine, startLine + visibleLines);
   }
 
-  const showFollowIndicator = !following && scrollOffset > 0;
+  const showFollowIndicator = !following && effectiveOffset > 0;
 
   return (
     <Box ref={ref} flexDirection="column" flexGrow={1}>

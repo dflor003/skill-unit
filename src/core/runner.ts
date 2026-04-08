@@ -192,7 +192,7 @@ export interface RunHandle extends EventEmitter {
   on(event: 'output', listener: (chunk: string) => void): this;
   on(event: 'tool-use', listener: (name: string, input: unknown) => void): this;
   on(event: 'progress', listener: (progress: RunProgress) => void): this;
-  on(event: 'complete', listener: (result: { exitCode: number; timedOut: boolean; durationMs: number }) => void): this;
+  on(event: 'complete', listener: (result: { exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }) => void): this;
   on(event: 'error', listener: (error: Error) => void): this;
 }
 
@@ -241,10 +241,13 @@ interface StreamEvent {
 /**
  * Run a CLI command and pipe events through the handle emitter.
  */
-function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<{ exitCode: number; timedOut: boolean; durationMs: number }> {
+function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<{ exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }> {
   return new Promise((resolve, reject) => {
     const startTime = Date.now();
     const { handle } = options;
+    let costUsd = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
 
     const proc = spawn(cmd, cliArgs, {
       cwd: options.cwd,
@@ -358,6 +361,13 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
               mdLogStream.write(formatToolResult(output, isError));
             }
           } else if (event.type === 'result') {
+            if (event.total_cost_usd) costUsd = event.total_cost_usd;
+            if (event.usage) {
+              inputTokens = (event.usage.input_tokens ?? 0)
+                + (event.usage.cache_read_input_tokens ?? 0)
+                + (event.usage.cache_creation_input_tokens ?? 0);
+              outputTokens = event.usage.output_tokens ?? 0;
+            }
             const summaryText = `---\n**Result:** ${event.subtype || 'unknown'}\n${formatUsageSummary(event.usage, event.total_cost_usd)}`;
             handle.emit('output', summaryText);
             if (mdLogStream) {
@@ -413,7 +423,7 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
       const durationMs = Date.now() - startTime;
       const exitCode = timedOut ? 124 : (code || 0);
 
-      resolve({ exitCode, timedOut, durationMs });
+      resolve({ exitCode, timedOut, durationMs, costUsd, inputTokens, outputTokens });
     });
 
     proc.on('error', (err: Error) => {
@@ -572,6 +582,9 @@ async function _runTestAsync(
   let exitCode: number;
   let timedOut = false;
   let durationMs: number;
+  let costUsd = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
 
   try {
     const result = await runAsync(tool, cmdArgs, {
@@ -589,6 +602,9 @@ async function _runTestAsync(
     exitCode = result.exitCode;
     timedOut = result.timedOut;
     durationMs = result.durationMs;
+    costUsd = result.costUsd;
+    inputTokens = result.inputTokens;
+    outputTokens = result.outputTokens;
 
     if (timedOut) {
       runLog.error(`[${testId}]: Timed out after ${timeoutMs}ms`);
@@ -623,5 +639,5 @@ async function _runTestAsync(
     results: [{ id: testId, status: exitCode === 0 ? 'running' : 'error', durationMs }],
   } satisfies RunProgress);
 
-  handle.emit('complete', { exitCode, timedOut, durationMs });
+  handle.emit('complete', { exitCode, timedOut, durationMs, costUsd, inputTokens, outputTokens });
 }

@@ -18,6 +18,60 @@ describe('parseResultsFile', () => {
     expect(result.failedChecks).toBe(0);
   });
 
+  it('parses heading-style verdict (## Verdict: PASS)', () => {
+    // Arrange
+    const content = `# Results: TD-1 — Generated Test Case
+## Verdict: PASS
+## Expectation Results
+`;
+
+    // Act
+    const result = parseResultsFile(content);
+
+    // Assert
+    expect(result.passed).toBe(true);
+  });
+
+  it('parses heading-style result (## Result: PASS)', () => {
+    // Arrange
+    const content = `# Test Result: TD-2 -- Detects Existing Spec
+## Result: PASS
+## Score: 5 / 5
+`;
+
+    // Act
+    const result = parseResultsFile(content);
+
+    // Assert
+    expect(result.passed).toBe(true);
+  });
+
+  it('parses bold-wrapped result (**Result: FAIL**)', () => {
+    // Arrange
+    const content = `# Results: TD-1 — Some Test
+**Result: FAIL**
+`;
+
+    // Act
+    const result = parseResultsFile(content);
+
+    // Assert
+    expect(result.passed).toBe(false);
+  });
+
+  it('parses heading-style verdict FAIL (## Verdict: FAIL)', () => {
+    // Arrange
+    const content = `# Results: TD-1 — Some Test
+## Verdict: FAIL
+`;
+
+    // Act
+    const result = parseResultsFile(content);
+
+    // Assert
+    expect(result.passed).toBe(false);
+  });
+
   it('parses a failing results file', () => {
     const content = `# Results: TEST-2: error-case
 

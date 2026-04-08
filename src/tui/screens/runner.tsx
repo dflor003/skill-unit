@@ -223,6 +223,9 @@ export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
                   viewMode={viewModes[activeTest.id] ?? 'execution'}
                   scrollOffset={scrollState[activeTest.id]?.offset ?? 0}
                   following={scrollState[activeTest.id]?.following ?? true}
+                  onScrollClamp={(clamped) => {
+                    setScrollState(prev => ({ ...prev, [activeTest.id]: { offset: clamped, following: false } }));
+                  }}
                 />
               ) : (
                 <Box padding={1}>

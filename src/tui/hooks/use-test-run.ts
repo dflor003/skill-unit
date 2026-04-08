@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import fs from 'node:fs';
 import path from 'node:path';
 import { runTest } from '../../core/runner.js';
 import { gradeTest } from '../../core/grader.js';
@@ -199,6 +200,8 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       let active = 0;
       let nextIdx = 0;
       let completedCount = 0;
+      let totalCost = 0;
+      let totalTokens = 0;
       const totalTasks = allTasks.length;
       const gradingQueue: RunTask[] = [];
 
@@ -248,8 +251,8 @@ export function useTestRun(): [TestRunState, TestRunActions] {
             passed: totalPassed,
             failed: totalFailed,
             durationMs: totalDuration,
-            cost: 0,
-            tokens: 0,
+            cost: totalCost,
+            tokens: totalTokens,
             tests: testResults,
             reportPath: reportResult.reportPath,
           };
@@ -287,7 +290,20 @@ export function useTestRun(): [TestRunState, TestRunActions] {
         });
 
         gradeHandle.on('complete', (result) => {
-          const passed = result.exitCode === 0;
+          // Parse the results file to determine pass/fail (exit code only indicates
+          // whether the grader process ran successfully, not the test verdict)
+          let passed = false;
+          const resultsPath = path.join(
+            '.workspace', 'runs', timestamp, 'results',
+            `${specName}.${task.testCase.id}.results.md`,
+          );
+          try {
+            const resultsContent = fs.readFileSync(resultsPath, 'utf-8');
+            passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(resultsContent);
+          } catch {
+            // If results file can't be read, fall back to grader exit code
+            passed = result.exitCode === 0;
+          }
           updateTest(task.testCase.id, {
             status: passed ? 'passed' : 'failed',
             activity: '',
@@ -322,6 +338,8 @@ export function useTestRun(): [TestRunState, TestRunActions] {
 
           handle.on('complete', (result) => {
             updateTest(task.testCase.id, { durationMs: result.durationMs, activity: '' });
+            totalCost += result.costUsd ?? 0;
+            totalTokens += (result.inputTokens ?? 0) + (result.outputTokens ?? 0);
             active--; // Release execution slot
 
             if (result.timedOut) {
