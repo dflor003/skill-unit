@@ -10,6 +10,7 @@ import { recordRun } from '../../core/stats.js';
 import { createLogger } from '../../core/logger.js';
 import type { SpecFilter, Manifest, ManifestTestCase } from '../../types/spec.js';
 import type { RunResult, TestResult } from '../../types/run.js';
+import type { SkillUnitConfig } from '../../types/config.js';
 
 const STATS_BASE_DIR = '.skill-unit';
 
@@ -46,7 +47,7 @@ class Semaphore {
 function runTestAsync(
   manifest: Manifest,
   testCase: ManifestTestCase,
-  config: import('../../types/config.js').SkillUnitConfig,
+  config: SkillUnitConfig,
   noStream: boolean,
 ): Promise<{ exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }> {
   return new Promise((resolve, reject) => {

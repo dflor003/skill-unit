@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Box, Text, type DOMElement, measureElement } from 'ink';
 import type { TestStatus } from '../../types/run.js';
 import { Markdown } from './markdown.js';
+import { Scrollbar } from './scrollbar.js';
 
 export type TranscriptViewMode = 'execution' | 'grading';
 
@@ -36,6 +37,8 @@ function statusLabel(status: TestStatus | 'idle'): { label: string; color: strin
       return { label: 'Timed out', color: 'red' };
     case 'error':
       return { label: 'Error', color: 'red' };
+    case 'cancelled':
+      return { label: 'Cancelled', color: 'gray' };
   }
 }
 
@@ -133,12 +136,20 @@ export function SessionPanel({
         )}
         <Text color="gray">  [t] toggle</Text>
       </Box>
-      <Box flexDirection="column" paddingX={1} flexGrow={1} overflow="hidden">
-        {activeTranscript.length === 0 ? (
-          <Text color="gray">Waiting for output...</Text>
-        ) : (
-          <Markdown content={slicedLines.join('\n')} />
-        )}
+      <Box flexDirection="row" flexGrow={1} overflow="hidden">
+        <Box flexDirection="column" paddingX={1} flexGrow={1} overflow="hidden">
+          {activeTranscript.length === 0 ? (
+            <Text color="gray">Waiting for output...</Text>
+          ) : (
+            <Markdown content={slicedLines.join('\n')} />
+          )}
+        </Box>
+        <Scrollbar
+          totalLines={allLines.length}
+          visibleLines={visibleLines}
+          scrollOffset={effectiveOffset}
+          height={visibleLines}
+        />
       </Box>
       {showFollowIndicator && (
         <Box paddingX={1}>

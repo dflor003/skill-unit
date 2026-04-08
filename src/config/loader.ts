@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import YAML from 'yaml';
 import type { SkillUnitConfig } from '../types/config.js';
 
 // -- Default configuration ----------------------------------------------------
@@ -25,160 +26,18 @@ export const CONFIG_DEFAULTS: SkillUnitConfig = {
   },
 };
 
-// -- Minimal YAML parser ------------------------------------------------------
-// Handles the subset used in frontmatter and .skill-unit.yml:
-//   - Scalar strings:  key: value
-//   - Inline lists:    key: [a, b, c]
-//   - Block lists:     key:\n  - item\n  - item
-//   - One level of nesting: parent:\n  child: value
-//   - Comments:        # ignored
-//   - Booleans:        key: true / false
-//   - Numbers:         key: 42
-//   - Null:            key: null
+// -- YAML parsing and serialization -------------------------------------------
 
 export function parseYaml(text: string): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
-  const lines = text.split('\n');
-  let i = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    // Skip blank lines and comments
-    if (!line.trim() || line.trim().startsWith('#')) {
-      i++;
-      continue;
-    }
-
-    // Top-level key (no leading whitespace)
-    const topMatch = line.match(/^([A-Za-z][A-Za-z0-9_-]*)\s*:\s*(.*)/);
-    if (!topMatch) {
-      i++;
-      continue;
-    }
-
-    const key = topMatch[1];
-    const rawValue = topMatch[2].trim();
-
-    // Check if this is a parent key with nested children (value is empty and
-    // next non-blank line is indented)
-    if (!rawValue) {
-      // Look ahead for indented lines (block list or nested object)
-      const nested: Record<string, unknown> = {};
-      let isList = false;
-      const listItems: string[] = [];
-      i++;
-
-      while (i < lines.length) {
-        const child = lines[i];
-        if (!child.trim() || child.trim().startsWith('#')) {
-          i++;
-          continue;
-        }
-        // Must be indented (2+ spaces)
-        if (!/^\s{2,}/.test(child)) break;
-
-        const trimmed = child.trim();
-
-        // Block list item
-        if (trimmed.startsWith('- ')) {
-          isList = true;
-          listItems.push(trimmed.slice(2).trim());
-          i++;
-          continue;
-        }
-
-        // Nested key-value
-        const childMatch = trimmed.match(/^([A-Za-z][A-Za-z0-9_-]*)\s*:\s*(.*)/);
-        if (childMatch) {
-          const childKey = childMatch[1];
-          const childRaw = childMatch[2].trim();
-          // Check for block list under nested key
-          if (!childRaw) {
-            const childList: string[] = [];
-            i++;
-            while (i < lines.length) {
-              const sub = lines[i];
-              if (!sub.trim() || sub.trim().startsWith('#')) {
-                i++;
-                continue;
-              }
-              if (!/^\s{4,}/.test(sub)) break;
-              const subTrimmed = sub.trim();
-              if (subTrimmed.startsWith('- ')) {
-                childList.push(subTrimmed.slice(2).trim());
-                i++;
-              } else {
-                break;
-              }
-            }
-            nested[childKey] = childList.length ? childList : null;
-          } else {
-            nested[childKey] = parseScalar(childRaw);
-            i++;
-          }
-          continue;
-        }
-
-        i++;
-      }
-
-      result[key] = isList ? listItems : nested;
-      continue;
-    }
-
-    // Inline value
-    result[key] = parseValue(rawValue);
-    i++;
+  const result = YAML.parse(text);
+  if (result === null || result === undefined || typeof result !== 'object') {
+    return {};
   }
-
-  return result;
+  return result as Record<string, unknown>;
 }
 
-// Parse a value that may be an inline array or a scalar
-function parseValue(raw: string): unknown {
-  // Strip inline comments (but not inside quoted strings)
-  let value = raw;
-  if (!value.startsWith('"') && !value.startsWith("'")) {
-    const commentIdx = value.indexOf(' #');
-    if (commentIdx > 0) value = value.slice(0, commentIdx).trim();
-  }
-
-  // Inline list: [a, b, c]
-  if (value.startsWith('[') && value.endsWith(']')) {
-    const inner = value.slice(1, -1).trim();
-    if (!inner) return [];
-    return inner.split(',').map((s) => {
-      const t = s.trim();
-      // Strip quotes
-      if ((t.startsWith('"') && t.endsWith('"')) || (t.startsWith("'") && t.endsWith("'"))) {
-        return t.slice(1, -1);
-      }
-      return t;
-    });
-  }
-
-  return parseScalar(value);
-}
-
-// Parse a scalar value: boolean, null, number, quoted string, or plain string
-function parseScalar(value: string): unknown {
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  if (value === 'null') return null;
-
-  // Numbers
-  if (/^\d+$/.test(value)) return parseInt(value, 10);
-
-  // Strip quotes from scalar strings
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-
-  return value;
+export function serializeYaml(obj: Record<string, unknown>): string {
+  return YAML.stringify(obj);
 }
 
 // -- Config loading -----------------------------------------------------------

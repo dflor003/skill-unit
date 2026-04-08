@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import fs from 'node:fs';
 import path from 'node:path';
-import { runTest } from '../../core/runner.js';
-import { gradeTest } from '../../core/grader.js';
+import { runTest, type RunHandle } from '../../core/runner.js';
+import { gradeTest, type GradeHandle } from '../../core/grader.js';
 import { generateReport } from '../../core/reporter.js';
 import { recordRun } from '../../core/stats.js';
 import type { TestStatus, RunResult, TestResult } from '../../types/run.js';
@@ -40,6 +40,7 @@ export interface TestRunActions {
   selectTest: (id: string) => void;
   updateTest: (id: string, patch: Partial<TestRunEntry>) => void;
   completeRun: () => void;
+  cancelRun: () => void;
 }
 
 const INITIAL_STATE: TestRunState = {
@@ -65,6 +66,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
   const transcriptBuffers = useRef<Map<string, string[]>>(new Map());
   const gradeTranscriptBuffers = useRef<Map<string, string[]>>(new Map());
   const flushTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const activeHandles = useRef<Map<string, RunHandle | GradeHandle>>(new Map());
 
   useEffect(() => {
     return () => {
@@ -130,6 +132,39 @@ export function useTestRun(): [TestRunState, TestRunActions] {
     });
   }, []);
 
+  const cancelRun = useCallback(() => {
+    // Kill all active processes
+    for (const handle of activeHandles.current.values()) {
+      handle.kill();
+    }
+    activeHandles.current.clear();
+
+    // Transition all non-terminal tests to cancelled
+    setState(prev => ({
+      ...prev,
+      status: 'complete',
+      tests: prev.tests.map(t => {
+        if (t.status === 'pending' || t.status === 'running' || t.status === 'grading') {
+          return { ...t, status: 'cancelled' as const, activity: '' };
+        }
+        return t;
+      }),
+    }));
+
+    // Stop timers
+    if (timerRef.current !== null) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    if (flushTimerRef.current !== null) {
+      clearInterval(flushTimerRef.current);
+      flushTimerRef.current = null;
+    }
+
+    // Flush any remaining transcript data
+    flushTranscripts();
+  }, [flushTranscripts]);
+
   const startRun = useCallback(
     (tests: Array<{ id: string; name: string; specName: string }>) => {
       if (timerRef.current !== null) {
@@ -141,6 +176,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
 
       transcriptBuffers.current.clear();
       gradeTranscriptBuffers.current.clear();
+      activeHandles.current.clear();
 
       const entries: TestRunEntry[] = tests.map(t => ({
         id: t.id,
@@ -282,6 +318,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
         );
 
         const gradeHandle = gradeTest(fullTestCase, transcriptPath, config, specName, timestamp);
+        activeHandles.current.set(task.testCase.id, gradeHandle);
 
         gradeHandle.on('output', (chunk: string) => {
           const buf = gradeTranscriptBuffers.current.get(task.testCase.id) ?? [];
@@ -292,11 +329,11 @@ export function useTestRun(): [TestRunState, TestRunActions] {
         gradeHandle.on('complete', (result) => {
           // Parse the results file to determine pass/fail (exit code only indicates
           // whether the grader process ran successfully, not the test verdict)
-          let passed = false;
           const resultsPath = path.join(
             '.workspace', 'runs', timestamp, 'results',
             `${specName}.${task.testCase.id}.results.md`,
           );
+          let passed: boolean;
           try {
             const resultsContent = fs.readFileSync(resultsPath, 'utf-8');
             passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(resultsContent);
@@ -308,6 +345,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
             status: passed ? 'passed' : 'failed',
             activity: '',
           });
+          activeHandles.current.delete(task.testCase.id);
           completedCount++;
           active--;
           tryNext();
@@ -325,6 +363,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           updateTest(task.testCase.id, { status: 'running', activity: 'Starting...' });
 
           const handle = runTest(task.manifest, task.testCase, config, { silent: true });
+          activeHandles.current.set(task.testCase.id, handle);
 
           handle.on('output', (chunk: string) => {
             const buf = transcriptBuffers.current.get(task.testCase.id) ?? [];
@@ -340,6 +379,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
             updateTest(task.testCase.id, { durationMs: result.durationMs, activity: '' });
             totalCost += result.costUsd ?? 0;
             totalTokens += (result.inputTokens ?? 0) + (result.outputTokens ?? 0);
+            activeHandles.current.delete(task.testCase.id);
             active--; // Release execution slot
 
             if (result.timedOut) {
@@ -363,6 +403,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
 
           handle.on('error', (err: Error) => {
             updateTest(task.testCase.id, { status: 'error', activity: err.message });
+            activeHandles.current.delete(task.testCase.id);
             completedCount++;
             active--;
             tryNext();
@@ -383,6 +424,6 @@ export function useTestRun(): [TestRunState, TestRunActions] {
     [updateTest, completeRun, flushTranscripts],
   );
 
-  const actions: TestRunActions = { startRun, executeRun, selectTest, updateTest, completeRun };
+  const actions: TestRunActions = { startRun, executeRun, selectTest, updateTest, completeRun, cancelRun };
   return [state, actions];
 }

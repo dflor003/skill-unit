@@ -11,11 +11,12 @@ interface RunnerProps {
   runState: TestRunState;
   onSelectTest: (id: string) => void;
   onRerunTests?: (testIds: string[]) => void;
+  onViewModeChange?: (mode: 'primary' | 'split') => void;
 }
 
 type ViewMode = 'primary' | 'split';
 
-export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
+export function Runner({ runState, onSelectTest, onRerunTests, onViewModeChange }: RunnerProps) {
   const { tests, activeTestId, elapsed, status } = runState;
   const [viewMode, setViewMode] = useState<ViewMode>('primary');
   const [splitFocusedId, setSplitFocusedId] = useState<string | null>(null);
@@ -34,7 +35,11 @@ export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
 
     // Toggle view mode with [v]
     if (input === 'v') {
-      setViewMode(prev => (prev === 'primary' ? 'split' : 'primary'));
+      setViewMode(prev => {
+        const next = prev === 'primary' ? 'split' : 'primary';
+        if (onViewModeChange) onViewModeChange(next);
+        return next;
+      });
       return;
     }
 
@@ -131,6 +136,10 @@ export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
       }
     }
   });
+
+  useEffect(() => {
+    if (onViewModeChange) onViewModeChange(viewMode);
+  }, []); // Only report initial view mode on mount
 
   useEffect(() => {
     for (const test of tests) {
@@ -273,16 +282,6 @@ export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
         </Box>
       )}
 
-      {/* Footer status */}
-      <Box>
-        <Text color="gray">
-          {status === 'complete'
-            ? '[Space] select  [Enter] re-run  ← → sessions  [D] dashboard'
-            : viewMode === 'primary'
-              ? '← → sessions  ↑↓ scroll  [f] follow  [t] transcript  [v] split view'
-              : '[1-9] focus pane  [m] maximize  [v] primary view'}
-        </Text>
-      </Box>
     </Box>
   );
 }
