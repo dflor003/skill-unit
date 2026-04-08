@@ -6,6 +6,7 @@ import type { SkillUnitConfig, LogLevel } from '../../types/config.js';
 interface OptionsProps {
   config: SkillUnitConfig;
   onSave: (config: SkillUnitConfig) => void;
+  onEditingChange?: (editing: boolean) => void;
 }
 
 type FieldType = 'enum' | 'boolean' | 'number' | 'string';
@@ -121,7 +122,7 @@ const FIELDS: FieldDef[] = [
   },
 ];
 
-export function Options({ config, onSave }: OptionsProps) {
+export function Options({ config, onSave, onEditingChange }: OptionsProps) {
   const [cursor, setCursor] = useState(0);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<SkillUnitConfig>(config);
@@ -129,10 +130,20 @@ export function Options({ config, onSave }: OptionsProps) {
 
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(config);
 
+  function startEditing(index: number) {
+    setEditingIndex(index);
+    onEditingChange?.(true);
+  }
+
+  function stopEditing() {
+    setEditingIndex(null);
+    onEditingChange?.(false);
+  }
+
   useInput((input, key) => {
     if (editingIndex !== null) {
       if (key.escape) {
-        setEditingIndex(null);
+        stopEditing();
       }
       return;
     }
@@ -147,8 +158,10 @@ export function Options({ config, onSave }: OptionsProps) {
         const current = field.get(draft);
         const toggled = current === 'true' ? 'false' : 'true';
         setDraft(field.set(draft, toggled));
+      } else if (field.type === 'enum' && (field.options?.length ?? 0) <= 1) {
+        // Single-option enum: nothing to choose, skip the editor
       } else {
-        setEditingIndex(cursor);
+        startEditing(cursor);
       }
     } else if (input === 's' || input === 'S') {
       onSave(draft);
@@ -193,7 +206,7 @@ export function Options({ config, onSave }: OptionsProps) {
                   value={value}
                   onSubmit={(newValue) => {
                     setDraft(field.set(draft, newValue));
-                    setEditingIndex(null);
+                    stopEditing();
                   }}
                 />
               ) : (
