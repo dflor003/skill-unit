@@ -10,6 +10,7 @@ test-dir: skill-tests
 runner:
   # The harness CLI to use. Supported: claude (more coming soon).
   tool: claude
+  model: haiku
   # Model to use for test execution (optional, uses harness default if omitted).
   # model: sonnet
   # Max conversation turns per test case.

@@ -32,6 +32,8 @@ function statusIcon(status: TestStatus): { symbol: string; color: string } {
       return { symbol: '⏰', color: 'red' };
     case 'error':
       return { symbol: '✗', color: 'red' };
+    case 'cancelled':
+      return { symbol: '⊘', color: 'gray' };
   }
 }
 
@@ -49,7 +51,7 @@ function formatDuration(ms: number): string {
 
 export function ProgressTree({ tests, elapsed, selectable, selected }: ProgressTreeProps) {
   const completed = tests.filter(
-    t => t.status === 'passed' || t.status === 'failed' || t.status === 'timedout' || t.status === 'error',
+    t => t.status === 'passed' || t.status === 'failed' || t.status === 'timedout' || t.status === 'error' || t.status === 'cancelled',
   ).length;
   const total = tests.length;
 

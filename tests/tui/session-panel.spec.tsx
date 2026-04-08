@@ -140,4 +140,32 @@ describe('SessionPanel', () => {
       expect(getMaxLine(out2)).toBeGreaterThan(getMaxLine(out1));
     });
   });
+
+  describe('when transcript overflows the panel', () => {
+    it('should show a scrollbar', () => {
+      // Arrange
+      const manyLines = Array.from({ length: 50 }, (_, i) => `line-${i}`);
+
+      // Act
+      const { lastFrame } = render(
+        <SessionPanel testId="TEST-1" testName="test" status="running" transcript={manyLines} gradeTranscript={[]} elapsed={0} viewMode="execution" scrollOffset={0} following={true} />,
+      );
+
+      // Assert
+      expect(lastFrame()!).toContain('\u2591');
+    });
+  });
+
+  describe('when transcript fits the panel', () => {
+    it('should not show a scrollbar', () => {
+      // Act
+      const { lastFrame } = render(
+        <SessionPanel testId="TEST-1" testName="test" status="running" transcript={['short']} gradeTranscript={[]} elapsed={0} viewMode="execution" />,
+      );
+
+      // Assert
+      expect(lastFrame()!).not.toContain('\u2591');
+      expect(lastFrame()!).not.toContain('\u2588');
+    });
+  });
 });

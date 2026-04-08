@@ -1,6 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
+
+// Mock @inkjs/ui to avoid ESM linking issues in vmForks pool
+vi.mock('@inkjs/ui', () => ({
+  Select: () => null,
+  TextInput: () => null,
+}));
+
 import { App } from '../../src/tui/app.js';
 
 describe('App', () => {

@@ -19,7 +19,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
 import { createLogger } from './logger.js';
@@ -194,6 +194,7 @@ export interface RunHandle extends EventEmitter {
   on(event: 'progress', listener: (progress: RunProgress) => void): this;
   on(event: 'complete', listener: (result: { exitCode: number; timedOut: boolean; durationMs: number; costUsd: number; inputTokens: number; outputTokens: number }) => void): this;
   on(event: 'error', listener: (error: Error) => void): this;
+  kill(): void;
 }
 
 interface RunOptions {
@@ -207,6 +208,8 @@ interface RunOptions {
   handle: RunHandle;
   /** When true, suppresses all direct writes to stderr/stdout (TUI mode). */
   silent: boolean;
+  /** Callback to capture the spawned child process reference for kill(). */
+  setProcRef?: (proc: ChildProcess) => void;
 }
 
 // -- Stream-json event parsing ----------------------------------------------
@@ -253,6 +256,7 @@ function runAsync(cmd: string, cliArgs: string[], options: RunOptions): Promise<
       cwd: options.cwd,
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    if (options.setProcRef) options.setProcRef(proc);
 
     // Open log files
     const logStream = options.logPath
@@ -454,10 +458,17 @@ export function runTest(
 ): RunHandle {
   const handle = new EventEmitter() as RunHandle;
   const silent = options?.silent ?? false;
+  let proc: ChildProcess | null = null;
+
+  handle.kill = () => {
+    if (proc) {
+      proc.kill('SIGTERM');
+    }
+  };
 
   // Run asynchronously so callers can attach listeners before events fire
   setImmediate(() => {
-    _runTestAsync(manifest, testCase, config, handle, silent).catch((err: Error) => {
+    _runTestAsync(manifest, testCase, config, handle, silent, (p) => { proc = p; }).catch((err: Error) => {
       handle.emit('error', err);
     });
   });
@@ -471,6 +482,7 @@ async function _runTestAsync(
   config: SkillUnitConfig,
   handle: RunHandle,
   silent: boolean,
+  setProcRef?: (proc: ChildProcess) => void,
 ): Promise<void> {
   const cwd = process.cwd();
 
@@ -597,6 +609,7 @@ async function _runTestAsync(
       prompt,
       handle,
       silent,
+      setProcRef,
     });
 
     exitCode = result.exitCode;

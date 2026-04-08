@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import path from 'node:path';
 import { Box, useInput, useStdout } from 'ink';
-import { BottomBar, type Screen } from './components/bottom-bar.js';
+import { BottomBar, type Screen, type RunViewMode } from './components/bottom-bar.js';
+import { ConfirmDialog } from './components/confirm-dialog.js';
 import { Dashboard } from './screens/dashboard.js';
 import { Runner } from './screens/runner.js';
 import { RunManager } from './screens/runs.js';
@@ -29,6 +30,7 @@ const DEFAULT_CONFIG: SkillUnitConfig = {
 
 export function App() {
   const [screen, setScreen] = useState<Screen>('dashboard');
+  const [previousScreen, setPreviousScreen] = useState<Screen>('dashboard');
   const [specs, setSpecs] = useState<Spec[]>([]);
   const [appConfig, setAppConfig] = useState<SkillUnitConfig>(DEFAULT_CONFIG);
   const [statsIndex, setStatsIndex] = useState<StatsIndex>(() => ({
@@ -38,9 +40,11 @@ export function App() {
     tests: {},
     runs: [],
   }));
-  const [runState, { startRun, executeRun, selectTest }] = useTestRun();
+  const [runState, { startRun, executeRun, selectTest, cancelRun }] = useTestRun();
   const [historicalRun, setHistoricalRun] = useState<TestRunState | null>(null);
   const [historicalActiveTestId, setHistoricalActiveTestId] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [runnerViewMode, setRunnerViewMode] = useState<RunViewMode>('primary');
   const { stdout } = useStdout();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
 
@@ -120,12 +124,12 @@ export function App() {
     const data = loadHistoricalRun(runDir, run);
     setHistoricalRun(data);
     setHistoricalActiveTestId(data.activeTestId);
+    setPreviousScreen('runs');
     setScreen('runner');
   }
 
   function handleDeleteRun(id: string) {
     try {
-      // Remove the run from the index by keeping only runs that don't match the id
       const index = loadIndex(STATS_BASE_DIR);
       index.runs = index.runs.filter(r => r.id !== id);
       setStatsIndex({ ...index });
@@ -134,9 +138,47 @@ export function App() {
     }
   }
 
+  function handleCancelConfirm() {
+    cancelRun();
+    setShowCancelDialog(false);
+  }
+
+  function handleCancelDismiss() {
+    setShowCancelDialog(false);
+  }
+
   const NAV_SCREENS: Screen[] = ['dashboard', 'runs', 'stats', 'options'];
 
   useInput((input, key) => {
+    // Cancel dialog is modal -- absorb all input
+    if (showCancelDialog) return;
+
+    const isRunnerActive = screen === 'runner' && runState.status === 'running';
+
+    // Escape handling
+    if (key.escape) {
+      if (isRunnerActive) {
+        setShowCancelDialog(true);
+        return;
+      }
+      if (screen === 'runner') {
+        setScreen(previousScreen);
+        return;
+      }
+      return;
+    }
+
+    // Backspace = back from runner (only when not running)
+    if (key.backspace || key.delete) {
+      if (screen === 'runner' && !isRunnerActive) {
+        setScreen(previousScreen);
+        return;
+      }
+    }
+
+    // Block all global nav during active run
+    if (isRunnerActive) return;
+
     if (input === 'd' || input === 'D') setScreen('dashboard');
     if (input === 'r' || input === 'R') setScreen('runs');
     if (input === 's' || input === 'S') setScreen('stats');
@@ -152,70 +194,76 @@ export function App() {
 
   return (
     <Box flexDirection="column" height={termHeight}>
-      <Box flexGrow={1} flexDirection="column" paddingX={1}>
-        {screen === 'dashboard' && (
-          <Dashboard
-            specs={specs}
-            onRunTests={tests => {
-              setHistoricalRun(null);
-              // Initialize run state in the hook (sets up timer, entries)
-              startRun(
-                tests.map(t => ({
-                  id: t.testCase.id,
-                  name: t.testCase.name,
-                  specName: t.specName,
-                })),
-              );
-              setScreen('runner');
-
-              // Build manifests and kick off actual execution
-              const timestamp = formatTimestamp(new Date());
-
-              // Collect unique specs from the selected tests
-              const specPathSet = new Set(tests.map(t => t.specPath));
-              const selectedSpecs = specs.filter(s => specPathSet.has(s.path));
-
-              // Build manifests, filtering test cases to only those selected
-              const selectedTestIds = new Set(tests.map(t => t.testCase.id));
-              const manifests = selectedSpecs.map(spec => {
-                const manifest = buildManifest(spec, appConfig, { timestamp });
-                // Filter test cases to only the ones the user selected
-                manifest['test-cases'] = manifest['test-cases'].filter(tc =>
-                  selectedTestIds.has(tc.id),
+      {showCancelDialog ? (
+        <ConfirmDialog
+          message="Cancel the run?"
+          onConfirm={handleCancelConfirm}
+          onDismiss={handleCancelDismiss}
+        />
+      ) : (
+        <Box flexGrow={1} flexDirection="column" paddingX={1}>
+          {screen === 'dashboard' && (
+            <Dashboard
+              specs={specs}
+              onRunTests={tests => {
+                setHistoricalRun(null);
+                setPreviousScreen('dashboard');
+                startRun(
+                  tests.map(t => ({
+                    id: t.testCase.id,
+                    name: t.testCase.name,
+                    specName: t.specName,
+                  })),
                 );
-                return manifest;
-              }).filter(m => m['test-cases'].length > 0);
+                setScreen('runner');
 
-              // Execute the run asynchronously
-              executeRun(manifests, selectedSpecs, appConfig, timestamp);
-            }}
-          />
-        )}
-        {screen === 'runs' && (
-          <RunManager
-            runs={statsIndex.runs}
-            onCleanup={handleCleanup}
-            onDeleteRun={handleDeleteRun}
-            onViewRun={handleViewRun}
-          />
-        )}
-        {screen === 'stats' && <Statistics index={statsIndex} />}
-        {screen === 'options' && (
-          <Options config={appConfig} onSave={setAppConfig} />
-        )}
-        {screen === 'runner' && (
-          <Runner
-            runState={
-              historicalRun
-                ? { ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId }
-                : runState
-            }
-            onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
-            onRerunTests={handleRerunTests}
-          />
-        )}
-      </Box>
-      <BottomBar activeScreen={screen} />
+                const timestamp = formatTimestamp(new Date());
+                const specPathSet = new Set(tests.map(t => t.specPath));
+                const selectedSpecs = specs.filter(s => specPathSet.has(s.path));
+                const selectedTestIds = new Set(tests.map(t => t.testCase.id));
+                const manifests = selectedSpecs.map(spec => {
+                  const manifest = buildManifest(spec, appConfig, { timestamp });
+                  manifest['test-cases'] = manifest['test-cases'].filter(tc =>
+                    selectedTestIds.has(tc.id),
+                  );
+                  return manifest;
+                }).filter(m => m['test-cases'].length > 0);
+
+                executeRun(manifests, selectedSpecs, appConfig, timestamp);
+              }}
+            />
+          )}
+          {screen === 'runs' && (
+            <RunManager
+              runs={statsIndex.runs}
+              onCleanup={handleCleanup}
+              onDeleteRun={handleDeleteRun}
+              onViewRun={handleViewRun}
+            />
+          )}
+          {screen === 'stats' && <Statistics index={statsIndex} />}
+          {screen === 'options' && (
+            <Options config={appConfig} onSave={setAppConfig} />
+          )}
+          {screen === 'runner' && (
+            <Runner
+              runState={
+                historicalRun
+                  ? { ...historicalRun, activeTestId: historicalActiveTestId ?? historicalRun.activeTestId }
+                  : runState
+              }
+              onSelectTest={historicalRun ? setHistoricalActiveTestId : selectTest}
+              onRerunTests={handleRerunTests}
+              onViewModeChange={setRunnerViewMode}
+            />
+          )}
+        </Box>
+      )}
+      <BottomBar
+        activeScreen={screen}
+        runStatus={screen === 'runner' ? runState.status : undefined}
+        runViewMode={screen === 'runner' ? runnerViewMode : undefined}
+      />
     </Box>
   );
 }

@@ -15,7 +15,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
 import { createLogger } from './logger.js';
@@ -37,6 +37,7 @@ export interface GradeResult {
 export interface GradeHandle extends EventEmitter {
   on(event: 'output', listener: (chunk: string) => void): this;
   on(event: 'complete', listener: (result: GradeResult) => void): this;
+  kill(): void;
 }
 
 // -- Grader prompt construction -----------------------------------------------
@@ -104,12 +105,18 @@ export const GRADER_PROFILES: Record<string, (agentPath: string) => string[]> = 
 
 // -- Spawn a single grader process --------------------------------------------
 
-function spawnGrader(tool: string, cliArgs: string[], prompt: string): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+function spawnGrader(
+  tool: string,
+  cliArgs: string[],
+  prompt: string,
+  setProcRef?: (proc: ChildProcess) => void,
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     const proc = spawn(tool, cliArgs, {
       cwd: process.cwd(),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
+    if (setProcRef) setProcRef(proc);
 
     let stdout = '';
     let stderr = '';
@@ -140,6 +147,13 @@ export function gradeTest(
   timestamp: string,
 ): GradeHandle {
   const handle = new EventEmitter() as GradeHandle;
+  let proc: ChildProcess | null = null;
+
+  handle.kill = () => {
+    if (proc) {
+      proc.kill('SIGTERM');
+    }
+  };
 
   setImmediate(async () => {
     const tool = config.runner.tool || 'claude';
@@ -177,7 +191,7 @@ export function gradeTest(
     const cliArgs = buildArgs(agentPath);
     const prompt = buildGraderPrompt(testCase, specName, timestamp);
 
-    const { exitCode, stdout, stderr } = await spawnGrader(tool, cliArgs, prompt);
+    const { exitCode, stdout, stderr } = await spawnGrader(tool, cliArgs, prompt, (p) => { proc = p; });
 
     if (stdout) {
       handle.emit('output', stdout);

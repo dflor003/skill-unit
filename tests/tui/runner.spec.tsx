@@ -18,6 +18,20 @@ describe('ProgressTree', () => {
     expect(output).toContain('pending');
   });
 
+  it('when a test is cancelled should show the cancelled icon', () => {
+    // Arrange
+    const tests = [
+      { id: 'TEST-1', name: 'cancelled-test', status: 'cancelled' as const, durationMs: 0 },
+    ];
+
+    // Act
+    const { lastFrame } = render(<ProgressTree tests={tests} elapsed={0} />);
+
+    // Assert
+    expect(lastFrame()!).toContain('⊘');
+    expect(lastFrame()!).toContain('cancelled-test');
+  });
+
   it('when selectable should show checkboxes', () => {
     // Arrange
     const tests = [

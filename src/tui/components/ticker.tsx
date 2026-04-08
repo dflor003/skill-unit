@@ -30,6 +30,8 @@ function statusIcon(status: TestStatus): { symbol: string; color: string } {
       return { symbol: '⏰', color: 'red' };
     case 'error':
       return { symbol: '✗', color: 'red' };
+    case 'cancelled':
+      return { symbol: '⊘', color: 'gray' };
   }
 }
 
