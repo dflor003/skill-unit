@@ -48,7 +48,7 @@ describe('loadConfig', () => {
     const config = loadConfig('/nonexistent/path/.skill-unit.yml');
     expect(config['test-dir']).toBe('skill-tests');
     expect(config.runner.tool).toBe('claude');
-    expect(config.runner['max-turns']).toBe(10);
+    expect(config.runner['max-turns']).toBe(50);
     expect(config.execution.timeout).toBe('120s');
   });
 
@@ -74,7 +74,7 @@ describe('CONFIG_DEFAULTS', () => {
     expect(CONFIG_DEFAULTS['test-dir']).toBe('skill-tests');
     expect(CONFIG_DEFAULTS.runner.tool).toBe('claude');
     expect(CONFIG_DEFAULTS.runner.model).toBeNull();
-    expect(CONFIG_DEFAULTS.runner['max-turns']).toBe(10);
+    expect(CONFIG_DEFAULTS.runner['max-turns']).toBe(50);
     expect(CONFIG_DEFAULTS.output.format).toBe('interactive');
   });
 

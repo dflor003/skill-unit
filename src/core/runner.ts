@@ -346,6 +346,11 @@ function runAsync(
         try {
           const event = JSON.parse(trimmed) as StreamEvent;
 
+          // Drop system events other than init (hooks, startup, etc.)
+          if (event.type === 'system' && event.subtype !== 'init') {
+            continue;
+          }
+
           if (event.type === 'system' && event.subtype === 'init') {
             const initText = formatSessionInit(event);
             handle.emit('output', initText);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { Spec, TestCase } from '../../types/spec.js';
+import type { ContextHint } from '../components/context-bar.js';
 import { SearchBox } from '../components/search-box.js';
 import { loadSelection, saveSelection } from '../../core/selection.js';
 
@@ -12,9 +13,23 @@ interface FlatTestCase {
   key: string;
 }
 
+// Build a breadcrumb like "skill-unit > empty-project" from a spec path.
+// Strips the configured test directory prefix and the .spec.md extension.
+function specBreadcrumb(specPath: string, testDir: string): string {
+  const normalized = specPath.replace(/\\/g, '/');
+  const prefix = testDir.replace(/\\/g, '/').replace(/\/$/, '') + '/';
+  const relative = normalized.startsWith(prefix)
+    ? normalized.slice(prefix.length)
+    : normalized;
+  const withoutExt = relative.replace(/\.spec\.md$/, '');
+  return withoutExt.split('/').join(' > ');
+}
+
 interface DashboardProps {
   specs: Spec[];
+  testDir: string;
   onRunTests: (tests: FlatTestCase[]) => void;
+  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 function flattenSpecs(specs: Spec[]): FlatTestCase[] {
@@ -53,7 +68,12 @@ function filterTests(tests: FlatTestCase[], query: string): FlatTestCase[] {
 
 const SELECTION_DIR = '.skill-unit';
 
-export function Dashboard({ specs, onRunTests }: DashboardProps) {
+export function Dashboard({
+  specs,
+  testDir,
+  onRunTests,
+  onContextHintsChange,
+}: DashboardProps) {
   const allTests = flattenSpecs(specs);
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -70,6 +90,20 @@ export function Dashboard({ specs, onRunTests }: DashboardProps) {
       SELECTION_DIR
     );
   }, [selected]);
+
+  useEffect(() => {
+    const hints = [
+      { key: '↑↓', label: 'navigate' },
+      { key: '[Space]', label: 'toggle' },
+      { key: '[a]', label: 'all' },
+      { key: '[A]', label: 'all in spec' },
+      ...(selected.size > 0
+        ? [{ key: '[Enter]', label: `run ${selected.size} selected` }]
+        : []),
+      { key: 'type', label: 'to search' },
+    ];
+    onContextHintsChange?.(hints);
+  }, [selected.size, onContextHintsChange]);
 
   useInput((input, key) => {
     if (key.upArrow) {
@@ -88,18 +122,31 @@ export function Dashboard({ specs, onRunTests }: DashboardProps) {
         }
         return next;
       });
-    } else if (input === 'a' || input === 'A') {
+    } else if (input === 'a') {
       if (selected.size === visible.length) {
         setSelected(new Set());
       } else {
         setSelected(new Set(visible.map((t) => t.key)));
       }
+    } else if (input === 'A') {
+      const item = visible[cursor];
+      if (!item) return;
+      const specTests = visible.filter((t) => t.specPath === item.specPath);
+      const specKeys = specTests.map((t) => t.key);
+      const allSelected = specKeys.every((k) => selected.has(k));
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (allSelected) {
+          for (const k of specKeys) next.delete(k);
+        } else {
+          for (const k of specKeys) next.add(k);
+        }
+        return next;
+      });
     } else if (key.return) {
-      const toRun =
-        selected.size > 0
-          ? visible.filter((t) => selected.has(t.key))
-          : visible;
-      onRunTests(toRun);
+      if (selected.size === 0) return;
+      const toRun = visible.filter((t) => selected.has(t.key));
+      if (toRun.length > 0) onRunTests(toRun);
     } else if (key.backspace || key.delete) {
       setQuery((q) => q.slice(0, -1));
     } else if (input && !key.ctrl && !key.meta) {
@@ -125,16 +172,31 @@ export function Dashboard({ specs, onRunTests }: DashboardProps) {
         {visible.map((item, idx) => {
           const isActive = idx === cursor;
           const isChecked = selected.has(item.key);
+          const prev = idx > 0 ? visible[idx - 1] : null;
+          const isFirstOfSpec = !prev || prev.specPath !== item.specPath;
+          const breadcrumb = isFirstOfSpec
+            ? specBreadcrumb(item.specPath, testDir)
+            : null;
           return (
-            <Box key={item.key}>
-              <Text color={isActive ? 'blue' : undefined}>
-                {isActive ? '>' : ' '} {isChecked ? '[x]' : '[ ]'}{' '}
-                <Text bold={isActive}>{item.testCase.name}</Text>{' '}
-                <Text color="gray">({item.specName})</Text>
-                {item.tags.length > 0 && (
-                  <Text color="cyan"> [{item.tags.join(', ')}]</Text>
-                )}
-              </Text>
+            <Box key={item.key} flexDirection="column">
+              {breadcrumb && (
+                <Box marginTop={idx === 0 ? 0 : 1}>
+                  <Box flexGrow={1}>
+                    <Text bold color="cyan">
+                      {breadcrumb}
+                    </Text>
+                  </Box>
+                  {item.tags.length > 0 && (
+                    <Text color="gray">[{item.tags.join(', ')}]</Text>
+                  )}
+                </Box>
+              )}
+              <Box paddingLeft={2}>
+                <Text color={isActive ? 'blue' : undefined}>
+                  {isActive ? '>' : ' '} {isChecked ? '[x]' : '[ ]'}{' '}
+                  <Text bold={isActive}>{item.testCase.name}</Text>
+                </Text>
+              </Box>
             </Box>
           );
         })}

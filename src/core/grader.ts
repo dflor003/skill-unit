@@ -19,6 +19,13 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
 import { createLogger } from './logger.js';
+import {
+  formatToolCall,
+  formatToolResult,
+  formatTurnUsage,
+  formatSessionInit,
+  formatUsageSummary,
+} from './transcript-formatter.js';
 import type { Spec } from '../types/spec.js';
 import type { SkillUnitConfig } from '../types/config.js';
 
@@ -111,27 +118,146 @@ export const GRADER_PROFILES: Record<string, (agentPath: string) => string[]> =
     ],
   };
 
+// -- Stream-json event type (shared with runner.ts) ---------------------------
+
+interface StreamEvent {
+  type: string;
+  subtype?: string;
+  message?: {
+    content?: Array<{
+      type: string;
+      text?: string;
+      name?: string;
+      input?: unknown;
+    }>;
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      cache_read_input_tokens?: number;
+      cache_creation_input_tokens?: number;
+    };
+  };
+  output?: string;
+  is_error?: boolean;
+  result?: string;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+    cache_read_input_tokens?: number;
+    cache_creation_input_tokens?: number;
+  };
+  total_cost_usd?: number;
+  model?: string;
+  cwd?: string;
+  skills?: string[];
+}
+
 // -- Spawn a single grader process --------------------------------------------
+
+interface SpawnGraderOptions {
+  /** Callback for each formatted markdown chunk (TUI streaming). */
+  onOutput?: (chunk: string) => void;
+  /** Path to write grader transcript file. */
+  mdLogPath?: string;
+  /** Callback to capture process reference for kill(). */
+  setProcRef?: (proc: ChildProcess) => void;
+}
 
 function spawnGrader(
   tool: string,
   cliArgs: string[],
   prompt: string,
-  setProcRef?: (proc: ChildProcess) => void
+  options?: SpawnGraderOptions
 ): Promise<{ exitCode: number; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     const proc = spawn(tool, cliArgs, {
       cwd: process.cwd(),
       stdio: ['pipe', 'pipe', 'pipe'],
     });
-    if (setProcRef) setProcRef(proc);
+    if (options?.setProcRef) options.setProcRef(proc);
+
+    const mdLogStream = options?.mdLogPath
+      ? fs.createWriteStream(options.mdLogPath, { flags: 'w' })
+      : null;
 
     let stdout = '';
     let stderr = '';
+    let buffer = '';
+    let turnNumber = 0;
+
+    function emit(text: string): void {
+      if (options?.onOutput) options.onOutput(text);
+      if (mdLogStream) mdLogStream.write(text);
+    }
 
     proc.stdout.on('data', (data: Buffer) => {
-      stdout += data.toString();
+      const chunk = data.toString();
+      stdout += chunk;
+      buffer += chunk;
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+
+        try {
+          const event = JSON.parse(trimmed) as StreamEvent;
+
+          // Drop non-init system events (hooks, startup noise)
+          if (event.type === 'system' && event.subtype !== 'init') {
+            continue;
+          }
+
+          if (event.type === 'system' && event.subtype === 'init') {
+            emit(formatSessionInit(event));
+          } else if (event.type === 'assistant' && event.message) {
+            turnNumber++;
+            const content = event.message.content || [];
+            const usage = event.message.usage;
+            const textParts = content
+              .filter((c) => c.type === 'text')
+              .map((c) => c.text ?? '')
+              .join('');
+            const toolUses = content.filter((c) => c.type === 'tool_use');
+
+            if (textParts || toolUses.length) {
+              emit(`## Turn ${turnNumber}\n${formatTurnUsage(usage)}`);
+            }
+
+            if (textParts) {
+              emit(textParts);
+            }
+
+            for (const tu of toolUses) {
+              const toolName = tu.name ?? '';
+              const toolInput = tu.input ?? {};
+              emit(
+                formatToolCall(toolName, toolInput as Record<string, unknown>)
+              );
+            }
+          } else if (event.type === 'tool_result') {
+            const output = event.output || '';
+            const isError = event.is_error === true;
+            const preview = output.substring(0, 200);
+            emit(
+              formatToolResult(
+                preview + (output.length > 200 ? '...' : ''),
+                isError
+              )
+            );
+          } else if (event.type === 'result') {
+            emit(
+              `---\n**Result:** ${event.subtype || 'unknown'}\n${formatUsageSummary(event.usage, event.total_cost_usd)}`
+            );
+          }
+        } catch {
+          // Not valid JSON, skip
+        }
+      }
     });
+
     proc.stderr.on('data', (data: Buffer) => {
       stderr += data.toString();
     });
@@ -140,10 +266,12 @@ function spawnGrader(
     proc.stdin.end();
 
     proc.on('close', (code: number | null) => {
+      if (mdLogStream) mdLogStream.end();
       resolve({ exitCode: code ?? 0, stdout, stderr });
     });
 
     proc.on('error', (err: Error) => {
+      if (mdLogStream) mdLogStream.end();
       resolve({ exitCode: 1, stdout, stderr: err.message });
     });
   });
@@ -211,18 +339,24 @@ export function gradeTest(
     const cliArgs = buildArgs(agentPath);
     const prompt = buildGraderPrompt(testCase, specName, timestamp);
 
+    const resultsDir = path.join('.workspace', 'runs', timestamp, 'results');
+    const graderMdLogPath = path.join(
+      resultsDir,
+      `${specName}.${testCase.id}.grader-transcript.md`
+    );
+
     const { exitCode, stdout, stderr } = await spawnGrader(
       tool,
       cliArgs,
       prompt,
-      (p) => {
-        proc = p;
+      {
+        onOutput: (chunk) => handle.emit('output', chunk),
+        mdLogPath: graderMdLogPath,
+        setProcRef: (p) => {
+          proc = p;
+        },
       }
     );
-
-    if (stdout) {
-      handle.emit('output', stdout);
-    }
 
     handle.emit('complete', {
       testId: testCase.id,
@@ -325,10 +459,19 @@ export async function gradeSpecs(
 
       const prompt = buildGraderPrompt(tc, specName, timestamp);
 
+      const graderMdLogPath = path.join(
+        '.workspace',
+        'runs',
+        timestamp,
+        'results',
+        `${specName}.${tc.id}.grader-transcript.md`
+      );
+
       tasks.push({
         specName,
         testId: tc.id,
-        run: () => spawnGrader(tool, cliArgs, prompt),
+        run: () =>
+          spawnGrader(tool, cliArgs, prompt, { mdLogPath: graderMdLogPath }),
       });
     }
   }

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { StatsIndex } from '../../types/run.js';
+import type { ContextHint } from '../components/context-bar.js';
 import { formatTimestamp } from '../format.js';
 
 type RunEntry = StatsIndex['runs'][number];
@@ -10,6 +11,7 @@ interface RunManagerProps {
   onCleanup: () => void;
   onDeleteRun: (id: string) => void;
   onViewRun: (run: RunEntry) => void;
+  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 function formatDuration(ms: number): string {
@@ -29,8 +31,29 @@ export function RunManager({
   onCleanup,
   onDeleteRun,
   onViewRun,
+  onContextHintsChange,
 }: RunManagerProps) {
   const [cursor, setCursor] = useState(0);
+
+  // Clamp cursor when runs list shrinks (e.g. after deletion)
+  useEffect(() => {
+    if (runs.length > 0 && cursor >= runs.length) {
+      setCursor(runs.length - 1);
+    }
+  }, [runs.length, cursor]);
+
+  useEffect(() => {
+    if (runs.length === 0) {
+      onContextHintsChange?.([]);
+    } else {
+      onContextHintsChange?.([
+        { key: '↑↓', label: 'navigate' },
+        { key: '[Enter]', label: 'view' },
+        { key: '[Del]', label: 'delete' },
+        { key: '[c]', label: 'cleanup' },
+      ]);
+    }
+  }, [runs.length, onContextHintsChange]);
 
   useInput((input, key) => {
     if (runs.length === 0) return;
@@ -153,13 +176,6 @@ export function RunManager({
             </Box>
           );
         })}
-      </Box>
-
-      {/* Footer help */}
-      <Box marginTop={1}>
-        <Text color="gray">
-          up/down navigate  [Enter] view run  [Del] delete selected  [c] cleanup
-        </Text>
       </Box>
     </Box>
   );

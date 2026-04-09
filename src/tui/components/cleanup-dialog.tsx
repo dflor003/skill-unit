@@ -45,12 +45,7 @@ export function CleanupDialog({
       justifyContent="center"
       flexGrow={1}
     >
-      <Box
-        flexDirection="column"
-        borderStyle="round"
-        paddingX={4}
-        paddingY={1}
-      >
+      <Box flexDirection="column" borderStyle="round" paddingX={4} paddingY={1}>
         <Box marginBottom={1}>
           <Text bold>Clean up runs</Text>
           <Text color="gray"> ({totalRuns} total)</Text>
@@ -59,7 +54,9 @@ export function CleanupDialog({
         {OPTIONS.map((opt, idx) => {
           const isActive = idx === cursor;
           const wouldRemove =
-            opt.keepCount === 0 ? totalRuns : Math.max(0, totalRuns - opt.keepCount);
+            opt.keepCount === 0
+              ? totalRuns
+              : Math.max(0, totalRuns - opt.keepCount);
           const dimmed = wouldRemove === 0;
 
           return (
@@ -70,18 +67,13 @@ export function CleanupDialog({
               <Text bold={isActive} color={dimmed ? 'gray' : undefined}>
                 {opt.label}
               </Text>
-              {wouldRemove > 0 && (
-                <Text color="red">
-                  {' '}
-                  (-{wouldRemove})
-                </Text>
-              )}
+              {wouldRemove > 0 && <Text color="red"> (-{wouldRemove})</Text>}
             </Box>
           );
         })}
 
         <Box marginTop={1}>
-          <Text color="gray">[Enter] confirm  [Esc] cancel</Text>
+          <Text color="gray">[Enter] confirm [Esc] cancel</Text>
         </Box>
       </Box>
     </Box>

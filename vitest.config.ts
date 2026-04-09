@@ -12,6 +12,7 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.spec.ts', 'tests/**/*.spec.tsx'],
     pool: 'vmForks',
+    maxWorkers: 8,
     coverage: {
       provider: 'v8',
       include: ['src/**'],

@@ -64,15 +64,26 @@ describe('Options', () => {
     expect(output).toContain('timeout');
   });
 
-  it('should show edit hint in footer', () => {
+  it('should emit context hints on mount', () => {
+    // Arrange
+    const hintsCallback = vi.fn();
+
     // Act
-    const { lastFrame } = render(
-      <Options config={defaultConfig} onSave={() => {}} />
+    render(
+      <Options
+        config={defaultConfig}
+        onSave={() => {}}
+        onContextHintsChange={hintsCallback}
+      />
     );
 
     // Assert
-    expect(lastFrame()!).toContain('[Enter] edit');
-    expect(lastFrame()!).toContain('[s] save');
+    expect(hintsCallback).toHaveBeenCalled();
+    const hints =
+      hintsCallback.mock.calls[hintsCallback.mock.calls.length - 1][0];
+    const keys = hints.map((h: { key: string }) => h.key);
+    expect(keys).toContain('[Enter]');
+    expect(keys).toContain('[s]');
   });
 
   it('should show section headers', () => {

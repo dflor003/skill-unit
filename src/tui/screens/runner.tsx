@@ -28,7 +28,7 @@ export function Runner({
   const [maximizedId, setMaximizedId] = useState<string | null>(null);
   const [selectedTests, setSelectedTests] = useState<Set<string>>(new Set());
   const [selectionInitialized, setSelectionInitialized] = useState(false);
-  // Scroll state per test: { [testId]: { offset, following } }
+  // Scroll state per test+viewMode: { ["testId:execution"]: { offset, following } }
   const [scrollState, setScrollState] = useState<
     Record<string, { offset: number; following: boolean }>
   >({});
@@ -38,6 +38,13 @@ export function Runner({
   >({});
   // Track which tests the user has manually toggled (prevents auto-switch)
   const [manualToggled, setManualToggled] = useState<Set<string>>(new Set());
+
+  // Compose scroll state key from test ID + view mode so execution and
+  // grading transcripts scroll independently.
+  function scrollKey(testId: string): string {
+    const vm = viewModes[testId] ?? 'execution';
+    return `${testId}:${vm}`;
+  }
 
   useInput((input, key) => {
     if (tests.length === 0) return;
@@ -78,11 +85,12 @@ export function Runner({
       // Scroll up
       if (key.upArrow) {
         if (activeTestId) {
+          const sk = scrollKey(activeTestId);
           setScrollState((prev) => {
-            const curr = prev[activeTestId] ?? { offset: 0, following: true };
+            const curr = prev[sk] ?? { offset: 0, following: true };
             return {
               ...prev,
-              [activeTestId]: { offset: curr.offset + 3, following: false },
+              [sk]: { offset: curr.offset + 3, following: false },
             };
           });
         }
@@ -92,11 +100,12 @@ export function Runner({
       // Scroll down
       if (key.downArrow) {
         if (activeTestId) {
+          const sk = scrollKey(activeTestId);
           setScrollState((prev) => {
-            const curr = prev[activeTestId] ?? { offset: 0, following: true };
+            const curr = prev[sk] ?? { offset: 0, following: true };
             return {
               ...prev,
-              [activeTestId]: {
+              [sk]: {
                 offset: Math.max(0, curr.offset - 3),
                 following: curr.offset - 3 <= 0,
               },
@@ -109,9 +118,10 @@ export function Runner({
       // Follow mode
       if (input === 'f') {
         if (activeTestId) {
+          const sk = scrollKey(activeTestId);
           setScrollState((prev) => ({
             ...prev,
-            [activeTestId]: { offset: 0, following: true },
+            [sk]: { offset: 0, following: true },
           }));
         }
         return;
@@ -223,15 +233,21 @@ export function Runner({
     <Box flexDirection="column" flexGrow={1}>
       {viewMode === 'primary' ? (
         <>
-          {/* Header ticker strip */}
-          <Ticker sessions={tickerSessions} activeId={activeTestId} />
+          {/* Compact summary bar */}
+          <Ticker
+            sessions={tickerSessions}
+            activeId={activeTestId}
+            elapsed={elapsed}
+          />
 
           {/* Main content: progress sidebar + session panel */}
           <Box flexDirection="row" flexGrow={1}>
             {/* Left sidebar: progress tree */}
             <Box
               flexDirection="column"
-              width={30}
+              width={38}
+              flexShrink={0}
+              overflow="hidden"
               borderStyle="single"
               borderRight
               borderTop={false}
@@ -243,6 +259,7 @@ export function Runner({
               <ProgressTree
                 tests={tests}
                 elapsed={elapsed}
+                sidebarWidth={38}
                 selectable={status === 'complete'}
                 selected={selectedTests}
               />
@@ -259,12 +276,17 @@ export function Runner({
                   gradeTranscript={activeTest.gradeTranscript}
                   elapsed={elapsed}
                   viewMode={viewModes[activeTest.id] ?? 'execution'}
-                  scrollOffset={scrollState[activeTest.id]?.offset ?? 0}
-                  following={scrollState[activeTest.id]?.following ?? true}
+                  scrollOffset={
+                    scrollState[scrollKey(activeTest.id)]?.offset ?? 0
+                  }
+                  following={
+                    scrollState[scrollKey(activeTest.id)]?.following ?? true
+                  }
                   onScrollClamp={(clamped) => {
+                    const sk = scrollKey(activeTest.id);
                     setScrollState((prev) => ({
                       ...prev,
-                      [activeTest.id]: { offset: clamped, following: false },
+                      [sk]: { offset: clamped, following: false },
                     }));
                   }}
                 />
@@ -286,7 +308,7 @@ export function Runner({
           {/* Left sidebar: progress tree */}
           <Box
             flexDirection="column"
-            width={30}
+            width={38}
             borderStyle="single"
             borderRight
             borderTop={false}
@@ -298,6 +320,7 @@ export function Runner({
             <ProgressTree
               tests={tests}
               elapsed={elapsed}
+              sidebarWidth={38}
               selectable={status === 'complete'}
               selected={selectedTests}
             />

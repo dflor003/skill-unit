@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import type { StatsIndex, TestStats } from '../../types/run.js';
+import type { ContextHint } from '../components/context-bar.js';
 import { formatDate } from '../format.js';
 
 type SortField =
@@ -31,6 +32,7 @@ const SORT_LABELS: Record<SortField, string> = {
 
 interface StatisticsProps {
   index: StatsIndex;
+  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 function formatPassRate(rate: number): string {
@@ -76,8 +78,12 @@ function sortTests(
   });
 }
 
-export function Statistics({ index }: StatisticsProps) {
+export function Statistics({ index, onContextHintsChange }: StatisticsProps) {
   const [sortField, setSortField] = useState<SortField>('name');
+
+  useEffect(() => {
+    onContextHintsChange?.([{ key: '[s]', label: 'cycle sort' }]);
+  }, [onContextHintsChange]);
 
   useInput((input) => {
     if (input === 's' || input === 'S') {
@@ -239,11 +245,6 @@ export function Statistics({ index }: StatisticsProps) {
           })}
         </Box>
       )}
-
-      {/* Footer help */}
-      <Box marginTop={1}>
-        <Text color="gray">[s] cycle sort field</Text>
-      </Box>
     </Box>
   );
 }

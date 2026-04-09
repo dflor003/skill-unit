@@ -1,0 +1,66 @@
+# .skill-unit.yml
+# Place this file at your repo root to configure skill-unit for this project.
+# All fields are optional — skill-unit has sensible built-in defaults.
+
+# Directory where test spec files (*.spec.md) are discovered recursively.
+test-dir: skill-tests
+
+# Runner configuration — controls how test prompts are executed.
+# The runner script handles all CLI parameters internally for proper isolation.
+runner:
+  # The harness CLI to use. Supported: claude (more coming soon).
+  tool: claude
+  model: haiku
+  # Model to use for test execution (optional, uses harness default if omitted).
+  # model: sonnet
+  # Max conversation turns per test case.
+  max-turns: 25
+  # Maximum number of spec files to run their test runners in parallel.
+  # Each spec file launches its own runner process; this limits concurrency.
+  runner-concurrency: 5
+  # Tool permissions for test sessions. Controls what the harness agent can do.
+  # Built-in defaults allow: Read, Write, Edit, Bash, Glob, Grep, Agent, Skill
+  # Built-in defaults disallow: AskUserQuestion
+  #
+  # These lists fully REPLACE the built-in defaults when specified.
+  # Spec frontmatter can further override or extend via allowed-tools-extra
+  # and disallowed-tools-extra fields.
+  #
+  # allowed-tools:
+  #   - Read
+  #   - Write
+  #   - Edit
+  #   - Bash
+  #   - Glob
+  #   - Grep
+  #   - Agent
+  #   - Skill
+  # disallowed-tools:
+  #   - AskUserQuestion
+
+  # Output settings
+output:
+  # Display format for results. Use "json" for CI/CD pipelines and machine-readable output.
+  format: interactive
+
+  # When false, passing tests are collapsed to a single summary line.
+  # Set to true to show full expectation details for passing tests as well.
+  show-passing-details: false
+
+  # Logging verbosity. Options: debug, verbose, info, success, warn, error.
+  # The LOG_LEVEL environment variable takes precedence over this setting.
+  log-level: info
+
+# Execution settings
+execution:
+  # Default per-test timeout. Can be overridden per spec file via frontmatter.
+  timeout: 120s
+  # Maximum number of grader agents to run in parallel. Each test case is
+  # graded by a separate agent; this limits how many run concurrently.
+  grader-concurrency: 5
+
+# Default setup and teardown scripts. Applied to all spec files that do not
+# declare their own setup/teardown in frontmatter.
+defaults:
+  setup: setup.sh
+  teardown: teardown.sh
