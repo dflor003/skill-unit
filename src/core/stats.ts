@@ -103,23 +103,31 @@ export function recordRun(result: RunResult, baseDir: string): void {
   saveIndex(baseDir, index);
 }
 
-export function cleanupRuns(baseDir: string, keepCount: number): void {
+export function deleteRun(baseDir: string, runId: string): void {
   const index = loadIndex(baseDir);
   const runsDir = path.join(baseDir, 'runs');
 
-  if (index.runs.length <= keepCount) return;
+  // Remove from index
+  index.runs = index.runs.filter((r) => r.id !== runId);
 
-  const toRemove = index.runs.slice(0, index.runs.length - keepCount);
-  index.runs = index.runs.slice(index.runs.length - keepCount);
+  // Remove from filesystem
+  const runDir = path.join(runsDir, runId);
+  if (fs.existsSync(runDir)) {
+    fs.rmSync(runDir, { recursive: true, force: true });
+  }
 
-  for (const run of toRemove) {
-    const runDir = path.join(runsDir, run.id);
-    if (fs.existsSync(runDir)) {
-      fs.rmSync(runDir, { recursive: true, force: true });
-    }
+  // Also remove from .workspace/runs if present
+  const workspaceRunDir = path.join('.workspace', 'runs', runId);
+  if (fs.existsSync(workspaceRunDir)) {
+    fs.rmSync(workspaceRunDir, { recursive: true, force: true });
   }
 
   // Rebuild test stats from remaining runs
+  rebuildTestStats(index, runsDir);
+  saveIndex(baseDir, index);
+}
+
+function rebuildTestStats(index: StatsIndex, runsDir: string): void {
   index.tests = {};
   for (const runEntry of index.runs) {
     const runDir = path.join(runsDir, runEntry.id);
@@ -155,7 +163,6 @@ export function cleanupRuns(baseDir: string, keepCount: number): void {
     }
   }
 
-  // Recalculate aggregate
   const agg = index.aggregate;
   agg.totalRuns = index.runs.length;
   agg.totalTests = index.runs.reduce((sum, r) => sum + r.testCount, 0);
@@ -170,7 +177,25 @@ export function cleanupRuns(baseDir: string, keepCount: number): void {
     0
   );
   agg.passRate = totalTestRuns > 0 ? totalPassed / totalTestRuns : 0;
+}
 
+export function cleanupRuns(baseDir: string, keepCount: number): void {
+  const index = loadIndex(baseDir);
+  const runsDir = path.join(baseDir, 'runs');
+
+  if (index.runs.length <= keepCount) return;
+
+  const toRemove = index.runs.slice(0, index.runs.length - keepCount);
+  index.runs = index.runs.slice(index.runs.length - keepCount);
+
+  for (const run of toRemove) {
+    const runDir = path.join(runsDir, run.id);
+    if (fs.existsSync(runDir)) {
+      fs.rmSync(runDir, { recursive: true, force: true });
+    }
+  }
+
+  rebuildTestStats(index, runsDir);
   saveIndex(baseDir, index);
 }
 

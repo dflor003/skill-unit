@@ -47,8 +47,12 @@ fi
 
 # Copy default config if none exists at repo root
 if [ ! -f ".skill-unit.yml" ]; then
-  cp "$PLUGIN_ROOT/templates/.skill-unit.yml" ".skill-unit.yml"
-  echo "Created .skill-unit.yml"
+  if [ -f "$PLUGIN_ROOT/templates/.skill-unit.yml" ]; then
+    cp "$PLUGIN_ROOT/templates/.skill-unit.yml" ".skill-unit.yml"
+    echo "Created .skill-unit.yml"
+  else
+    echo "No .skill-unit.yml found; the CLI/TUI Options screen will generate one on first save."
+  fi
 fi
 
 echo "Done."

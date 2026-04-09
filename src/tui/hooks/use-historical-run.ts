@@ -21,9 +21,13 @@ export function loadHistoricalRun(
     };
   }
 
+  // Only match execution transcripts (exclude grader-transcript.md)
   const files = fs
     .readdirSync(resultsDir)
-    .filter((f) => f.endsWith('.transcript.md'));
+    .filter(
+      (f) =>
+        f.endsWith('.transcript.md') && !f.endsWith('.grader-transcript.md')
+    );
 
   for (const transcriptFile of files) {
     const withoutExt = transcriptFile.replace(/\.transcript\.md$/, '');
@@ -36,18 +40,27 @@ export function loadHistoricalRun(
     const transcriptPath = path.join(resultsDir, transcriptFile);
     const transcriptContent = fs.readFileSync(transcriptPath, 'utf-8');
 
+    // Load grading verdict to determine pass/fail and test name
     const resultsFile = `${specName}.${testId}.results.md`;
     const resultsPath = path.join(resultsDir, resultsFile);
-    let gradeContent = '';
+    let resultsContent = '';
     let passed = false;
     if (fs.existsSync(resultsPath)) {
-      gradeContent = fs.readFileSync(resultsPath, 'utf-8');
+      resultsContent = fs.readFileSync(resultsPath, 'utf-8');
       passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(
-        gradeContent
+        resultsContent
       );
     }
 
-    const headingMatch = gradeContent.match(
+    // Load grader conversation transcript (separate from verdict)
+    const graderFile = `${specName}.${testId}.grader-transcript.md`;
+    const graderPath = path.join(resultsDir, graderFile);
+    let graderContent = '';
+    if (fs.existsSync(graderPath)) {
+      graderContent = fs.readFileSync(graderPath, 'utf-8');
+    }
+
+    const headingMatch = resultsContent.match(
       /^#\s+(?:Results|Test Result):\s*(\S+?)(?:\s*:\s*|\s+—\s*|\s+--\s+)(.+)$/m
     );
     const testName = headingMatch ? headingMatch[2].trim() : testId;
@@ -61,7 +74,7 @@ export function loadHistoricalRun(
       status,
       durationMs: 0,
       transcript: [transcriptContent],
-      gradeTranscript: gradeContent ? [gradeContent] : [],
+      gradeTranscript: graderContent ? [graderContent] : [],
       activity: '',
     });
   }

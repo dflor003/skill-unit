@@ -64,13 +64,13 @@ export function SessionPanel({
   following = true,
   onScrollClamp,
 }: SessionPanelProps) {
-  const ref = useRef<DOMElement>(null);
-  const [panelHeight, setPanelHeight] = useState(24);
+  const contentRef = useRef<DOMElement>(null);
+  const [contentHeight, setContentHeight] = useState(20);
 
   useEffect(() => {
-    if (ref.current) {
-      const { height } = measureElement(ref.current);
-      if (height > 0) setPanelHeight(height);
+    if (contentRef.current) {
+      const { height } = measureElement(contentRef.current);
+      if (height > 0) setContentHeight(height);
     }
   });
 
@@ -89,8 +89,11 @@ export function SessionPanel({
     viewMode === 'grading' ? gradeTranscript : transcript;
   const allLines = activeTranscript.join('\n').split('\n');
 
-  // Reserve ~4 lines for header + view mode indicator + follow indicator
-  const visibleLines = Math.max(1, panelHeight - 4);
+  // contentHeight is the measured height of the content row Box.
+  // Subtract 2 lines as buffer: long lines wrap and blank lines in
+  // rendered markdown can consume extra visual rows, so being
+  // conservative prevents the last few lines from being clipped.
+  const visibleLines = Math.max(1, contentHeight - 2);
 
   // Clamp offset so it never exceeds the scrollable range
   const maxOffset = Math.max(0, allLines.length - visibleLines);
@@ -114,8 +117,9 @@ export function SessionPanel({
   const showFollowIndicator = !following && effectiveOffset > 0;
 
   return (
-    <Box ref={ref} flexDirection="column" flexGrow={1}>
+    <Box flexDirection="column" flexGrow={1}>
       <Box
+        flexShrink={0}
         borderStyle="single"
         borderBottom
         borderTop={false}
@@ -128,25 +132,35 @@ export function SessionPanel({
         <Text color={color}>[{label}]</Text>
         <Text color="gray"> {formatElapsed(elapsed)}</Text>
       </Box>
-      <Box paddingX={1}>
+      <Box
+        flexShrink={0}
+        paddingX={1}
+        borderStyle="single"
+        borderBottom
+        borderTop={false}
+        borderLeft={false}
+        borderRight={false}
+      >
         {viewMode === 'execution' ? (
           <Text>
-            <Text bold color="cyan">
-              [Execution]
+            <Text bold color="white" backgroundColor="blue">
+              {' '}
+              Execution{' '}
             </Text>
-            <Text color="gray"> | Grading</Text>
+            <Text color="gray"> Grading</Text>
           </Text>
         ) : (
           <Text>
-            <Text color="gray">Execution | </Text>
-            <Text bold color="cyan">
-              [Grading]
+            <Text color="gray">Execution </Text>
+            <Text bold color="white" backgroundColor="blue">
+              {' '}
+              Grading{' '}
             </Text>
           </Text>
         )}
         <Text color="gray"> [t] toggle</Text>
       </Box>
-      <Box flexDirection="row" flexGrow={1} overflow="hidden">
+      <Box ref={contentRef} flexDirection="row" flexGrow={1} overflow="hidden">
         <Box flexDirection="column" paddingX={1} flexGrow={1} overflow="hidden">
           {activeTranscript.length === 0 ? (
             <Text color="gray">Waiting for output...</Text>
@@ -162,7 +176,7 @@ export function SessionPanel({
         />
       </Box>
       {showFollowIndicator && (
-        <Box paddingX={1}>
+        <Box flexShrink={0} paddingX={1}>
           <Text color="yellow">[f] follow</Text>
         </Box>
       )}

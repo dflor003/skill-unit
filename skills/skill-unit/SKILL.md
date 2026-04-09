@@ -354,8 +354,4 @@ For detailed documentation, consult these files as needed:
 
 ## Configuration
 
-The framework reads `.skill-unit.yml` from the repository root. See `templates/.skill-unit.yml` for all available options with documentation. A template can be copied with:
-
-```bash
-cp ${CLAUDE_SKILL_DIR}/templates/.skill-unit.yml .skill-unit.yml
-```
+The framework reads `.skill-unit.yml` from the repository root. When running the CLI/TUI, saving options from the Options screen generates this file automatically with all defaults and comments. When running through the skill, the `setup-tests.sh` script creates it if missing.

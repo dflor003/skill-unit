@@ -10,12 +10,12 @@
     "dist/"
   ],
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "scripts": {
     "su": "tsx src/cli/index.ts",
     "dev": "npm run su",
-    "build": "tsc",
+    "build": "tsc && cp src/config/default-config.yml dist/config/default-config.yml",
     "lint": "eslint src/",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

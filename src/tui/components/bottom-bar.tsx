@@ -27,6 +27,7 @@ export function BottomBar({
 
     return (
       <Box
+        flexShrink={0}
         borderStyle="single"
         borderTop
         borderBottom={false}
@@ -53,6 +54,7 @@ export function BottomBar({
 
     return (
       <Box
+        flexShrink={0}
         borderStyle="single"
         borderTop
         borderBottom={false}
@@ -77,6 +79,7 @@ export function BottomBar({
 
   return (
     <Box
+      flexShrink={0}
       borderStyle="single"
       borderTop
       borderBottom={false}
@@ -96,7 +99,9 @@ export function BottomBar({
           </Box>
         ))}
       </Box>
-      <Text color="gray">Tab: next [Q]uit skill-unit v0.0.1</Text>
+      <Text color="gray">
+        Tab/Shift+Tab: next/prev [Q]uit skill-unit v0.0.1
+      </Text>
     </Box>
   );
 }

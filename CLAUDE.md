@@ -33,6 +33,10 @@ docs/
   plans/          # Implementation plans
 ```
 
+## Working with the User
+
+- Do not make assumptions about the user's intentions. Always ask clarifying questions if the task is ambiguous.
+
 ## Running and Writing Tests
 
 - **Running tests**: Run `/skill-unit` or ask to "run skill tests." The skill handles execution, isolation, and reporting.

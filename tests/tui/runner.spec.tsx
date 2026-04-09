@@ -109,7 +109,7 @@ describe('Ticker', () => {
       <Ticker sessions={sessions} activeId="TEST-1" />
     );
     const output = lastFrame()!;
-    expect(output).toContain('basic');
-    expect(output).toContain('error');
+    expect(output).toContain('1 running');
+    expect(output).toContain('1 grading');
   });
 });

@@ -7,6 +7,7 @@ import {
   loadIndex,
   rebuildIndex,
   cleanupRuns,
+  deleteRun,
   createEmptyIndex,
 } from '../../src/core/stats.js';
 import type { RunResult } from '../../src/types/run.js';
@@ -141,6 +142,65 @@ describe('stats', () => {
       const runsDir = path.join(tmpDir, 'runs');
       const remaining = fs.readdirSync(runsDir);
       expect(remaining).toHaveLength(2);
+    });
+  });
+
+  describe('deleteRun', () => {
+    it('removes run from index and filesystem', () => {
+      // Arrange
+      recordRun(makeRunResult({ id: 'run-a' }), tmpDir);
+      recordRun(makeRunResult({ id: 'run-b' }), tmpDir);
+      recordRun(makeRunResult({ id: 'run-c' }), tmpDir);
+
+      // Act
+      deleteRun(tmpDir, 'run-b');
+
+      // Assert
+      const index = loadIndex(tmpDir);
+      expect(index.runs).toHaveLength(2);
+      expect(index.runs.map((r) => r.id)).toEqual(['run-a', 'run-c']);
+      expect(fs.existsSync(path.join(tmpDir, 'runs', 'run-b'))).toBe(false);
+      expect(fs.existsSync(path.join(tmpDir, 'runs', 'run-a'))).toBe(true);
+      expect(fs.existsSync(path.join(tmpDir, 'runs', 'run-c'))).toBe(true);
+    });
+
+    it('rebuilds aggregate stats after deletion', () => {
+      // Arrange
+      recordRun(makeRunResult({ id: 'run-a' }), tmpDir);
+      recordRun(makeRunResult({ id: 'run-b' }), tmpDir);
+
+      // Act
+      deleteRun(tmpDir, 'run-a');
+
+      // Assert
+      const index = loadIndex(tmpDir);
+      expect(index.aggregate.totalRuns).toBe(1);
+    });
+
+    it('handles deleting the last remaining run', () => {
+      // Arrange
+      recordRun(makeRunResult({ id: 'run-only' }), tmpDir);
+
+      // Act
+      deleteRun(tmpDir, 'run-only');
+
+      // Assert
+      const index = loadIndex(tmpDir);
+      expect(index.runs).toHaveLength(0);
+      expect(index.aggregate.totalRuns).toBe(0);
+      expect(index.tests).toEqual({});
+    });
+
+    it('handles deleting a nonexistent run gracefully', () => {
+      // Arrange
+      recordRun(makeRunResult({ id: 'run-a' }), tmpDir);
+
+      // Act -- should not throw
+      deleteRun(tmpDir, 'does-not-exist');
+
+      // Assert
+      const index = loadIndex(tmpDir);
+      expect(index.runs).toHaveLength(1);
     });
   });
 

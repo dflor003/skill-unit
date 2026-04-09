@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -56,13 +56,22 @@ jobs:
       (github.event_name == 'workflow_dispatch' && inputs.run-skill-tests == true) ||
       (github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'run-skill-tests'))
     env:
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: lts/*
+          cache: npm
+
+      - name: Verify Node.js
+        run: |
+          node --version
+          npm --version
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Install Claude CLI
         run: |
@@ -71,6 +80,15 @@ jobs:
 
       - name: Verify Claude CLI
         run: claude --version
+
+      - name: Verify auth token is present
+        run: |
+          if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN is empty. Check the GitHub secret name matches."
+            exit 1
+          fi
+          echo "Token length: ${#CLAUDE_CODE_OAUTH_TOKEN}"
+          echo "Token prefix: ${CLAUDE_CODE_OAUTH_TOKEN:0:8}..."
 
       - name: Run skill-unit tests
         run: npm run test:skills

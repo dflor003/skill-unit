@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import path from 'node:path';
 import { Box, useInput, useStdout } from 'ink';
 import {
@@ -6,6 +6,7 @@ import {
   type Screen,
   type RunViewMode,
 } from './components/bottom-bar.js';
+import { ContextBar, type ContextHint } from './components/context-bar.js';
 import { ConfirmDialog } from './components/confirm-dialog.js';
 import { CleanupDialog } from './components/cleanup-dialog.js';
 import { Dashboard } from './screens/dashboard.js';
@@ -15,37 +16,26 @@ import { Statistics } from './screens/stats.js';
 import { Options } from './screens/options.js';
 import { useTestRun, type TestRunState } from './hooks/use-test-run.js';
 import { loadHistoricalRun } from './hooks/use-historical-run.js';
-import { loadConfig } from '../config/loader.js';
+import { loadConfig, CONFIG_DEFAULTS } from '../config/loader.js';
 import { discoverSpecPaths } from '../core/discovery.js';
 import {
   parseSpecFile,
   buildManifest,
   formatTimestamp,
 } from '../core/compiler.js';
-import { loadIndex, cleanupRuns } from '../core/stats.js';
+import { loadIndex, cleanupRuns, deleteRun } from '../core/stats.js';
+import { saveConfig } from '../config/loader.js';
 import type { Spec } from '../types/spec.js';
 import type { StatsIndex } from '../types/run.js';
 import type { SkillUnitConfig } from '../types/config.js';
 
 const STATS_BASE_DIR = '.skill-unit';
 
-const DEFAULT_CONFIG: SkillUnitConfig = {
-  'test-dir': 'skill-tests',
-  runner: { tool: 'claude', model: null, 'max-turns': 10, concurrency: 5 },
-  output: {
-    format: 'interactive',
-    'show-passing-details': false,
-    'log-level': 'info',
-  },
-  execution: { timeout: '120s' },
-  defaults: { setup: 'setup.sh', teardown: 'teardown.sh' },
-};
-
 export function App() {
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [previousScreen, setPreviousScreen] = useState<Screen>('dashboard');
   const [specs, setSpecs] = useState<Spec[]>([]);
-  const [appConfig, setAppConfig] = useState<SkillUnitConfig>(DEFAULT_CONFIG);
+  const [appConfig, setAppConfig] = useState<SkillUnitConfig>(CONFIG_DEFAULTS);
   const [statsIndex, setStatsIndex] = useState<StatsIndex>(() => ({
     version: 1,
     lastUpdated: new Date().toISOString(),
@@ -61,6 +51,18 @@ export function App() {
   }));
   const [runState, { startRun, executeRun, selectTest, cancelRun }] =
     useTestRun();
+
+  // Refresh stats index when a run completes
+  useEffect(() => {
+    if (runState.status === 'complete') {
+      try {
+        const index = loadIndex(STATS_BASE_DIR);
+        setStatsIndex(index);
+      } catch {
+        // Non-fatal
+      }
+    }
+  }, [runState.status]);
   const [historicalRun, setHistoricalRun] = useState<TestRunState | null>(null);
   const [historicalActiveTestId, setHistoricalActiveTestId] = useState<
     string | null
@@ -69,6 +71,10 @@ export function App() {
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
   const [isEditingField, setIsEditingField] = useState(false);
   const [runnerViewMode, setRunnerViewMode] = useState<RunViewMode>('primary');
+  const [contextHints, setContextHints] = useState<ContextHint[]>([]);
+  const handleContextHintsChange = useCallback((hints: ContextHint[]) => {
+    setContextHints(hints);
+  }, []);
   const { stdout } = useStdout();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
 
@@ -99,6 +105,11 @@ export function App() {
       // Non-fatal: leave stats index empty if loading fails
     }
   }, []);
+
+  function handleSaveConfig(config: SkillUnitConfig) {
+    saveConfig('.skill-unit.yml', config);
+    setAppConfig(config);
+  }
 
   function handleCleanup() {
     setShowCleanupDialog(true);
@@ -167,9 +178,9 @@ export function App() {
 
   function handleDeleteRun(id: string) {
     try {
+      deleteRun(STATS_BASE_DIR, id);
       const index = loadIndex(STATS_BASE_DIR);
-      index.runs = index.runs.filter((r) => r.id !== id);
-      setStatsIndex({ ...index });
+      setStatsIndex(index);
     } catch {
       // Non-fatal
     }
@@ -223,7 +234,10 @@ export function App() {
     if (key.tab) {
       setScreen((prev) => {
         const idx = NAV_SCREENS.indexOf(prev);
-        return NAV_SCREENS[(idx + 1) % NAV_SCREENS.length];
+        const delta = key.shift ? -1 : 1;
+        return NAV_SCREENS[
+          (idx + delta + NAV_SCREENS.length) % NAV_SCREENS.length
+        ];
       });
     }
     if (input === 'q' || (key.ctrl && input === 'c')) process.exit(0);
@@ -248,6 +262,8 @@ export function App() {
           {screen === 'dashboard' && (
             <Dashboard
               specs={specs}
+              testDir={appConfig['test-dir']}
+              onContextHintsChange={handleContextHintsChange}
               onRunTests={(tests) => {
                 setHistoricalRun(null);
                 setPreviousScreen('dashboard');
@@ -290,11 +306,22 @@ export function App() {
               onCleanup={handleCleanup}
               onDeleteRun={handleDeleteRun}
               onViewRun={handleViewRun}
+              onContextHintsChange={handleContextHintsChange}
             />
           )}
-          {screen === 'stats' && <Statistics index={statsIndex} />}
+          {screen === 'stats' && (
+            <Statistics
+              index={statsIndex}
+              onContextHintsChange={handleContextHintsChange}
+            />
+          )}
           {screen === 'options' && (
-            <Options config={appConfig} onSave={setAppConfig} onEditingChange={setIsEditingField} />
+            <Options
+              config={appConfig}
+              onSave={handleSaveConfig}
+              onEditingChange={setIsEditingField}
+              onContextHintsChange={handleContextHintsChange}
+            />
           )}
           {screen === 'runner' && (
             <Runner
@@ -315,6 +342,9 @@ export function App() {
             />
           )}
         </Box>
+      )}
+      {screen !== 'runner' && !showCleanupDialog && (
+        <ContextBar hints={contextHints} />
       )}
       <BottomBar
         activeScreen={screen}

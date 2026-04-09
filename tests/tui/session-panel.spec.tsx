@@ -89,7 +89,8 @@ describe('SessionPanel', () => {
         />
       );
       const output = lastFrame()!;
-      expect(output).toContain('[Execution]');
+      expect(output).toContain('Execution');
+      expect(output).toContain('[t] toggle');
     });
   });
 

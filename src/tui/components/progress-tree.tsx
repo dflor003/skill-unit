@@ -7,11 +7,13 @@ interface TestEntry {
   name: string;
   status: TestStatus;
   durationMs: number;
+  activity?: string;
 }
 
 interface ProgressTreeProps {
   tests: TestEntry[];
   elapsed: number;
+  sidebarWidth?: number;
   selectable?: boolean;
   selected?: Set<string>;
 }
@@ -37,59 +39,59 @@ function statusIcon(status: TestStatus): { symbol: string; color: string } {
   }
 }
 
-function formatElapsed(ms: number): string {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  if (m > 0) return `${m}m${s % 60}s`;
-  return `${s}s`;
-}
-
 function formatDuration(ms: number): string {
   if (ms === 0) return '';
   return ` ${(ms / 1000).toFixed(1)}s`;
 }
 
+function truncate(str: string, max: number): string {
+  if (str.length <= max) return str;
+  return str.slice(0, max - 1) + '…';
+}
+
 export function ProgressTree({
   tests,
-  elapsed,
+  sidebarWidth = 38,
   selectable,
   selected,
 }: ProgressTreeProps) {
-  const completed = tests.filter(
-    (t) =>
-      t.status === 'passed' ||
-      t.status === 'failed' ||
-      t.status === 'timedout' ||
-      t.status === 'error' ||
-      t.status === 'cancelled'
-  ).length;
-  const total = tests.length;
+  // Usable width: total - border(1) - paddingRight(1) - icon(up to 2) - space(1) - safety(1)
+  const checkboxWidth = selectable ? 5 : 0; // "[x] " with extra safety
+  const nameWidth = sidebarWidth - 5 - checkboxWidth; // icon(2) + space + border + padding
 
   return (
     <Box flexDirection="column">
-      <Box marginBottom={1}>
-        <Text bold>Tests </Text>
-        <Text color="gray">
-          {completed}/{total} ({formatElapsed(elapsed)})
-        </Text>
-      </Box>
       {tests.map((test) => {
         const { symbol, color } = statusIcon(test.status);
-        const isRunning = test.status === 'running';
+        const isRunning =
+          test.status === 'running' || test.status === 'grading';
         const isSelected = selected?.has(test.id) ?? false;
+        const duration = formatDuration(test.durationMs);
+        const maxName = nameWidth - duration.length;
+        const displayName = truncate(test.name, Math.max(8, maxName));
+
+        const showActivity = isRunning && !!test.activity;
+
         return (
-          <Box key={test.id}>
-            {selectable && (
-              <Text color={isSelected ? 'blue' : 'gray'}>
-                {isSelected ? '[x]' : '[ ]'}{' '}
-              </Text>
+          <React.Fragment key={test.id}>
+            <Box>
+              {selectable && (
+                <Text color={isSelected ? 'blue' : 'gray'}>
+                  {isSelected ? '[x]' : '[ ]'}{' '}
+                </Text>
+              )}
+              <Text color={color}>{symbol} </Text>
+              <Text bold={isRunning}>{displayName}</Text>
+              {test.durationMs > 0 && <Text color="gray">{duration}</Text>}
+            </Box>
+            {showActivity && (
+              <Box marginLeft={checkboxWidth + 3}>
+                <Text color="gray" dimColor>
+                  {truncate(test.activity!, maxName)}
+                </Text>
+              </Box>
             )}
-            <Text color={color}>{symbol} </Text>
-            <Text bold={isRunning}>{test.name}</Text>
-            {test.durationMs > 0 && (
-              <Text color="gray">{formatDuration(test.durationMs)}</Text>
-            )}
-          </Box>
+          </React.Fragment>
         );
       })}
     </Box>

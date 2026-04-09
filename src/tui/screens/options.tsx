@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { Select, TextInput } from '@inkjs/ui';
 import type { SkillUnitConfig, LogLevel } from '../../types/config.js';
+import type { ContextHint } from '../components/context-bar.js';
 
 interface OptionsProps {
   config: SkillUnitConfig;
   onSave: (config: SkillUnitConfig) => void;
   onEditingChange?: (editing: boolean) => void;
+  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 type FieldType = 'enum' | 'boolean' | 'number' | 'string';
@@ -122,13 +124,51 @@ const FIELDS: FieldDef[] = [
   },
 ];
 
-export function Options({ config, onSave, onEditingChange }: OptionsProps) {
+export function Options({
+  config,
+  onSave,
+  onEditingChange,
+  onContextHintsChange,
+}: OptionsProps) {
   const [cursor, setCursor] = useState(0);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<SkillUnitConfig>(config);
   const [saved, setSaved] = useState(false);
 
+  // Reset draft when the saved config changes (e.g., navigating away and back)
+  useEffect(() => {
+    setDraft(config);
+  }, [config]);
+
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(config);
+
+  useEffect(() => {
+    if (editingIndex !== null) {
+      const field = FIELDS[editingIndex];
+      if (field.type === 'enum') {
+        onContextHintsChange?.([
+          { key: '↑↓', label: 'navigate' },
+          { key: '[Enter]', label: 'select' },
+          { key: '[Esc]', label: 'cancel' },
+        ]);
+      } else {
+        onContextHintsChange?.([
+          { key: '[Enter]', label: 'submit' },
+          { key: '[Esc]', label: 'cancel' },
+        ]);
+      }
+    } else {
+      const hints: ContextHint[] = [
+        { key: '↑↓', label: 'navigate' },
+        { key: '[Enter]', label: 'edit' },
+        { key: '[s]', label: 'save' },
+      ];
+      if (hasChanges) {
+        hints.push({ key: '[Esc]', label: 'discard' });
+      }
+      onContextHintsChange?.(hints);
+    }
+  }, [editingIndex, hasChanges, onContextHintsChange]);
 
   function startEditing(index: number) {
     setEditingIndex(index);
@@ -167,6 +207,8 @@ export function Options({ config, onSave, onEditingChange }: OptionsProps) {
       onSave(draft);
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
+    } else if (key.escape && hasChanges) {
+      setDraft(config);
     }
   });
 
@@ -217,17 +259,16 @@ export function Options({ config, onSave, onEditingChange }: OptionsProps) {
         );
       })}
 
-      <Box marginTop={1}>
-        {saved ? (
+      {saved && (
+        <Box marginTop={1}>
           <Text color="green">Saved.</Text>
-        ) : (
-          <Text color="gray">
-            {'[Enter] edit  [s] save  [up/down] navigate'}
-            {hasChanges ? ' ' : ''}
-          </Text>
-        )}
-        {!saved && hasChanges && <Text color="yellow">(unsaved changes)</Text>}
-      </Box>
+        </Box>
+      )}
+      {!saved && hasChanges && (
+        <Box marginTop={1}>
+          <Text color="yellow">(unsaved changes)</Text>
+        </Box>
+      )}
     </Box>
   );
 }
