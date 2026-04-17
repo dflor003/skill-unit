@@ -25,9 +25,9 @@ jobs:
       matrix:
         node-version: [22, 24, 25]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
@@ -58,9 +58,9 @@ jobs:
     env:
       CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: lts/*
           cache: npm
@@ -81,21 +81,29 @@ jobs:
       - name: Verify Claude CLI
         run: claude --version
 
-      - name: Verify auth token is present
+      - name: Verify Claude Token is present
         run: |
           if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
             echo "::error::CLAUDE_CODE_OAUTH_TOKEN is empty. Check the GitHub secret name matches."
             exit 1
           fi
           echo "Token length: ${#CLAUDE_CODE_OAUTH_TOKEN}"
-          echo "Token prefix: ${CLAUDE_CODE_OAUTH_TOKEN:0:8}..."
 
       - name: Run skill-unit tests
-        run: npm run test:skills
+        run: npm run test:skills -- --junit test-results/junit.xml
+
+      - name: Publish test report
+        if: always()
+        uses: dorny/test-reporter@v3
+        with:
+          name: Skill-Unit Tests
+          path: test-results/junit.xml
+          reporter: java-junit
+          fail-on-error: false
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: skill-unit-results
           path: .workspace/runs/

@@ -189,7 +189,7 @@ describe('Dashboard', () => {
   });
 
   it('runs selected tests when Enter is pressed', async () => {
-    // Arrange
+    // Arrange -- cursor starts on the group; arrow down to land on first test
     const onRunTests = vi.fn();
     const { stdin, lastFrame } = render(
       <Dashboard
@@ -199,11 +199,17 @@ describe('Dashboard', () => {
       />
     );
 
-    // Act -- press Space to select first test, wait for state update, then Enter
+    // Act -- move from group to TEST-1, select it with space, then Enter
+    stdin.write('\x1b[B'); // arrow down
+    await vi.waitFor(() => {
+      expect(lastFrame()).toMatch(/>\s+\[ \]\s+basic-usage/);
+    });
+    await new Promise((r) => setImmediate(r));
     stdin.write(' ');
     await vi.waitFor(() => {
       expect(lastFrame()).toContain('(1 selected)');
     });
+    await new Promise((r) => setImmediate(r));
     stdin.write('\r');
     await vi.waitFor(() => {
       expect(onRunTests).toHaveBeenCalledTimes(1);
@@ -212,5 +218,114 @@ describe('Dashboard', () => {
     // Assert
     expect(onRunTests.mock.calls[0][0]).toHaveLength(1);
     expect(onRunTests.mock.calls[0][0][0].testCase.id).toBe('TEST-1');
+  });
+
+  describe('when cursor is on a group', () => {
+    it('should select all tests in the group when Space is pressed', async () => {
+      // Arrange -- cursor starts on the group header (index 0)
+      const onRunTests = vi.fn();
+      const { stdin, lastFrame } = render(
+        <Dashboard
+          specs={mockSpecs}
+          testDir="skill-tests"
+          onRunTests={onRunTests}
+        />
+      );
+
+      // Act
+      stdin.write(' ');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain('(2 selected)');
+      });
+
+      // Assert
+      expect(lastFrame()).toContain('(2 selected)');
+    });
+
+    it('should deselect all tests in the group when Space is pressed again', async () => {
+      // Arrange
+      const { stdin, lastFrame } = render(
+        <Dashboard
+          specs={mockSpecs}
+          testDir="skill-tests"
+          onRunTests={() => {}}
+        />
+      );
+
+      // Act -- select then deselect
+      stdin.write(' ');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain('(2 selected)');
+      });
+      stdin.write(' ');
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain('selected');
+      });
+
+      // Assert
+      expect(lastFrame()).not.toContain('selected');
+    });
+  });
+
+  describe('group checkbox states', () => {
+    it('should render [ ] when no tests in the group are selected', () => {
+      // Arrange / Act
+      const { lastFrame } = render(
+        <Dashboard
+          specs={mockSpecs}
+          testDir="skill-tests"
+          onRunTests={() => {}}
+        />
+      );
+
+      // Assert
+      const output = lastFrame()!;
+      expect(output).toMatch(/\[ \]\s+runner/);
+    });
+
+    it('should render [x] when all tests in the group are selected', async () => {
+      // Arrange
+      const { stdin, lastFrame } = render(
+        <Dashboard
+          specs={mockSpecs}
+          testDir="skill-tests"
+          onRunTests={() => {}}
+        />
+      );
+
+      // Act -- space on group to select all
+      stdin.write(' ');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain('(2 selected)');
+      });
+
+      // Assert
+      expect(lastFrame()!).toMatch(/\[x\]\s+runner/);
+    });
+
+    it('should render [-] when some but not all tests are selected', async () => {
+      // Arrange -- navigate to first test, select just that one
+      const { stdin, lastFrame } = render(
+        <Dashboard
+          specs={mockSpecs}
+          testDir="skill-tests"
+          onRunTests={() => {}}
+        />
+      );
+
+      // Act -- arrow down to test, space to select one
+      stdin.write('\x1b[B');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toMatch(/>\s+\[ \]\s+basic-usage/);
+      });
+      await new Promise((r) => setImmediate(r));
+      stdin.write(' ');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain('(1 selected)');
+      });
+
+      // Assert
+      expect(lastFrame()!).toMatch(/\[-\]\s+runner/);
+    });
   });
 });

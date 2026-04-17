@@ -532,13 +532,15 @@ export async function gradeSpecs(
       `${task.specName}.${task.testId}.results.md`
     );
     if (!fs.existsSync(resultsPath)) {
-      gradeLog.warn(`Missing results file for ${task.testId}: ${resultsPath}`);
+      gradeLog.verbose(
+        `Missing results file for ${task.testId}: ${resultsPath}`
+      );
       missing++;
     }
   }
 
   if (missing > 0) {
-    gradeLog.warn(`${missing} result file(s) missing`);
+    gradeLog.verbose(`${missing} result file(s) missing`);
   } else {
     gradeLog.success('All result files written');
   }

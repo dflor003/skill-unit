@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { defineCommand } from 'citty';
 import { loadConfig } from '../../config/loader.js';
@@ -10,6 +11,8 @@ import {
 import { runTest } from '../../core/runner.js';
 import { gradeSpecs } from '../../core/grader.js';
 import { generateReport, generateSummary } from '../../core/reporter.js';
+import { formatCiReport } from '../../core/ci-reporter.js';
+import { generateJUnitXml } from '../../core/junit.js';
 import { recordRun } from '../../core/stats.js';
 import { createLogger } from '../../core/logger.js';
 import type {
@@ -66,7 +69,7 @@ function runTestAsync(
   outputTokens: number;
 }> {
   return new Promise((resolve, reject) => {
-    const handle = runTest(manifest, testCase, config);
+    const handle = runTest(manifest, testCase, config, { silent: noStream });
 
     handle.on('output', (chunk: string) => {
       if (!noStream) {
@@ -135,8 +138,16 @@ export const testCommand = defineCommand({
     },
     ci: {
       type: 'boolean',
+      description: 'Alias for --reporter=ci',
+    },
+    reporter: {
+      type: 'string',
       description:
-        'Enable CI mode (non-interactive, exits non-zero on failure)',
+        'Output reporter: "default" (streaming transcripts) or "ci" (compact, jest-like). Auto-selects "ci" when CI env var is set.',
+    },
+    junit: {
+      type: 'string',
+      description: 'Write JUnit XML to the given path.',
     },
     'no-stream': {
       type: 'boolean',
@@ -144,6 +155,22 @@ export const testCommand = defineCommand({
     },
   },
   async run({ args, rawArgs }) {
+    // Resolve reporter mode: explicit flag > --ci alias > CI env auto-detect > default
+    const explicitReporter = args.reporter as string | undefined;
+    const reporter: 'default' | 'ci' =
+      explicitReporter === 'ci' || explicitReporter === 'default'
+        ? explicitReporter
+        : args.ci
+          ? 'ci'
+          : process.env.CI
+            ? 'ci'
+            : 'default';
+
+    // In CI mode, raise log level so INF lines don't flood stdout/stderr
+    if (reporter === 'ci' && !process.env.LOG_LEVEL) {
+      createLogger.setLevel('warn');
+    }
+
     const log = createLogger('test');
     const config = loadConfig(args.config ?? '.skill-unit.yml');
 
@@ -170,6 +197,8 @@ export const testCommand = defineCommand({
       args.model,
       args.timeout,
       args['max-turns'],
+      args.reporter,
+      args.junit,
     ].filter(Boolean);
     const positional = rawArgs.filter(
       (a) => !a.startsWith('-') && !knownValues.includes(a)
@@ -203,7 +232,7 @@ export const testCommand = defineCommand({
     const maxTurnsOverride = args['max-turns']
       ? parseInt(args['max-turns'], 10)
       : null;
-    const noStream = !!args['no-stream'];
+    const noStream = !!args['no-stream'] || reporter === 'ci';
 
     const manifests = filtered.map((spec) =>
       buildManifest(spec, config, {
@@ -314,12 +343,14 @@ export const testCommand = defineCommand({
             ? ('passed' as const)
             : ('failed' as const);
 
-      // Look up the test name from the filtered specs
+      // Look up the test name and spec file path from the filtered specs
       let testName = tr.testCase.id;
+      let specPath: string | undefined;
       for (const spec of filtered) {
         const tc = spec.testCases.find((c) => c.id === tr.testCase.id);
         if (tc) {
           testName = tc.name;
+          specPath = spec.path;
           break;
         }
       }
@@ -328,6 +359,7 @@ export const testCommand = defineCommand({
         id: tr.testCase.id,
         name: testName,
         specName,
+        specPath,
         status: testStatus,
         durationMs: tr.durationMs,
         passed,
@@ -371,12 +403,38 @@ export const testCommand = defineCommand({
 
     // -- Phase 5: Print summary -------------------------------------------------
 
-    if (reportResult.terminalSummary) {
-      process.stdout.write(reportResult.terminalSummary + '\n');
+    if (reporter === 'ci') {
+      process.stdout.write(
+        formatCiReport(runResult, { testDir: config['test-dir'] })
+      );
+    } else {
+      if (reportResult.terminalSummary) {
+        process.stdout.write(reportResult.terminalSummary + '\n');
+      }
+      const summaryLine = generateSummary(runResult);
+      process.stdout.write(summaryLine + '\n');
     }
 
-    const summaryLine = generateSummary(runResult);
-    process.stdout.write(summaryLine + '\n');
+    // -- Phase 6: Write JUnit XML (CI mode, or explicit --junit) ---------------
+
+    const junitPath = args.junit as string | undefined;
+    if (junitPath) {
+      fs.mkdirSync(path.dirname(junitPath), { recursive: true });
+      fs.writeFileSync(junitPath, generateJUnitXml(runResult), 'utf-8');
+    }
+
+    // -- Phase 7: Append report.md to $GITHUB_STEP_SUMMARY (CI mode) -----------
+
+    const stepSummaryPath = process.env.GITHUB_STEP_SUMMARY;
+    if (
+      reporter === 'ci' &&
+      stepSummaryPath &&
+      reportResult.reportPath &&
+      fs.existsSync(reportResult.reportPath)
+    ) {
+      const reportMd = fs.readFileSync(reportResult.reportPath, 'utf-8');
+      fs.appendFileSync(stepSummaryPath, reportMd + '\n', 'utf-8');
+    }
 
     // -- Exit code --------------------------------------------------------------
 

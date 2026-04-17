@@ -122,3 +122,35 @@ describe("cli ls", () => {
 npm test              # runs all unit tests
 npm run test:skills   # runs skill-level integration tests (costs tokens)
 ```
+
+## Ink TUI Tests: avoid stale-closure flakes
+
+ink's `useInput` hook re-binds its event listener inside a `useEffect` whose deps include the user's handler closure. After a state update, React commits the new render BEFORE the effect re-binds the listener with the up-to-date closure. The rendered frame can show new state while the input listener still holds a stale closure. CI loses this race more often than local machines, producing flakes that look impossible.
+
+Symptom: a test sends two `stdin.write` calls with `vi.waitFor(() => expect(lastFrame()).toContain(...))` between them, the frame assertion passes, but the second keystroke seems to do nothing.
+
+```tsx
+stdin.write('A');
+await vi.waitFor(() => expect(lastFrame()).toContain('(2 selected)'));
+stdin.write('\r'); // may fire stale listener whose `selected` is still empty
+```
+
+**Fix in production code, not just the test.** Read state through refs inside the `useInput` callback so the handler is correct even on the stale subscriber. This also makes the handler robust to fast keypresses in real use (paste, autorepeat).
+
+```tsx
+const selectedRef = useRef(selected);
+selectedRef.current = selected;
+
+useInput((input, key) => {
+  const selected = selectedRef.current; // always current
+  // ...
+});
+```
+
+If you can't change the component (third-party, etc.), let the effect flush in the test:
+
+```tsx
+await vi.waitFor(() => expect(lastFrame()).toContain('(2 selected)'));
+await new Promise((resolve) => setImmediate(resolve)); // let useInput re-bind
+stdin.write('\r');
+```

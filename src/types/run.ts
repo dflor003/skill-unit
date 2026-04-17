@@ -12,6 +12,7 @@ export interface TestResult {
   id: string;
   name: string;
   specName: string;
+  specPath?: string;
   status: TestStatus;
   durationMs: number;
   passed: boolean;
