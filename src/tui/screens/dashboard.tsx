@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import React, { useState, useEffect, useRef } from 'react';
+import { Box, Text, useInput, measureElement, type DOMElement } from 'ink';
 import type { Spec, TestCase } from '../../types/spec.js';
 import type { ContextHint } from '../components/context-bar.js';
 import { SearchBox } from '../components/search-box.js';
+import { Scrollbar } from '../components/scrollbar.js';
 import { loadSelection, saveSelection } from '../../core/selection.js';
+import { ensureCursorVisible } from '../utils/scroll.js';
 
 interface FlatTestCase {
   specName: string;
@@ -12,6 +14,23 @@ interface FlatTestCase {
   testCase: TestCase;
   key: string;
 }
+
+interface GroupItem {
+  kind: 'group';
+  specPath: string;
+  specName: string;
+  tags: string[];
+  tests: FlatTestCase[];
+  key: string;
+}
+
+interface TestItem {
+  kind: 'test';
+  test: FlatTestCase;
+  key: string;
+}
+
+type VisibleItem = GroupItem | TestItem;
 
 // Build a breadcrumb like "skill-unit > empty-project" from a spec path.
 // Strips the configured test directory prefix and the .spec.md extension.
@@ -66,6 +85,66 @@ function filterTests(tests: FlatTestCase[], query: string): FlatTestCase[] {
   );
 }
 
+// Interleave group headers and tests into a single navigation list.
+// Groups appear before their tests; each group only includes the tests that
+// survived the current search filter.
+function buildVisibleItems(tests: FlatTestCase[]): VisibleItem[] {
+  const items: VisibleItem[] = [];
+  let currentGroup: GroupItem | null = null;
+
+  for (const t of tests) {
+    if (!currentGroup || currentGroup.specPath !== t.specPath) {
+      currentGroup = {
+        kind: 'group',
+        specPath: t.specPath,
+        specName: t.specName,
+        tags: t.tags,
+        tests: [],
+        key: `group:${t.specPath}`,
+      };
+      items.push(currentGroup);
+    }
+    currentGroup.tests.push(t);
+    items.push({ kind: 'test', test: t, key: t.key });
+  }
+
+  return items;
+}
+
+function visibleTests(items: VisibleItem[]): FlatTestCase[] {
+  return items
+    .filter((i): i is TestItem => i.kind === 'test')
+    .map((i) => i.test);
+}
+
+type GroupState = 'none' | 'all' | 'partial';
+
+function groupState(group: GroupItem, selected: Set<string>): GroupState {
+  if (group.tests.length === 0) return 'none';
+  let count = 0;
+  for (const t of group.tests) if (selected.has(t.key)) count++;
+  if (count === 0) return 'none';
+  if (count === group.tests.length) return 'all';
+  return 'partial';
+}
+
+function groupCheckbox(state: GroupState): string {
+  if (state === 'all') return '[x]';
+  if (state === 'partial') return '[-]';
+  return '[ ]';
+}
+
+function toggleGroup(group: GroupItem, prev: Set<string>): Set<string> {
+  const next = new Set(prev);
+  const state = groupState(group, prev);
+  if (state === 'all') {
+    for (const t of group.tests) next.delete(t.key);
+  } else {
+    for (const t of group.tests) next.add(t.key);
+  }
+  return next;
+}
+
 const SELECTION_DIR = '.skill-unit';
 
 export function Dashboard({
@@ -82,7 +161,33 @@ export function Dashboard({
     return persisted.selectedTests;
   });
 
-  const visible = filterTests(allTests, query);
+  const filtered = filterTests(allTests, query);
+  const visible = buildVisibleItems(filtered);
+  const testsInView = visibleTests(visible);
+
+  const contentRef = useRef<DOMElement>(null);
+  const [contentHeight, setContentHeight] = useState(20);
+  const [scrollOffset, setScrollOffset] = useState(0);
+
+  useEffect(() => {
+    if (contentRef.current) {
+      const { height } = measureElement(contentRef.current);
+      if (height > 0 && height !== contentHeight) setContentHeight(height);
+    }
+  });
+
+  // Keep the cursor within the visible window. Runs on cursor, viewport, or
+  // list length changes so filtering/resizing re-clamps correctly.
+  useEffect(() => {
+    setScrollOffset((prev) =>
+      ensureCursorVisible(cursor, prev, contentHeight, visible.length)
+    );
+  }, [cursor, contentHeight, visible.length]);
+
+  // Clamp the cursor when the filtered list shrinks out from under it.
+  useEffect(() => {
+    setCursor((c) => Math.max(0, Math.min(c, visible.length - 1)));
+  }, [visible.length]);
 
   useEffect(() => {
     saveSelection(
@@ -105,7 +210,23 @@ export function Dashboard({
     onContextHintsChange?.(hints);
   }, [selected.size, onContextHintsChange]);
 
+  // Refs mirror the latest state for the useInput handler. ink re-binds the
+  // input listener via useEffect after each render, which lands a tick AFTER
+  // commit. Reading state through refs keeps the handler correct even when
+  // it fires on the stale closure (fast keypresses, paste, test stdin.write).
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  const visibleRef = useRef(visible);
+  visibleRef.current = visible;
+  const cursorRef = useRef(cursor);
+  cursorRef.current = cursor;
+  const onRunTestsRef = useRef(onRunTests);
+  onRunTestsRef.current = onRunTests;
+
   useInput((input, key) => {
+    const selected = selectedRef.current;
+    const visible = visibleRef.current;
+    const cursor = cursorRef.current;
     if (key.upArrow) {
       setCursor((c) => Math.max(0, c - 1));
     } else if (key.downArrow) {
@@ -113,40 +234,43 @@ export function Dashboard({
     } else if (input === ' ') {
       const item = visible[cursor];
       if (!item) return;
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (next.has(item.key)) {
-          next.delete(item.key);
-        } else {
-          next.add(item.key);
-        }
-        return next;
-      });
+      if (item.kind === 'test') {
+        setSelected((prev) => {
+          const next = new Set(prev);
+          if (next.has(item.test.key)) {
+            next.delete(item.test.key);
+          } else {
+            next.add(item.test.key);
+          }
+          return next;
+        });
+      } else {
+        setSelected((prev) => toggleGroup(item, prev));
+      }
     } else if (input === 'a') {
-      if (selected.size === visible.length) {
+      const inViewKeys = visible
+        .filter((i): i is TestItem => i.kind === 'test')
+        .map((i) => i.key);
+      const allSelected = inViewKeys.every((k) => selected.has(k));
+      if (allSelected) {
         setSelected(new Set());
       } else {
-        setSelected(new Set(visible.map((t) => t.key)));
+        setSelected(new Set(inViewKeys));
       }
     } else if (input === 'A') {
       const item = visible[cursor];
       if (!item) return;
-      const specTests = visible.filter((t) => t.specPath === item.specPath);
-      const specKeys = specTests.map((t) => t.key);
-      const allSelected = specKeys.every((k) => selected.has(k));
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (allSelected) {
-          for (const k of specKeys) next.delete(k);
-        } else {
-          for (const k of specKeys) next.add(k);
-        }
-        return next;
-      });
+      const specPath =
+        item.kind === 'test' ? item.test.specPath : item.specPath;
+      const group = visible.find(
+        (i): i is GroupItem => i.kind === 'group' && i.specPath === specPath
+      );
+      if (!group) return;
+      setSelected((prev) => toggleGroup(group, prev));
     } else if (key.return) {
       if (selected.size === 0) return;
-      const toRun = visible.filter((t) => selected.has(t.key));
-      if (toRun.length > 0) onRunTests(toRun);
+      const toRun = testsInView.filter((t) => selected.has(t.key));
+      if (toRun.length > 0) onRunTestsRef.current(toRun);
     } else if (key.backspace || key.delete) {
       setQuery((q) => q.slice(0, -1));
     } else if (input && !key.ctrl && !key.meta) {
@@ -154,52 +278,74 @@ export function Dashboard({
     }
   });
 
+  const visibleStart = Math.max(0, Math.min(scrollOffset, visible.length));
+  const visibleEnd = Math.min(visible.length, visibleStart + contentHeight);
+  const renderedItems = visible.slice(visibleStart, visibleEnd);
+  const maxOffset = Math.max(0, visible.length - contentHeight);
+  // Scrollbar uses inverted offset convention (0 = bottom). Our offset is
+  // top-down (0 = showing the first item), so invert when passing in.
+  const scrollbarOffset = maxOffset - Math.min(scrollOffset, maxOffset);
+
   return (
-    <Box flexDirection="column">
-      <Box marginBottom={1}>
+    <Box flexDirection="column" flexGrow={1}>
+      <Box marginBottom={1} flexShrink={0}>
         <Text bold>Dashboard</Text>
       </Box>
-      <Box marginBottom={1}>
+      <Box marginBottom={1} flexShrink={0}>
         <SearchBox value={query} onChange={setQuery} />
       </Box>
-      <Box marginBottom={1}>
+      <Box marginBottom={1} flexShrink={0}>
         <Text color="gray">
-          {visible.length} test{visible.length !== 1 ? 's' : ''}
+          {testsInView.length} test{testsInView.length !== 1 ? 's' : ''}
           {selected.size > 0 ? ` (${selected.size} selected)` : ''}
         </Text>
       </Box>
-      <Box flexDirection="column">
-        {visible.map((item, idx) => {
-          const isActive = idx === cursor;
-          const isChecked = selected.has(item.key);
-          const prev = idx > 0 ? visible[idx - 1] : null;
-          const isFirstOfSpec = !prev || prev.specPath !== item.specPath;
-          const breadcrumb = isFirstOfSpec
-            ? specBreadcrumb(item.specPath, testDir)
-            : null;
-          return (
-            <Box key={item.key} flexDirection="column">
-              {breadcrumb && (
-                <Box marginTop={idx === 0 ? 0 : 1}>
+      <Box flexDirection="row" flexGrow={1}>
+        <Box
+          ref={contentRef}
+          flexDirection="column"
+          flexGrow={1}
+          overflow="hidden"
+        >
+          {renderedItems.map((item, relativeIdx) => {
+            const idx = visibleStart + relativeIdx;
+            const isActive = idx === cursor;
+            if (item.kind === 'group') {
+              const state = groupState(item, selected);
+              const checkbox = groupCheckbox(state);
+              return (
+                <Box key={item.key} flexShrink={0}>
                   <Box flexGrow={1}>
-                    <Text bold color="cyan">
-                      {breadcrumb}
+                    <Text color={isActive ? 'blue' : undefined}>
+                      {isActive ? '>' : ' '} {checkbox}{' '}
+                      <Text bold color={isActive ? undefined : 'cyan'}>
+                        {specBreadcrumb(item.specPath, testDir)}
+                      </Text>
                     </Text>
                   </Box>
                   {item.tags.length > 0 && (
                     <Text color="gray">[{item.tags.join(', ')}]</Text>
                   )}
                 </Box>
-              )}
-              <Box paddingLeft={2}>
+              );
+            }
+            const isChecked = selected.has(item.test.key);
+            return (
+              <Box key={item.key} paddingLeft={2} flexShrink={0}>
                 <Text color={isActive ? 'blue' : undefined}>
                   {isActive ? '>' : ' '} {isChecked ? '[x]' : '[ ]'}{' '}
-                  <Text bold={isActive}>{item.testCase.name}</Text>
+                  <Text bold={isActive}>{item.test.testCase.name}</Text>
                 </Text>
               </Box>
-            </Box>
-          );
-        })}
+            );
+          })}
+        </Box>
+        <Scrollbar
+          totalLines={visible.length}
+          visibleLines={contentHeight}
+          scrollOffset={scrollbarOffset}
+          height={contentHeight}
+        />
       </Box>
     </Box>
   );

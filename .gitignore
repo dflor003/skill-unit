@@ -32,5 +32,8 @@ dist/
 # Test coverage
 coverage/
 
+# JUnit output for CI
+test-results/
+
 # Skill Unit persistent data
 .skill-unit/
