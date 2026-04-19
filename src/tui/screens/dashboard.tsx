@@ -197,18 +197,28 @@ export function Dashboard({
   }, [selected]);
 
   useEffect(() => {
-    const hints = [
-      { key: '↑↓', label: 'navigate' },
-      { key: '[Space]', label: 'toggle' },
-      { key: '[a]', label: 'all' },
-      { key: '[A]', label: 'all in spec' },
-      ...(selected.size > 0
-        ? [{ key: '[Enter]', label: `run ${selected.size} selected` }]
-        : []),
-      { key: 'type', label: 'to search' },
-    ];
+    const searching = query.length > 0;
+    const hints = searching
+      ? [
+          { key: '↑↓', label: 'navigate' },
+          { key: '[Esc]', label: 'clear search' },
+          ...(selected.size > 0
+            ? [{ key: '[Enter]', label: `run ${selected.size} selected` }]
+            : []),
+          { key: 'type', label: 'to search' },
+        ]
+      : [
+          { key: '↑↓', label: 'navigate' },
+          { key: '[Space]', label: 'toggle' },
+          { key: '[a]', label: 'all' },
+          { key: '[A]', label: 'all in spec' },
+          ...(selected.size > 0
+            ? [{ key: '[Enter]', label: `run ${selected.size} selected` }]
+            : []),
+          { key: 'type', label: 'to search' },
+        ];
     onContextHintsChange?.(hints);
-  }, [selected.size, onContextHintsChange]);
+  }, [selected.size, query.length, onContextHintsChange]);
 
   // Refs mirror the latest state for the useInput handler. ink re-binds the
   // input listener via useEffect after each render, which lands a tick AFTER
@@ -220,6 +230,8 @@ export function Dashboard({
   visibleRef.current = visible;
   const cursorRef = useRef(cursor);
   cursorRef.current = cursor;
+  const queryRef = useRef(query);
+  queryRef.current = query;
   const onRunTestsRef = useRef(onRunTests);
   onRunTestsRef.current = onRunTests;
 
@@ -227,53 +239,84 @@ export function Dashboard({
     const selected = selectedRef.current;
     const visible = visibleRef.current;
     const cursor = cursorRef.current;
+    const query = queryRef.current;
+    const searching = query.length > 0;
+
+    // Keys that always behave the same, regardless of search state.
     if (key.upArrow) {
       setCursor((c) => Math.max(0, c - 1));
-    } else if (key.downArrow) {
+      return;
+    }
+    if (key.downArrow) {
       setCursor((c) => Math.min(visible.length - 1, c + 1));
-    } else if (input === ' ') {
-      const item = visible[cursor];
-      if (!item) return;
-      if (item.kind === 'test') {
-        setSelected((prev) => {
-          const next = new Set(prev);
-          if (next.has(item.test.key)) {
-            next.delete(item.test.key);
-          } else {
-            next.add(item.test.key);
-          }
-          return next;
-        });
-      } else {
-        setSelected((prev) => toggleGroup(item, prev));
-      }
-    } else if (input === 'a') {
-      const inViewKeys = visible
-        .filter((i): i is TestItem => i.kind === 'test')
-        .map((i) => i.key);
-      const allSelected = inViewKeys.every((k) => selected.has(k));
-      if (allSelected) {
-        setSelected(new Set());
-      } else {
-        setSelected(new Set(inViewKeys));
-      }
-    } else if (input === 'A') {
-      const item = visible[cursor];
-      if (!item) return;
-      const specPath =
-        item.kind === 'test' ? item.test.specPath : item.specPath;
-      const group = visible.find(
-        (i): i is GroupItem => i.kind === 'group' && i.specPath === specPath
-      );
-      if (!group) return;
-      setSelected((prev) => toggleGroup(group, prev));
-    } else if (key.return) {
+      return;
+    }
+    if (key.return) {
       if (selected.size === 0) return;
       const toRun = testsInView.filter((t) => selected.has(t.key));
       if (toRun.length > 0) onRunTestsRef.current(toRun);
-    } else if (key.backspace || key.delete) {
+      return;
+    }
+    if (key.backspace || key.delete) {
       setQuery((q) => q.slice(0, -1));
-    } else if (input && !key.ctrl && !key.meta) {
+      return;
+    }
+    if (key.escape) {
+      // Clear the query, snapping back to action mode.
+      setQuery('');
+      return;
+    }
+
+    // Action keys only fire when the search query is empty. Once the user is
+    // typing a search, these characters are forwarded to the query so users
+    // can type words containing them (e.g., "safe" would otherwise trip 'a').
+    if (!searching) {
+      if (input === ' ') {
+        const item = visible[cursor];
+        if (!item) return;
+        if (item.kind === 'test') {
+          setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(item.test.key)) {
+              next.delete(item.test.key);
+            } else {
+              next.add(item.test.key);
+            }
+            return next;
+          });
+        } else {
+          setSelected((prev) => toggleGroup(item, prev));
+        }
+        return;
+      }
+      if (input === 'a') {
+        const inViewKeys = visible
+          .filter((i): i is TestItem => i.kind === 'test')
+          .map((i) => i.key);
+        const allSelected = inViewKeys.every((k) => selected.has(k));
+        if (allSelected) {
+          setSelected(new Set());
+        } else {
+          setSelected(new Set(inViewKeys));
+        }
+        return;
+      }
+      if (input === 'A') {
+        const item = visible[cursor];
+        if (!item) return;
+        const specPath =
+          item.kind === 'test' ? item.test.specPath : item.specPath;
+        const group = visible.find(
+          (i): i is GroupItem => i.kind === 'group' && i.specPath === specPath
+        );
+        if (!group) return;
+        setSelected((prev) => toggleGroup(group, prev));
+        return;
+      }
+    }
+
+    // Anything else printable becomes part of the query.
+    if (input && !key.ctrl && !key.meta) {
       setQuery((q) => q + input);
     }
   });

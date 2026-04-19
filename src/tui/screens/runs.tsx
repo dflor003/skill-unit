@@ -9,7 +9,6 @@ type RunEntry = StatsIndex['runs'][number];
 interface RunManagerProps {
   runs: RunEntry[];
   onCleanup: () => void;
-  onDeleteRun: (id: string) => void;
   onViewRun: (run: RunEntry) => void;
   onContextHintsChange?: (hints: ContextHint[]) => void;
 }
@@ -29,7 +28,6 @@ function formatCost(cost: number): string {
 export function RunManager({
   runs,
   onCleanup,
-  onDeleteRun,
   onViewRun,
   onContextHintsChange,
 }: RunManagerProps) {
@@ -49,8 +47,7 @@ export function RunManager({
       onContextHintsChange?.([
         { key: '↑↓', label: 'navigate' },
         { key: '[Enter]', label: 'view' },
-        { key: '[Del]', label: 'delete' },
-        { key: '[c]', label: 'cleanup' },
+        { key: '[C]', label: 'cleanup' },
       ]);
     }
   }, [runs.length, onContextHintsChange]);
@@ -62,10 +59,7 @@ export function RunManager({
       setCursor((c) => Math.max(0, c - 1));
     } else if (key.downArrow) {
       setCursor((c) => Math.min(runs.length - 1, c + 1));
-    } else if (key.delete) {
-      const run = runs[cursor];
-      if (run) onDeleteRun(run.id);
-    } else if (input === 'c' || input === 'C') {
+    } else if (input === 'C') {
       onCleanup();
     } else if (key.return) {
       const run = runs[cursor];
