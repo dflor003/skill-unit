@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import React, { useState } from 'react';
+import { Box, Text } from 'ink';
 import type { StatsIndex, TestStats } from '../../types/run.js';
-import type { ContextHint } from '../components/context-bar.js';
 import { formatDate } from '../format.js';
+import { useKeyboardShortcuts } from '../keyboard/index.js';
 
 type SortField =
   | 'name'
@@ -32,7 +32,6 @@ const SORT_LABELS: Record<SortField, string> = {
 
 interface StatisticsProps {
   index: StatsIndex;
-  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 function formatPassRate(rate: number): string {
@@ -78,21 +77,20 @@ function sortTests(
   });
 }
 
-export function Statistics({ index, onContextHintsChange }: StatisticsProps) {
+export function Statistics({ index }: StatisticsProps) {
   const [sortField, setSortField] = useState<SortField>('name');
 
-  useEffect(() => {
-    onContextHintsChange?.([{ key: '[s]', label: 'cycle sort' }]);
-  }, [onContextHintsChange]);
-
-  useInput((input) => {
-    if (input === 's' || input === 'S') {
-      setSortField((current) => {
-        const idx = SORT_FIELDS.indexOf(current);
-        return SORT_FIELDS[(idx + 1) % SORT_FIELDS.length]!;
-      });
-    }
-  });
+  useKeyboardShortcuts([
+    {
+      keys: ['s', 'S'],
+      hint: 'cycle sort',
+      handler: () =>
+        setSortField((current) => {
+          const idx = SORT_FIELDS.indexOf(current);
+          return SORT_FIELDS[(idx + 1) % SORT_FIELDS.length]!;
+        }),
+    },
+  ]);
 
   const { aggregate } = index;
   const testEntries = sortTests(Object.entries(index.tests), sortField);

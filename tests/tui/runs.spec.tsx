@@ -2,10 +2,15 @@ import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { RunManager } from '../../src/tui/screens/runs.js';
+import { KeyboardRegistryProvider } from '../../src/tui/keyboard/index.js';
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<KeyboardRegistryProvider>{ui}</KeyboardRegistryProvider>);
+}
 
 describe('RunManager', () => {
   it('shows empty state when no runs exist', () => {
-    const { lastFrame } = render(
+    const { lastFrame } = renderWithProvider(
       <RunManager runs={[]} onCleanup={() => {}} onViewRun={() => {}} />
     );
     expect(lastFrame()!).toContain('No runs yet');
@@ -24,7 +29,7 @@ describe('RunManager', () => {
         tokens: 5000,
       },
     ];
-    const { lastFrame } = render(
+    const { lastFrame } = renderWithProvider(
       <RunManager runs={runs} onCleanup={() => {}} onViewRun={() => {}} />
     );
     const output = lastFrame()!;
@@ -67,13 +72,19 @@ describe('RunManager', () => {
       },
     ];
 
-    const { rerender, lastFrame } = render(
+    const { rerender, lastFrame } = renderWithProvider(
       <RunManager runs={runs} onCleanup={() => {}} onViewRun={() => {}} />
     );
 
     // Act -- rerender with only 1 run (simulating 2 deletions)
     rerender(
-      <RunManager runs={[runs[0]]} onCleanup={() => {}} onViewRun={() => {}} />
+      <KeyboardRegistryProvider>
+        <RunManager
+          runs={[runs[0]]}
+          onCleanup={() => {}}
+          onViewRun={() => {}}
+        />
+      </KeyboardRegistryProvider>
     );
 
     // Assert -- should render without crash, cursor clamped to 0

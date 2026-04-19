@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useKeyboardShortcuts } from '../keyboard/index.js';
 
 interface CleanupOption {
   label: string;
@@ -26,17 +27,22 @@ export function CleanupDialog({
 }: CleanupDialogProps) {
   const [cursor, setCursor] = useState(0);
 
-  useInput((_input, key) => {
-    if (key.upArrow) {
-      setCursor((c) => Math.max(0, c - 1));
-    } else if (key.downArrow) {
-      setCursor((c) => Math.min(OPTIONS.length - 1, c + 1));
-    } else if (key.return) {
-      onConfirm(OPTIONS[cursor].keepCount);
-    } else if (key.escape) {
-      onDismiss();
-    }
-  });
+  useKeyboardShortcuts(
+    [
+      { keys: 'up', handler: () => setCursor((c) => Math.max(0, c - 1)) },
+      {
+        keys: 'down',
+        handler: () => setCursor((c) => Math.min(OPTIONS.length - 1, c + 1)),
+      },
+      {
+        keys: 'enter',
+        hint: 'confirm',
+        handler: () => onConfirm(OPTIONS[cursor]!.keepCount),
+      },
+      { keys: 'escape', hint: 'cancel', handler: onDismiss },
+    ],
+    { modal: true }
+  );
 
   return (
     <Box

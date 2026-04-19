@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useKeyboardShortcuts } from '../keyboard/index.js';
 
 interface ConfirmDialogProps {
   message: string;
@@ -12,13 +13,13 @@ export function ConfirmDialog({
   onConfirm,
   onDismiss,
 }: ConfirmDialogProps) {
-  useInput((input, key) => {
-    if (input === 'y' || input === 'Y') {
-      onConfirm();
-    } else if (input === 'n' || input === 'N' || key.escape) {
-      onDismiss();
-    }
-  });
+  useKeyboardShortcuts(
+    [
+      { keys: ['y', 'Y'], hint: 'yes', handler: onConfirm },
+      { keys: ['n', 'N', 'escape'], hint: 'no', handler: onDismiss },
+    ],
+    { modal: true }
+  );
 
   return (
     <Box

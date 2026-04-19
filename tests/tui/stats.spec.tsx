@@ -2,6 +2,11 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { Statistics } from '../../src/tui/screens/stats.js';
+import { KeyboardRegistryProvider } from '../../src/tui/keyboard/index.js';
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<KeyboardRegistryProvider>{ui}</KeyboardRegistryProvider>);
+}
 
 describe('Statistics', () => {
   it('shows zero state for empty data', () => {
@@ -18,7 +23,7 @@ describe('Statistics', () => {
       tests: {},
       runs: [],
     };
-    const { lastFrame } = render(<Statistics index={emptyIndex} />);
+    const { lastFrame } = renderWithProvider(<Statistics index={emptyIndex} />);
     expect(lastFrame()!).toContain('0');
   });
 
@@ -36,7 +41,7 @@ describe('Statistics', () => {
       tests: {},
       runs: [],
     };
-    const { lastFrame } = render(<Statistics index={index} />);
+    const { lastFrame } = renderWithProvider(<Statistics index={index} />);
     const output = lastFrame()!;
     expect(output).toContain('10');
     expect(output).toContain('85');

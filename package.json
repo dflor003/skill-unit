@@ -23,7 +23,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:skills": "npm run su -- test --all"
+    "test:skills": "npm run su -- test --all",
+    "lockfile:refresh": "rm -rf node_modules package-lock.json && npm install --os=linux,win32,darwin --cpu=x64,arm64 --include=optional && npm install --no-save --no-package-lock",
+    "prepare": "simple-git-hooks"
   },
   "dependencies": {
     "@inkjs/ui": "^2.0.0",
@@ -44,6 +46,8 @@
     "eslint": "^10.2.0",
     "ink-testing-library": "^4.0.0",
     "prettier": "^3.8.1",
+    "pretty-quick": "^4.2.2",
+    "simple-git-hooks": "^2.13.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.58.0",

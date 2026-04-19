@@ -2,11 +2,30 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { BottomBar } from '../../src/tui/components/bottom-bar.js';
+import {
+  KeyboardRegistryProvider,
+  useKeyboardShortcuts,
+} from '../../src/tui/keyboard/index.js';
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<KeyboardRegistryProvider>{ui}</KeyboardRegistryProvider>);
+}
+
+function HintProbe({
+  bindings,
+}: {
+  bindings: Parameters<typeof useKeyboardShortcuts>[0];
+}) {
+  useKeyboardShortcuts(bindings);
+  return null;
+}
 
 describe('BottomBar', () => {
-  it('when a screen is active should highlight it', () => {
+  it('when a screen is active should highlight it in the nav row', () => {
     // Act
-    const { lastFrame } = render(<BottomBar activeScreen="dashboard" />);
+    const { lastFrame } = renderWithProvider(
+      <BottomBar activeScreen="dashboard" />
+    );
     const output = lastFrame()!;
 
     // Assert
@@ -16,85 +35,66 @@ describe('BottomBar', () => {
     expect(output).toContain('ptions');
   });
 
-  it('when runs screen is active should highlight it', () => {
+  it('when runs screen is active should still render the nav row', () => {
     // Act
-    const { lastFrame } = render(<BottomBar activeScreen="runs" />);
-    const output = lastFrame()!;
+    const { lastFrame } = renderWithProvider(<BottomBar activeScreen="runs" />);
 
     // Assert
-    expect(output).toContain('uns');
+    expect(lastFrame()!).toContain('uns');
   });
 
-  describe('when on runner screen with completed run', () => {
-    it('should show Esc back hint', () => {
+  describe('when a run is in progress', () => {
+    it('should show the running indicator', () => {
       // Act
-      const { lastFrame } = render(
-        <BottomBar
-          activeScreen="runner"
-          runStatus="complete"
-          runViewMode="primary"
-        />
+      const { lastFrame } = renderWithProvider(
+        <BottomBar activeScreen="runner" runStatus="running" />
       );
 
       // Assert
-      expect(lastFrame()!).toContain('[Esc] back');
+      expect(lastFrame()!).toContain('Run in progress');
     });
   });
 
-  describe('when on runner screen with active run in primary view', () => {
-    it('should show run-mode hints instead of nav', () => {
-      // Act
-      const { lastFrame } = render(
-        <BottomBar
-          activeScreen="runner"
-          runStatus="running"
-          runViewMode="primary"
-        />
+  describe('when a component registers hints', () => {
+    it('should render them in the bar', () => {
+      // Arrange / Act
+      const { lastFrame } = renderWithProvider(
+        <>
+          <HintProbe
+            bindings={[
+              { keys: 'space', hint: 'select', handler: () => {} },
+              { keys: 'enter', hint: 'run', handler: () => {} },
+            ]}
+          />
+          <BottomBar activeScreen="dashboard" />
+        </>
       );
-      const output = lastFrame()!;
 
       // Assert
-      expect(output).toContain('Run in progress');
-      expect(output).toContain('[Esc] cancel');
-      expect(output).not.toContain('[D]');
+      const output = lastFrame()!;
+      expect(output).toContain('[space] select');
+      expect(output).toContain('[enter] run');
     });
   });
 
-  describe('when on runner screen with active run in split view', () => {
-    it('should show split-mode hints', () => {
-      // Act
-      const { lastFrame } = render(
-        <BottomBar
-          activeScreen="runner"
-          runStatus="running"
-          runViewMode="split"
-        />
+  describe('when a hint matches a global nav key', () => {
+    it('should be filtered out of the context row', () => {
+      // Arrange / Act: register a binding using the same display key as a
+      // global nav letter. The context row should exclude it so the nav row
+      // is the sole display for those keys.
+      const { lastFrame } = renderWithProvider(
+        <>
+          <HintProbe
+            bindings={[
+              { keys: 'd', hint: 'should-not-appear', handler: () => {} },
+            ]}
+          />
+          <BottomBar activeScreen="dashboard" />
+        </>
       );
-      const output = lastFrame()!;
 
       // Assert
-      expect(output).toContain('[Esc] cancel');
-      expect(output).toContain('focus');
-      expect(output).toContain('maximize');
-    });
-  });
-
-  describe('when on runner screen with complete run in primary view', () => {
-    it('should show selection and re-run hints', () => {
-      // Act
-      const { lastFrame } = render(
-        <BottomBar
-          activeScreen="runner"
-          runStatus="complete"
-          runViewMode="primary"
-        />
-      );
-      const output = lastFrame()!;
-
-      // Assert
-      expect(output).toContain('[Space] select');
-      expect(output).toContain('[Enter] re-run');
-      expect(output).toContain('[Esc] back');
+      expect(lastFrame()!).not.toContain('should-not-appear');
     });
   });
 });

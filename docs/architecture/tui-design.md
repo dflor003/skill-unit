@@ -60,32 +60,24 @@ The root component manages:
 - **Full-screen layout** -- Uses `useStdout()` to get terminal rows and sets explicit `height={termHeight}` on the root Box. Listens for resize events.
 - **Alternate screen buffer** -- The CLI entry point writes `\x1b[?1049h` before rendering and `\x1b[?1049l` on exit, giving a clean full-screen experience.
 - **Data loading** -- On mount, loads config, discovers specs, loads the stats index. Passes data down to screens as props.
-- **Runner view mode tracking** -- Tracks whether the Runner is in `primary` or `split` mode so the BottomBar can display contextual hints.
 
 ### Bottom Bar (`bottom-bar.tsx`)
 
-Context-aware bar pinned to the bottom of every screen. Displays different content based on the current screen and run state:
+Two-row bar pinned to the bottom of every screen:
 
-| Context                                             | Display                                                                                                  |
-| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| Top-level screens (Dashboard, Runs, Stats, Options) | `[D]ashboard [R]uns [S]tats [O]ptions  Tab: next [Q]uit`                                                 |
-| Runner (running, primary view)                      | `Run in progress... [Esc] cancel  <- -> sessions  up/down scroll  [f] follow  [t] transcript  [v] split` |
-| Runner (running, split view)                        | `Run in progress... [Esc] cancel  [1-9] focus  [m] maximize  [v] primary`                                |
-| Runner (complete, primary view)                     | `[Space] select  [Enter] re-run  <- -> sessions  [Esc] back`                                             |
-| Runner (complete, split view)                       | `[1-9] focus  [m] maximize  [v] primary  [Esc] back`                                                     |
-
-The active screen is highlighted in white bold on top-level screens. During active runs, the bar shows a yellow "Run in progress..." indicator.
+- **Context row (top)** -- Renders hints derived from the keyboard registry via `useKeyboardHints()`. Bindings with a `hint` label and `enabled !== false` surface here automatically. When a run is in progress on the Runner screen, a yellow "Run in progress..." indicator is prepended. Hints whose `displayKey` matches a global nav letter (`d/D/r/R/s/S/o/O/q/Q/tab/shift+tab/ctrl+c`) are filtered out so the nav row below is the sole display for those keys.
+- **Nav row (bottom)** -- Always-visible `[D]ashboard [R]uns [S]tats [O]ptions` with the active screen highlighted in white bold, followed by the `Tab/Shift+Tab` and `[Q]uit` reminders. The nav row is purely informational; the underlying bindings live in App's `useKeyboardShortcuts` call.
 
 ### Screens
 
 **Dashboard (`dashboard.tsx`)** -- Landing screen. Scrollable list of all test cases with an auto-focused search box. Supports `tag:` prefix filtering and substring matching. Space toggles selection, `a` selects all, Enter runs selected tests. Selections persist to `.skill-unit/selection.json`.
 
-**Test Runner (`runner.tsx`)** -- Shown during test execution and historical run viewing. Session panel supports scrolling with Up/Down arrow keys to disable auto-follow mode, `[f]` to snap back to the bottom and re-enable auto-follow. A visual scrollbar (track + thumb) appears on the right edge when content overflows the panel. `[t]` toggles between execution and grading transcript views. Auto-switches to grading view when a test starts grading. When a run completes, the progress tree shows selection checkboxes; `[Space]` toggles selection for re-run, and `[Enter]` launches a new run with selected tests. Failed tests are pre-selected by default. Reports view mode changes to the app shell for bottom bar synchronization. Two view modes toggled with `[v]`:
+**Test Runner (`runner.tsx`)** -- Shown during test execution and historical run viewing. Session panel supports scrolling with Up/Down arrow keys to disable auto-follow mode, `[f]` to snap back to the bottom and re-enable auto-follow. A visual scrollbar (track + thumb) appears on the right edge when content overflows the panel. `[t]` toggles between execution and grading transcript views. Auto-switches to grading view when a test starts grading. When a run completes, the progress tree shows selection checkboxes; `[Space]` toggles selection for re-run, and `[Enter]` launches a new run with selected tests. Failed tests are pre-selected by default. The view mode drives a mode-specific `useKeyboardShortcuts` scope so only the active mode's bindings are live. Two view modes toggled with `[v]`:
 
 - _Primary + Ticker_ -- Progress tree sidebar on the left, ticker strip at top showing active session tabs, primary panel showing the selected session's full transcript rendered as markdown.
 - _Split Panes_ -- Grid layout of all active sessions. `[1-9]` focuses a pane, `[m]` maximizes/restores.
 
-**Run Manager (`runs.tsx`)** -- Lists past runs from `.skill-unit/runs/`. Shows locale-formatted timestamps, test counts, pass/fail, duration, and cost. `[d]` deletes a run, `[c]` cleans up old runs (keeps last 10). `[Enter]` opens a historical run in the Runner view, loading transcripts and grading results from disk.
+**Run Manager (`runs.tsx`)** -- Lists past runs from `.skill-unit/runs/`. Shows locale-formatted timestamps, test counts, pass/fail, duration, and cost. `[c]` cleans up old runs (keeps last 10). `[Enter]` opens a historical run in the Runner view, loading transcripts and grading results from disk.
 
 **Statistics (`stats.tsx`)** -- Aggregate metrics (total runs, pass rate, cost, tokens) and a per-test table sortable by name, run count, success rate, duration, cost, or last run date. `[s]` cycles the sort field.
 
@@ -218,6 +210,10 @@ type TestStatus =
 
 ## Keyboard Navigation
 
+Keyboard input dispatches through `KeyboardRegistryProvider` (`src/tui/keyboard/`). Each screen and dialog declares its bindings via `useKeyboardShortcuts(bindings, options)`. Three scope modes are supported: `normal` (default, bindings broadcast and unmatched keys fall through), `modal` (shadows everything below while mounted, used by `ConfirmDialog` and `CleanupDialog` and the Options field editor), and `textInput` (swallows unmatched printable characters via an optional `onText` callback, used by Dashboard's search). BottomBar hints are derived automatically via `useKeyboardHints()` rather than hardcoded. See `docs/specs/2026-04-19-keyboard-shortcut-abstraction-design.md` for the full design.
+
+The table below lists the bindings exposed to users. The implementation itself is declarative in each component file.
+
 | Key        | Context                        | Action                                    |
 | ---------- | ------------------------------ | ----------------------------------------- |
 | D, R, S, O | Global (not during active run) | Switch to Dashboard, Runs, Stats, Options |
@@ -241,7 +237,6 @@ type TestStatus =
 | Space      | Runner (complete)              | Toggle test selection for re-run          |
 | Enter      | Runner (complete)              | Re-run selected tests                     |
 | s          | Stats                          | Cycle sort field                          |
-| d          | Run Manager                    | Delete selected run                       |
 | c          | Run Manager                    | Clean up old runs (keep last 10)          |
 | Enter      | Run Manager                    | View historical run details               |
 | Enter      | Options                        | Edit focused field                        |

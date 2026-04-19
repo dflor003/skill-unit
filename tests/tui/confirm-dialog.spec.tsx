@@ -2,11 +2,16 @@ import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
 import { ConfirmDialog } from '../../src/tui/components/confirm-dialog.js';
+import { KeyboardRegistryProvider } from '../../src/tui/keyboard/index.js';
+
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<KeyboardRegistryProvider>{ui}</KeyboardRegistryProvider>);
+}
 
 describe('ConfirmDialog', () => {
   it('should render the message and yes/no options', () => {
     // Act
-    const { lastFrame } = render(
+    const { lastFrame } = renderWithProvider(
       <ConfirmDialog
         message="Cancel the run?"
         onConfirm={() => {}}
@@ -25,7 +30,7 @@ describe('ConfirmDialog', () => {
     it('should call onConfirm', () => {
       // Arrange
       const onConfirm = vi.fn();
-      const { stdin } = render(
+      const { stdin } = renderWithProvider(
         <ConfirmDialog
           message="Cancel?"
           onConfirm={onConfirm}
@@ -45,7 +50,7 @@ describe('ConfirmDialog', () => {
     it('should call onDismiss', () => {
       // Arrange
       const onDismiss = vi.fn();
-      const { stdin } = render(
+      const { stdin } = renderWithProvider(
         <ConfirmDialog
           message="Cancel?"
           onConfirm={() => {}}
@@ -66,7 +71,7 @@ describe('ConfirmDialog', () => {
       // Arrange
       const onConfirm = vi.fn();
       const onDismiss = vi.fn();
-      const { stdin } = render(
+      const { stdin } = renderWithProvider(
         <ConfirmDialog
           message="Cancel?"
           onConfirm={onConfirm}
