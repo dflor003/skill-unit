@@ -6,12 +6,7 @@ import { RunManager } from '../../src/tui/screens/runs.js';
 describe('RunManager', () => {
   it('shows empty state when no runs exist', () => {
     const { lastFrame } = render(
-      <RunManager
-        runs={[]}
-        onCleanup={() => {}}
-        onDeleteRun={() => {}}
-        onViewRun={() => {}}
-      />
+      <RunManager runs={[]} onCleanup={() => {}} onViewRun={() => {}} />
     );
     expect(lastFrame()!).toContain('No runs yet');
   });
@@ -30,58 +25,11 @@ describe('RunManager', () => {
       },
     ];
     const { lastFrame } = render(
-      <RunManager
-        runs={runs}
-        onCleanup={() => {}}
-        onDeleteRun={() => {}}
-        onViewRun={() => {}}
-      />
+      <RunManager runs={runs} onCleanup={() => {}} onViewRun={() => {}} />
     );
     const output = lastFrame()!;
     // Locale-formatted date should contain the year
     expect(output).toContain('2026');
-  });
-
-  it('calls onDeleteRun with correct id when Delete is pressed', () => {
-    // Arrange
-    const onDeleteRun = vi.fn();
-    const runs = [
-      {
-        id: 'run-a',
-        timestamp: '2026-04-07T10:00:00Z',
-        testCount: 2,
-        passed: 1,
-        failed: 1,
-        duration: 5000,
-        cost: 0.05,
-        tokens: 3000,
-      },
-      {
-        id: 'run-b',
-        timestamp: '2026-04-07T11:00:00Z',
-        testCount: 3,
-        passed: 2,
-        failed: 1,
-        duration: 8000,
-        cost: 0.08,
-        tokens: 4000,
-      },
-    ];
-
-    // Act
-    const { stdin } = render(
-      <RunManager
-        runs={runs}
-        onCleanup={() => {}}
-        onDeleteRun={onDeleteRun}
-        onViewRun={() => {}}
-      />
-    );
-    // Delete key on first item (cursor starts at 0)
-    stdin.write('\x1B[3~'); // Delete key escape sequence
-
-    // Assert
-    expect(onDeleteRun).toHaveBeenCalledWith('run-a');
   });
 
   it('clamps cursor when runs list shrinks', () => {
@@ -120,22 +68,12 @@ describe('RunManager', () => {
     ];
 
     const { rerender, lastFrame } = render(
-      <RunManager
-        runs={runs}
-        onCleanup={() => {}}
-        onDeleteRun={() => {}}
-        onViewRun={() => {}}
-      />
+      <RunManager runs={runs} onCleanup={() => {}} onViewRun={() => {}} />
     );
 
     // Act -- rerender with only 1 run (simulating 2 deletions)
     rerender(
-      <RunManager
-        runs={[runs[0]]}
-        onCleanup={() => {}}
-        onDeleteRun={() => {}}
-        onViewRun={() => {}}
-      />
+      <RunManager runs={[runs[0]]} onCleanup={() => {}} onViewRun={() => {}} />
     );
 
     // Assert -- should render without crash, cursor clamped to 0

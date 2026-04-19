@@ -328,4 +328,54 @@ describe('Dashboard', () => {
       expect(lastFrame()!).toMatch(/\[-\]\s+runner/);
     });
   });
+
+  describe('when the user is typing a search query', () => {
+    it('should route action keys into the query instead of firing actions', async () => {
+      // Arrange
+      const { stdin, lastFrame } = render(
+        <Dashboard
+          specs={mockSpecs}
+          testDir="skill-tests"
+          onRunTests={() => {}}
+        />
+      );
+
+      // Act -- typing "sa" includes an 'a' which used to trigger select-all
+      stdin.write('s');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain('s');
+      });
+      stdin.write('a');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain('sa');
+      });
+
+      // Assert -- nothing should have been selected; 'a' went into query
+      expect(lastFrame()).not.toContain('selected');
+    });
+
+    it('should clear the query when Esc is pressed', async () => {
+      // Arrange
+      const { stdin, lastFrame } = render(
+        <Dashboard
+          specs={mockSpecs}
+          testDir="skill-tests"
+          onRunTests={() => {}}
+        />
+      );
+
+      // Act -- type something, then press Esc
+      stdin.write('abc');
+      await vi.waitFor(() => {
+        expect(lastFrame()).toContain('abc');
+      });
+      stdin.write('\x1b'); // Esc
+      await vi.waitFor(() => {
+        expect(lastFrame()).not.toContain('abc');
+      });
+
+      // Assert
+      expect(lastFrame()).not.toContain('abc');
+    });
+  });
 });

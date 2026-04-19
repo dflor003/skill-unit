@@ -23,7 +23,7 @@ import {
   buildManifest,
   formatTimestamp,
 } from '../core/compiler.js';
-import { loadIndex, cleanupRuns, deleteRun } from '../core/stats.js';
+import { loadIndex, cleanupRuns } from '../core/stats.js';
 import { saveConfig } from '../config/loader.js';
 import type { Spec } from '../types/spec.js';
 import type { StatsIndex } from '../types/run.js';
@@ -177,16 +177,6 @@ export function App() {
     setScreen('runner');
   }
 
-  function handleDeleteRun(id: string) {
-    try {
-      deleteRun(STATS_BASE_DIR, id);
-      const index = loadIndex(STATS_BASE_DIR);
-      setStatsIndex(index);
-    } catch {
-      // Non-fatal
-    }
-  }
-
   function handleCancelConfirm() {
     cancelRun();
     setShowCancelDialog(false);
@@ -228,10 +218,12 @@ export function App() {
     // Block all global nav during active run
     if (isRunnerActive) return;
 
-    if (input === 'd' || input === 'D') setScreen('dashboard');
-    if (input === 'r' || input === 'R') setScreen('runs');
-    if (input === 's' || input === 'S') setScreen('stats');
-    if (input === 'o' || input === 'O') setScreen('options');
+    // Nav shortcuts are uppercase-only (Shift+letter) so they never collide
+    // with typing into text inputs like the dashboard search box.
+    if (input === 'D') setScreen('dashboard');
+    if (input === 'R') setScreen('runs');
+    if (input === 'S') setScreen('stats');
+    if (input === 'O') setScreen('options');
     if (key.tab) {
       setScreen((prev) => {
         const idx = NAV_SCREENS.indexOf(prev);
@@ -241,7 +233,7 @@ export function App() {
         ];
       });
     }
-    if (input === 'q' || (key.ctrl && input === 'c')) exit();
+    if (input === 'Q' || (key.ctrl && input === 'c')) exit();
   });
 
   return (
@@ -305,7 +297,6 @@ export function App() {
             <RunManager
               runs={statsIndex.runs}
               onCleanup={handleCleanup}
-              onDeleteRun={handleDeleteRun}
               onViewRun={handleViewRun}
               onContextHintsChange={handleContextHintsChange}
             />

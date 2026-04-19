@@ -68,3 +68,42 @@ When calculating visible lines for scrolling or virtual rendering, place the `re
 ## Sidebar text truncation
 
 Account for Unicode icon widths (some are 2 cells) when calculating truncation limits. Build in at least 1 extra character of margin beyond the naive calculation.
+
+## Bold doesn't render reliably — use `color="white"` for emphasis
+
+ANSI bold (`<Text bold>`) is rendered as genuine bold weight only when the terminal's active font has a bold variant. In many common Windows setups (default Git Bash font, certain Windows Terminal profiles), bold is silently dropped or rendered as the same weight as normal text, so the emphasis is invisible.
+
+Use `color="white"` (the bright-white foreground) for text that needs to visually stand out. The rest of the UI should use default terminal foreground or `color="gray"` for dimmed text. The contrast between `white` and the terminal's default dim white is reliable across every terminal and font combination.
+
+```tsx
+// Wrong: bold may be invisible depending on terminal/font
+<Text bold>Active item</Text>
+
+// Correct: bright white is reliably distinct from the default foreground
+<Text bold color="white">
+  Active item
+</Text>
+```
+
+Keep `bold` on the Text too — it still renders as bold where supported, and `color="white"` is the guaranteed fallback. The canonical reference for this pattern is the active item in the bottom navigation (`[D]ashboard [R]uns ...`), which uses `bold color="white"` for the active screen and `color="gray"` for inactive ones.
+
+## Never call `process.exit()` from inside an Ink component
+
+Ink enables alternate screen buffer (`\x1b[?1049h`), hides the cursor, and turns on mouse tracking (`\x1b[?1000h`) when it mounts. On unmount it emits the matching "off" escapes to restore the terminal. Calling `process.exit()` bypasses the unmount hook, so those sequences never fire and the terminal is left in a dirty state: frozen alt-buffer output, hidden cursor, and middle-click intercepted as escape-encoded mouse events (which Windows Terminal in particular will route to shell history navigation).
+
+Use `useApp().exit()` instead. It signals Ink to tear down cleanly.
+
+```tsx
+// Wrong: leaks terminal state, grows worse with repeated runs
+useInput((input) => {
+  if (input === 'Q') process.exit(0);
+});
+
+// Correct: Ink runs its cleanup, terminal returns to normal
+const { exit } = useApp();
+useInput((input) => {
+  if (input === 'Q') exit();
+});
+```
+
+If the terminal has already been left in a bad state by a previous crash, `reset` (or `printf '\e[?1049l\e[?1000l\e[?1002l\e[?1003l\e[?1006l\e[?25h'`) manually emits all the "off" sequences and recovers it.
