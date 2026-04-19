@@ -29,7 +29,7 @@ The `.workspace/` directory at the repository root is the single location for al
 
 ## How Workspaces Get Created
 
-The runner script (`skills/skill-unit/scripts/runner.js`) manages the full workspace lifecycle:
+The runner module (`src/core/runner.ts`, invoked by the `skill-unit test` CLI command) manages the full workspace lifecycle:
 
 1. **Setup phase** — The runner reads the manifest JSON and creates the `.workspace/` directory at the repo root if it doesn't exist. It idempotently adds `.workspace/` to the repo's `.gitignore`. It then creates the run-specific subdirectories under `runs/{timestamp}/`.
 

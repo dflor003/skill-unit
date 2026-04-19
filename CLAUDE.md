@@ -78,6 +78,20 @@ IDE schema validation will flag the correct format as an error. Ignore it.
 
 Never use `git -C <path>`. Always use relative paths so that the auto-approve rules in `settings.json` match correctly.
 
+## Dev Setup
+
+After cloning, run:
+
+```bash
+npm install
+npm run build
+npm link
+```
+
+The `npm link` step is required for the skill-unit skill's own self-tests. The `skill-unit` skill invokes the CLI as `skill-unit <subcommand>` (or `npx skill-unit <subcommand>`). For external users, `npm install skill-unit` creates `node_modules/.bin/skill-unit` automatically; `npm install` in this repo does NOT self-install the bin, so `npm link` is needed to expose it on PATH. CI does the same thing automatically.
+
+If the link gets stale (e.g., after pulling changes that modified `src/cli/`), re-run `npm run build` so the linked shim resolves to fresh code. The link target (`dist/cli/index.js`) is the same file on disk; only the content of `dist/` changes.
+
 ## Build, Lint, and Test Commands
 
 Always use `npm run` (or `npm.cmd run` in Git Bash) to run project commands. Do NOT call the underlying tools directly (e.g., do not run `npx vitest`, `npx tsc`, or `npx eslint`). The npm scripts are whitelisted for auto-approval; direct tool invocations are not.
