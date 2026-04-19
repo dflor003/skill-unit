@@ -9,6 +9,7 @@ type RunEntry = StatsIndex['runs'][number];
 interface RunManagerProps {
   runs: RunEntry[];
   onCleanup: () => void;
+  onDeleteRun: (id: string) => void;
   onViewRun: (run: RunEntry) => void;
 }
 
@@ -24,7 +25,12 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(3)}`;
 }
 
-export function RunManager({ runs, onCleanup, onViewRun }: RunManagerProps) {
+export function RunManager({
+  runs,
+  onCleanup,
+  onDeleteRun,
+  onViewRun,
+}: RunManagerProps) {
   const [cursor, setCursor] = useState(0);
 
   // Clamp cursor when runs list shrinks (e.g. after deletion)
@@ -50,6 +56,19 @@ export function RunManager({ runs, onCleanup, onViewRun }: RunManagerProps) {
       hint: 'cleanup',
       enabled: runs.length > 0,
       handler: onCleanup,
+    },
+    {
+      // Both keys: in this ink version, ASCII 0x7f (what most terminals send
+      // on Backspace) maps to `key.delete`, not `key.backspace`, so binding
+      // only 'delete' would still catch backspace anyway. The confirmation
+      // prompt in app.tsx is what guards against accidental deletes.
+      keys: ['backspace', 'delete'],
+      hint: 'delete',
+      enabled: runs.length > 0,
+      handler: () => {
+        const run = runs[cursor];
+        if (run) onDeleteRun(run.id);
+      },
     },
     {
       keys: 'enter',

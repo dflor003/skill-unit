@@ -54,4 +54,6 @@ export interface SpecFilter {
   tag?: string[];
   test?: string[];
   file?: string[];
+  skill?: string[];
+  search?: string;
 }

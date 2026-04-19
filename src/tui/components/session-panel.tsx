@@ -9,6 +9,7 @@ export type TranscriptViewMode = 'execution' | 'grading';
 interface SessionPanelProps {
   testId: string | null;
   testName: string;
+  specName?: string;
   status: TestStatus | 'idle';
   transcript: string[];
   gradeTranscript: string[];
@@ -55,6 +56,7 @@ function formatElapsed(ms: number): string {
 export function SessionPanel({
   testId,
   testName,
+  specName,
   status,
   transcript,
   gradeTranscript,
@@ -120,6 +122,7 @@ export function SessionPanel({
     <Box flexDirection="column" flexGrow={1}>
       <Box
         flexShrink={0}
+        flexDirection="column"
         borderStyle="single"
         borderBottom
         borderTop={false}
@@ -127,10 +130,19 @@ export function SessionPanel({
         borderRight={false}
         paddingX={1}
       >
-        <Text bold>{testName}</Text>
-        <Text> </Text>
-        <Text color={color}>[{label}]</Text>
-        <Text color="gray"> {formatElapsed(elapsed)}</Text>
+        <Box>
+          <Text bold>{testName}</Text>
+          <Text> </Text>
+          <Text color={color}>[{label}]</Text>
+          <Text color="gray"> {formatElapsed(elapsed)}</Text>
+        </Box>
+        {specName && (
+          <Box>
+            <Text color="gray">
+              {specName} / {testId}
+            </Text>
+          </Box>
+        )}
       </Box>
       <Box
         flexShrink={0}

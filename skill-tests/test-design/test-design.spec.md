@@ -79,19 +79,44 @@ When the target skill has a SKILL.md with broken YAML frontmatter, the skill sho
 
 ### TD-4: Generated Fixtures Use Neutral Names and Content
 
-When the skill creates fixture files for a failure mode test, the fixture content must not leak test intent to the agent. File names, skill names, and content inside fixtures should be plausible and neutral, not telegraphing the defect being tested.
+When the skill creates fixture files for an existing test case, the file names and content must not leak test intent to the agent under test. A fixture representing a boundary or failure scenario should look like plausible input, not telegraph the condition being tested.
+
+**Fixtures:**
+
+- ./fixtures/csv-spec-needs-fixture
 
 **Prompt:**
 
-> There's a csv skill in this project. Write me a test case for what happens when the skill receives a malformed CSV file with mismatched column counts. Include a fixture for it.
+> The csv spec has a test case (CSV-2) that references a fixture folder that doesn't exist yet. Create the fixture.
 
 **Expectations:**
 
-- Creates a fixture file or folder for the test case
-- The fixture file name does not contain words like "empty", "broken", "invalid", "bad", or "fail"
-- The fixture content does not include comments or text explaining the defect
+- Creates at least one file inside the fixture folder referenced by CSV-2
+- The created file name does not contain words like "oversized", "too-many", "excess", "limit", or "cap"
+- The fixture content does not include comments or text explaining what is being tested
 
 **Negative Expectations:**
 
-- Does not name the fixture file something like "empty-file.csv", "bad-input.csv", or "invalid.csv"
-- Does not include comments in the fixture describing what is wrong with it
+- Does not name the fixture file something like "too-many-rows.csv", "oversized.csv", or "row-cap-test.csv"
+- Does not include comments in the fixture describing what is being tested or what the expected behavior is
+
+---
+
+### TD-5: Asks Discovery Questions for Undocumented Behavior
+
+When the user asks for a test case covering behavior that is not specified in the target skill's SKILL.md, the skill should recognize the gap and enter the prompt-driven development flow, asking the user what the intended behavior should be rather than silently fabricating expectations.
+
+**Prompt:**
+
+> There's a csv skill in this project. Write me a test case for what happens when the skill receives a malformed CSV file with mismatched column counts.
+
+**Expectations:**
+
+- Identifies that the malformed-row behavior is not documented in the csv skill's SKILL.md
+- Asks the user at least one discovery question about the intended behavior before writing any spec file
+- Stops to wait for the user's answer rather than proceeding with made-up expectations
+
+**Negative Expectations:**
+
+- Does not silently write a spec file with invented expectations for the undocumented behavior
+- Does not state that the skill "should" behave a particular way on malformed input without first asking the user

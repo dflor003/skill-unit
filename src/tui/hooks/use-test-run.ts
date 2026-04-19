@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { runTest, type RunHandle } from '../../core/runner.js';
 import { gradeTest, type GradeHandle } from '../../core/grader.js';
-import { generateReport } from '../../core/reporter.js';
+import { generateReport, isResultsFilePassed } from '../../core/reporter.js';
 import { recordRun } from '../../core/stats.js';
 import type { TestStatus, RunResult, TestResult } from '../../types/run.js';
 import type {
@@ -394,10 +394,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           let passed: boolean;
           try {
             const resultsContent = fs.readFileSync(resultsPath, 'utf-8');
-            passed =
-              /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(
-                resultsContent
-              );
+            passed = isResultsFilePassed(resultsContent);
           } catch {
             // If results file can't be read, fall back to grader exit code
             passed = result.exitCode === 0;

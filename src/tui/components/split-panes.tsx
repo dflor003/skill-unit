@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import type { TestStatus } from '../../types/run.js';
+import { Markdown } from './markdown.js';
 
 interface PaneSession {
   id: string;
@@ -14,6 +15,12 @@ interface SplitPanesProps {
   sessions: PaneSession[];
   focusedId: string | null;
   maximizedId: string | null;
+}
+
+export function getGridCols(count: number): number {
+  if (count <= 2) return 1;
+  if (count <= 4) return 2;
+  return 3;
 }
 
 function statusIcon(status: TestStatus): { symbol: string; color: string } {
@@ -66,6 +73,7 @@ function Pane({ session, focused, fullWidth }: PaneProps) {
       <Box paddingX={1}>
         <Text color={color}>{symbol}</Text>
         <Text> </Text>
+        <Text color="gray">{session.id} </Text>
         <Text bold={focused}>{session.name}</Text>
         <Text color="gray"> {formatDuration(session.durationMs)}</Text>
       </Box>
@@ -74,11 +82,7 @@ function Pane({ session, focused, fullWidth }: PaneProps) {
         {session.transcript.length === 0 ? (
           <Text color="gray">Waiting for output...</Text>
         ) : (
-          session.transcript.slice(-10).map((line, idx) => (
-            <Text key={idx} wrap="truncate">
-              {line}
-            </Text>
-          ))
+          <Markdown content={session.transcript.slice(-10).join('\n')} />
         )}
       </Box>
     </Box>
