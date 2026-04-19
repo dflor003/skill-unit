@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import path from 'node:path';
-import { Box, useInput, useStdout } from 'ink';
+import { Box, useApp, useInput, useStdout } from 'ink';
 import {
   BottomBar,
   type Screen,
@@ -76,6 +76,7 @@ export function App() {
     setContextHints(hints);
   }, []);
   const { stdout } = useStdout();
+  const { exit } = useApp();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
 
   useEffect(() => {
@@ -240,7 +241,7 @@ export function App() {
         ];
       });
     }
-    if (input === 'q' || (key.ctrl && input === 'c')) process.exit(0);
+    if (input === 'q' || (key.ctrl && input === 'c')) exit();
   });
 
   return (
