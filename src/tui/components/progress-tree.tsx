@@ -57,7 +57,10 @@ export function ProgressTree({
 }: ProgressTreeProps) {
   // Usable width: total - border(1) - paddingRight(1) - icon(up to 2) - space(1) - safety(1)
   const checkboxWidth = selectable ? 5 : 0; // "[x] " with extra safety
-  const nameWidth = sidebarWidth - 5 - checkboxWidth; // icon(2) + space + border + padding
+  // Pad every ID to the widest so names align in a column.
+  const idWidth = tests.reduce((w, t) => Math.max(w, t.id.length), 0);
+  const idColWidth = idWidth > 0 ? idWidth + 1 : 0; // +1 for trailing space
+  const nameWidth = sidebarWidth - 5 - checkboxWidth - idColWidth;
 
   return (
     <Box flexDirection="column">
@@ -69,6 +72,7 @@ export function ProgressTree({
         const duration = formatDuration(test.durationMs);
         const maxName = nameWidth - duration.length;
         const displayName = truncate(test.name, Math.max(8, maxName));
+        const paddedId = test.id.padEnd(idWidth);
 
         const showActivity = isRunning && !!test.activity;
 
@@ -81,11 +85,12 @@ export function ProgressTree({
                 </Text>
               )}
               <Text color={color}>{symbol} </Text>
+              {idWidth > 0 && <Text color="gray">{paddedId} </Text>}
               <Text bold={isRunning}>{displayName}</Text>
               {test.durationMs > 0 && <Text color="gray">{duration}</Text>}
             </Box>
             {showActivity && (
-              <Box marginLeft={checkboxWidth + 3}>
+              <Box marginLeft={checkboxWidth + 3 + idColWidth}>
                 <Text color="gray" dimColor>
                   {truncate(test.activity!, maxName)}
                 </Text>

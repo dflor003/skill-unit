@@ -28,6 +28,16 @@ export const lsCommand = defineCommand({
       type: 'string',
       description: 'Filter by test case IDs (comma-separated)',
     },
+    skill: {
+      type: 'string',
+      description:
+        'Filter by the skill field in spec frontmatter (comma-separated)',
+    },
+    search: {
+      type: 'string',
+      description:
+        'Partial, case-insensitive match across spec name, skill, file, test ID, and test name',
+    },
   },
   run({ args, rawArgs }) {
     const config = loadConfig(args.config ?? '.skill-unit.yml');
@@ -41,13 +51,16 @@ export const lsCommand = defineCommand({
     const specs = specPaths.map((p) => parseSpecFile(p));
 
     // Collect positional args as name filters
+    const knownValues = [
+      args.config,
+      args.tag,
+      args.file,
+      args.test,
+      args.skill,
+      args.search,
+    ].filter(Boolean);
     const names = rawArgs.filter(
-      (a) =>
-        !a.startsWith('-') &&
-        a !== args.config &&
-        a !== args.tag &&
-        a !== args.file &&
-        a !== args.test
+      (a) => !a.startsWith('-') && !knownValues.includes(a)
     );
 
     const filter: SpecFilter = {};
@@ -57,6 +70,9 @@ export const lsCommand = defineCommand({
       filter.file = args.file.split(',').map((f: string) => f.trim());
     if (args.test)
       filter.test = args.test.split(',').map((t: string) => t.trim());
+    if (args.skill)
+      filter.skill = args.skill.split(',').map((s: string) => s.trim());
+    if (args.search) filter.search = args.search;
 
     const filtered = filterSpecs(specs, filter);
 
@@ -65,6 +81,7 @@ export const lsCommand = defineCommand({
       return;
     }
 
+    const verbose = !!args.search;
     for (const spec of filtered) {
       const name = spec.frontmatter.name || spec.path;
       const tags =
@@ -72,6 +89,12 @@ export const lsCommand = defineCommand({
           ? ` [${spec.frontmatter.tags.join(', ')}]`
           : '';
       console.log(`${name}${tags}`);
+      if (verbose) {
+        if (spec.frontmatter.skill) {
+          console.log(`  skill: ${spec.frontmatter.skill}`);
+        }
+        console.log(`  file:  ${spec.path}`);
+      }
       for (const tc of spec.testCases) {
         console.log(`  ${tc.id}: ${tc.name}`);
       }

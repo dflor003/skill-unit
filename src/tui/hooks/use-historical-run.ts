@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { isResultsFilePassed } from '../../core/reporter.js';
 import type { TestStatus, StatsIndex } from '../../types/run.js';
 import type { TestRunEntry, TestRunState } from './use-test-run.js';
 
@@ -47,9 +48,7 @@ export function loadHistoricalRun(
     let passed = false;
     if (fs.existsSync(resultsPath)) {
       resultsContent = fs.readFileSync(resultsPath, 'utf-8');
-      passed = /(?:^#+\s*|^\*\*)(?:Verdict|Result)[:\s]*\**\s*PASS\b/im.test(
-        resultsContent
-      );
+      passed = isResultsFilePassed(resultsContent);
     }
 
     // Load grader conversation transcript (separate from verdict)

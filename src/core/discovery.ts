@@ -30,6 +30,14 @@ export function filterSpecs(specs: Spec[], filter: SpecFilter): Spec[] {
     result = result.filter((s) => filter.name!.includes(s.frontmatter.name));
   }
 
+  if (filter.skill && filter.skill.length > 0) {
+    result = result.filter(
+      (s) =>
+        s.frontmatter.skill !== undefined &&
+        filter.skill!.includes(s.frontmatter.skill)
+    );
+  }
+
   if (filter.tag && filter.tag.length > 0) {
     result = result.filter((s) =>
       s.frontmatter.tags.some((t) => filter.tag!.includes(t))
@@ -50,6 +58,28 @@ export function filterSpecs(specs: Spec[], filter: SpecFilter): Spec[] {
         testCases: s.testCases.filter((tc) => filter.test!.includes(tc.id)),
       }))
       .filter((s) => s.testCases.length > 0);
+  }
+
+  if (filter.search && filter.search.trim().length > 0) {
+    const query = filter.search.trim().toLowerCase();
+    result = result
+      .map((s) => {
+        const specHit =
+          s.frontmatter.name.toLowerCase().includes(query) ||
+          (s.frontmatter.skill?.toLowerCase().includes(query) ?? false) ||
+          path.basename(s.path).toLowerCase().includes(query);
+        if (specHit) return s;
+        const matchedCases = s.testCases.filter(
+          (tc) =>
+            tc.id.toLowerCase().includes(query) ||
+            tc.name.toLowerCase().includes(query)
+        );
+        if (matchedCases.length > 0) {
+          return { ...s, testCases: matchedCases };
+        }
+        return null;
+      })
+      .filter((s): s is Spec => s !== null);
   }
 
   return result;

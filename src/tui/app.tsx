@@ -22,7 +22,7 @@ import {
   buildManifest,
   formatTimestamp,
 } from '../core/compiler.js';
-import { loadIndex, cleanupRuns } from '../core/stats.js';
+import { loadIndex, cleanupRuns, deleteRun } from '../core/stats.js';
 import { saveConfig } from '../config/loader.js';
 import type { Spec } from '../types/spec.js';
 import type { StatsIndex } from '../types/run.js';
@@ -78,6 +78,9 @@ function AppInner() {
   >(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
+  const [pendingDeleteRunId, setPendingDeleteRunId] = useState<string | null>(
+    null
+  );
   const { stdout } = useStdout();
   const { exit } = useApp();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
@@ -132,6 +135,27 @@ function AppInner() {
 
   function handleCleanupDismiss() {
     setShowCleanupDialog(false);
+  }
+
+  function handleDeleteRun(id: string) {
+    setPendingDeleteRunId(id);
+  }
+
+  function handleDeleteRunConfirm() {
+    const id = pendingDeleteRunId;
+    setPendingDeleteRunId(null);
+    if (!id) return;
+    try {
+      deleteRun(STATS_BASE_DIR, id);
+      const index = loadIndex(STATS_BASE_DIR);
+      setStatsIndex(index);
+    } catch {
+      // Non-fatal
+    }
+  }
+
+  function handleDeleteRunDismiss() {
+    setPendingDeleteRunId(null);
   }
 
   function handleRerunTests(testIds: string[]) {
@@ -256,6 +280,12 @@ function AppInner() {
           onConfirm={handleCancelConfirm}
           onDismiss={handleCancelDismiss}
         />
+      ) : pendingDeleteRunId ? (
+        <ConfirmDialog
+          message={`Delete run ${pendingDeleteRunId}?`}
+          onConfirm={handleDeleteRunConfirm}
+          onDismiss={handleDeleteRunDismiss}
+        />
       ) : showCleanupDialog ? (
         <CleanupDialog
           totalRuns={statsIndex.runs.length}
@@ -308,6 +338,7 @@ function AppInner() {
             <RunManager
               runs={statsIndex.runs}
               onCleanup={handleCleanup}
+              onDeleteRun={handleDeleteRun}
               onViewRun={handleViewRun}
             />
           )}

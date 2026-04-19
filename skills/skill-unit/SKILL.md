@@ -23,13 +23,21 @@ The `test` subcommand requires **at least one** filter (or `--all`).
 | User says                               | CLI invocation                           |
 | --------------------------------------- | ---------------------------------------- |
 | "Run all the tests"                     | `run-cli.sh test --all`                  |
-| "Run tests for `<name>`"                | `run-cli.sh test --name <name>`          |
+| "Run the tests for the `<X>` skill"     | `run-cli.sh test --skill <X>`            |
 | "Run the `<name1>` and `<name2>` tests" | `run-cli.sh test --name <name1>,<name2>` |
 | "Run tests tagged `<tag>`"              | `run-cli.sh test --tag <tag>`            |
 | "Run test case `<ID>`"                  | `run-cli.sh test --test <ID>`            |
 | "Run the tests in `<path>`"             | `run-cli.sh test --file <path>`          |
-| "/skill-unit `<name>`"                  | `run-cli.sh test --name <name>`          |
 | "/skill-unit" (no args)                 | `run-cli.sh test --all`                  |
+
+**Ambiguous targets**: when the user's request names a target that could be a skill, a spec, or a test (e.g. "run the tests for `<X>`", "/skill-unit `<X>`", "run the `<X>` tests"), do **not** guess a filter. First resolve the target with `run-cli.sh ls --search <X>`. The search does case-insensitive partial matching across spec name, frontmatter `skill:`, file basename, test case ID, and test case name, and prints each match with its skill and file path. Then pick the right `test` filter from the match:
+
+- One spec matched via its `skill:` field → `test --skill <X>`
+- One spec matched via its `name` field → `test --name <X>`
+- Specific test cases matched → `test --test <ID1>,<ID2>`
+- Multiple candidates with no clear winner → show the list to the user and ask which to run.
+
+If `ls --search <X>` returns nothing, relay that to the user and suggest creating tests with `/test-design <X>` rather than trying other filters.
 
 Pass-through overrides (apply only if the user asks):
 

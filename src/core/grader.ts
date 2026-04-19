@@ -26,6 +26,7 @@ import {
   formatSessionInit,
   formatUsageSummary,
 } from './transcript-formatter.js';
+import { renderResultsMarkdown, normalizeGraderJson } from './reporter.js';
 import type { Spec } from '../types/spec.js';
 import type { SkillUnitConfig } from '../types/config.js';
 
@@ -47,6 +48,76 @@ export interface GradeHandle extends EventEmitter {
   kill(): void;
 }
 
+// -- Seed results file -------------------------------------------------------
+
+// Graders drift field names even when we prescribe a schema in prose. The
+// much stronger forcing function is to write the file first -- every field
+// already in canonical form, every value the grader must supply set to
+// `null`. The grader then Reads this file and its job becomes "edit the
+// nulls", not "invent a JSON object". LLMs mirror input shape, so preserving
+// the canonical field names becomes the path of least resistance.
+
+interface SeedCheck {
+  text: string;
+  met: null;
+  evidence: null;
+}
+
+interface SeedResults {
+  testId: string;
+  testName: string;
+  prompt: string;
+  passed: null;
+  expectations: SeedCheck[];
+  negativeExpectations: SeedCheck[];
+}
+
+export function buildSeedResultsJson(tc: {
+  id: string;
+  name: string;
+  prompt: string;
+  expectations: string[];
+  'negative-expectations': string[];
+}): SeedResults {
+  return {
+    testId: tc.id,
+    testName: tc.name,
+    prompt: tc.prompt,
+    passed: null,
+    expectations: (tc.expectations || []).map((text) => ({
+      text,
+      met: null,
+      evidence: null,
+    })),
+    negativeExpectations: (tc['negative-expectations'] || []).map((text) => ({
+      text,
+      met: null,
+      evidence: null,
+    })),
+  };
+}
+
+function writeSeedResultsFile(
+  resultsDir: string,
+  specName: string,
+  tc: {
+    id: string;
+    name: string;
+    prompt: string;
+    expectations: string[];
+    'negative-expectations': string[];
+  }
+): string {
+  fs.mkdirSync(resultsDir, { recursive: true });
+  const jsonPath = path.join(resultsDir, `${specName}.${tc.id}.results.json`);
+  fs.writeFileSync(
+    jsonPath,
+    JSON.stringify(buildSeedResultsJson(tc), null, 2),
+    'utf-8'
+  );
+  return jsonPath;
+}
+
 // -- Grader prompt construction -----------------------------------------------
 
 export function buildGraderPrompt(
@@ -65,29 +136,37 @@ export function buildGraderPrompt(
     resultsDir,
     `${specName}.${tc.id}.transcript.md`
   );
-  const outputPath = path.join(resultsDir, `${specName}.${tc.id}.results.md`);
+  const seedPath = path.join(resultsDir, `${specName}.${tc.id}.results.json`);
 
-  const expectations = (tc.expectations || []).map((e) => `- ${e}`).join('\n');
-  const negExpectations = (tc['negative-expectations'] || []).length
-    ? tc['negative-expectations'].map((e) => `- ${e}`).join('\n')
-    : 'None';
+  // Fill-in-the-blank contract: the framework has already pre-written the
+  // seed JSON file with the canonical schema and every expectation's `text`
+  // already populated. The grader's only job is to replace each `null` with
+  // a decision. This is a dramatically tighter forcing function than "emit
+  // JSON matching this schema" -- field names are physically present in the
+  // file the grader just read, so mirroring them is the path of least
+  // resistance. Previous attempts at describing the schema in prose led to
+  // pervasive drift (`overallResult`, `description`, nested `grading`, etc.)
+  // that the normalizer had to paper over.
+  return `Grade this test case by filling in the pre-seeded results file.
 
-  return `Grade this test case.
+**Step 1.** Read the transcript. This is your evidence -- every decision must trace to something in it:
 
-**Test ID:** ${tc.id}
-**Test Name:** ${tc.name}
+\`${transcriptPath}\`
 
-**Prompt:**
-> ${tc.prompt}
+**Step 2.** Read the seed results file. Every field is already in place; every \`null\` is a decision you must make. The non-null fields (\`testId\`, \`testName\`, \`prompt\`, each expectation's \`text\`) are authoritative and MUST NOT change:
 
-**Expectations:**
-${expectations}
+\`${seedPath}\`
 
-**Negative Expectations:**
-${negExpectations}
+**Step 3.** For each \`null\` in the seed, decide the correct value based on the transcript:
+- Each \`expectations[i].met\`: \`true\` if the behavior in \`text\` was observed, else \`false\`.
+- Each \`expectations[i].evidence\`: a short string citing specific turn numbers from the transcript.
+- Each \`negativeExpectations[i].met\`: \`true\` if the prohibited behavior did NOT occur (the negative requirement was upheld), \`false\` if the transcript shows the prohibited behavior.
+- Each \`negativeExpectations[i].evidence\`: a short string citing the transcript.
+- \`passed\`: \`true\` only if every \`met\` above is \`true\`; otherwise \`false\`.
 
-**Transcript path:** ${transcriptPath}
-**Output path:** ${outputPath}`;
+**Step 4.** Use the Write tool to overwrite the seed file at the same path. Preserve the schema EXACTLY: do not rename any field, do not add new fields, do not remove fields. The only values that change are the \`null\`s.
+
+After writing, stop. Do not produce additional output.`;
 }
 
 // -- Agent path resolution ----------------------------------------------------
@@ -100,6 +179,12 @@ export function resolveAgentPath(): string | null {
 
 // -- CLI tool profiles for grader invocation ----------------------------------
 
+// The grader runs as an isolated session: haiku model, Read/Write only, no
+// user-global skills or MCP servers. Without these flags, `--agent` alone does
+// NOT enforce the agent file's `model` or `tools` frontmatter, so the grader
+// inherits the parent session's Opus model and every installed skill, which
+// causes the grader to wander (e.g. exhausting max-turns on Bash exploration)
+// and to deviate from the exact output format the reporter parses.
 export const GRADER_PROFILES: Record<string, (agentPath: string) => string[]> =
   {
     claude: (agentPath) => [
@@ -113,6 +198,14 @@ export const GRADER_PROFILES: Record<string, (agentPath: string) => string[]> =
       'dontAsk',
       '--no-chrome',
       '--no-session-persistence',
+      '--setting-sources',
+      'local',
+      '--strict-mcp-config',
+      '--model',
+      'haiku',
+      '--allowedTools',
+      'Read',
+      'Write',
       '--agent',
       agentPath,
     ],
@@ -186,8 +279,15 @@ function spawnGrader(
     let turnNumber = 0;
 
     function emit(text: string): void {
-      if (options?.onOutput) options.onOutput(text);
-      if (mdLogStream) mdLogStream.write(text);
+      // Normalize every chunk to end with a blank-line separator. Model text
+      // (assistant textParts) has no trailing newline, so when the next
+      // chunk starts with a block element like "## Turn N" or "---" it
+      // glues to the previous chunk's last line and loses its markdown
+      // structure. Historical transcript loading reads the file whole so
+      // the TUI's per-chunk \n join does not save it there.
+      const normalized = text.replace(/\n*$/, '\n\n');
+      if (options?.onOutput) options.onOutput(normalized);
+      if (mdLogStream) mdLogStream.write(normalized);
     }
 
     proc.stdout.on('data', (data: Buffer) => {
@@ -345,6 +445,10 @@ export function gradeTest(
       `${specName}.${testCase.id}.grader-transcript.md`
     );
 
+    // Pre-seed the results file with the canonical schema. The grader will
+    // Read this, fill in the null values, and Write it back.
+    writeSeedResultsFile(resultsDir, specName, testCase);
+
     const { exitCode, stdout, stderr } = await spawnGrader(
       tool,
       cliArgs,
@@ -357,6 +461,30 @@ export function gradeTest(
         },
       }
     );
+
+    // Render the human-readable `.results.md` from the grader's JSON so the
+    // TUI drill-in and report links see the same data the runs-list uses.
+    // Failures here are non-fatal -- downstream code still reads the JSON.
+    const jsonPath = path.join(
+      resultsDir,
+      `${specName}.${testCase.id}.results.json`
+    );
+    const mdPath = path.join(
+      resultsDir,
+      `${specName}.${testCase.id}.results.md`
+    );
+    if (fs.existsSync(jsonPath)) {
+      try {
+        const data = normalizeGraderJson(
+          JSON.parse(fs.readFileSync(jsonPath, 'utf-8')) as unknown
+        );
+        fs.writeFileSync(mdPath, renderResultsMarkdown(data), 'utf-8');
+      } catch (e) {
+        log.warn(
+          `Malformed grader JSON for ${testCase.id}: ${(e as Error).message}`
+        );
+      }
+    }
 
     handle.emit('complete', {
       testId: testCase.id,
@@ -467,6 +595,15 @@ export async function gradeSpecs(
         `${specName}.${tc.id}.grader-transcript.md`
       );
 
+      // Pre-seed the results file so the grader fills in nulls rather than
+      // inventing the schema. Done upfront (before the batch runs) so tasks
+      // can execute in any order.
+      writeSeedResultsFile(
+        path.join('.workspace', 'runs', timestamp, 'results'),
+        specName,
+        tc
+      );
+
       tasks.push({
         specName,
         testId: tc.id,
@@ -523,25 +660,46 @@ export async function gradeSpecs(
 
   gradeLog.info(`Graded ${tasks.length}/${tasks.length} test cases`);
 
-  // Verify results files exist
+  // Render the human-readable `.results.md` from each grader-produced
+  // `.results.json`. The JSON is the source of truth; the markdown is derived
+  // for the drill-in view and the report.md failure-detail links.
   const resultsDir = path.join('.workspace', 'runs', timestamp, 'results');
   let missing = 0;
+  let malformed = 0;
   for (const task of tasks) {
-    const resultsPath = path.join(
+    const jsonPath = path.join(
+      resultsDir,
+      `${task.specName}.${task.testId}.results.json`
+    );
+    const mdPath = path.join(
       resultsDir,
       `${task.specName}.${task.testId}.results.md`
     );
-    if (!fs.existsSync(resultsPath)) {
-      gradeLog.verbose(
-        `Missing results file for ${task.testId}: ${resultsPath}`
-      );
+    if (!fs.existsSync(jsonPath)) {
+      gradeLog.verbose(`Missing results.json for ${task.testId}: ${jsonPath}`);
       missing++;
+      continue;
+    }
+    try {
+      const content = fs.readFileSync(jsonPath, 'utf-8');
+      const raw = JSON.parse(content) as unknown;
+      const data = normalizeGraderJson(raw);
+      fs.writeFileSync(mdPath, renderResultsMarkdown(data), 'utf-8');
+    } catch (e) {
+      malformed++;
+      gradeLog.warn(
+        `Malformed results.json for ${task.testId}: ${(e as Error).message}`
+      );
     }
   }
 
   if (missing > 0) {
-    gradeLog.verbose(`${missing} result file(s) missing`);
-  } else {
+    gradeLog.verbose(`${missing} results.json file(s) missing`);
+  }
+  if (malformed > 0) {
+    gradeLog.warn(`${malformed} results.json file(s) malformed`);
+  }
+  if (missing === 0 && malformed === 0) {
     gradeLog.success('All result files written');
   }
 }

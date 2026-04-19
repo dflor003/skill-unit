@@ -120,6 +120,11 @@ export const testCommand = defineCommand({
       type: 'string',
       description: 'Filter by spec name',
     },
+    skill: {
+      type: 'string',
+      description:
+        'Filter by the skill field in spec frontmatter (comma-separated)',
+    },
     model: {
       type: 'string',
       description: 'Override model for runner',
@@ -178,6 +183,8 @@ export const testCommand = defineCommand({
     const filter: SpecFilter = {};
     if (args.name)
       filter.name = args.name.split(',').map((n: string) => n.trim());
+    if (args.skill)
+      filter.skill = args.skill.split(',').map((s: string) => s.trim());
     if (args.tag) filter.tag = args.tag.split(',').map((t: string) => t.trim());
     if (args.file)
       filter.file = args.file.split(',').map((f: string) => f.trim());
@@ -185,12 +192,13 @@ export const testCommand = defineCommand({
       filter.test = args.test.split(',').map((t: string) => t.trim());
 
     const hasFilter =
-      args.all || args.name || args.tag || args.file || args.test;
+      args.all || args.name || args.skill || args.tag || args.file || args.test;
 
     // Collect positional args as additional name filters
     const knownValues = [
       args.config,
       args.name,
+      args.skill,
       args.tag,
       args.file,
       args.test,
@@ -211,7 +219,7 @@ export const testCommand = defineCommand({
 
     if (!hasAnyFilter) {
       log.error(
-        'No filter specified. Use --all to run all tests, or specify --name, --tag, --file, or --test.'
+        'No filter specified. Use --all to run all tests, or specify --name, --skill, --tag, --file, or --test.'
       );
       process.stderr.write('Use --all to run all tests or provide a filter.\n');
       process.exit(1);

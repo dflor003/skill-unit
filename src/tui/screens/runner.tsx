@@ -4,7 +4,7 @@ import { useKeyboardShortcuts } from '../keyboard/index.js';
 import { ProgressTree } from '../components/progress-tree.js';
 import { Ticker } from '../components/ticker.js';
 import { SessionPanel } from '../components/session-panel.js';
-import { SplitPanes } from '../components/split-panes.js';
+import { SplitPanes, getGridCols } from '../components/split-panes.js';
 import type { TestRunState } from '../hooks/use-test-run.js';
 import type { TranscriptViewMode } from '../components/session-panel.js';
 
@@ -133,7 +133,36 @@ export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
     const target = tests[index];
     if (target) {
       setSplitFocusedId(target.id);
+      setMaximizedId((prev) => (prev !== null ? target.id : prev));
     }
+  };
+
+  const navigatePane = (direction: 'up' | 'down' | 'left' | 'right') => {
+    const focusId = splitFocusedId ?? tests[0]?.id ?? null;
+    const currentIdx = tests.findIndex((t) => t.id === focusId);
+    if (currentIdx < 0) return;
+
+    const cols = getGridCols(tests.length);
+    const row = Math.floor(currentIdx / cols);
+    const col = currentIdx % cols;
+    const lastRow = Math.floor((tests.length - 1) / cols);
+
+    let targetIdx = currentIdx;
+    if (direction === 'up' && row > 0) {
+      targetIdx = currentIdx - cols;
+    } else if (direction === 'down' && row < lastRow) {
+      targetIdx = Math.min(currentIdx + cols, tests.length - 1);
+    } else if (direction === 'left' && col > 0) {
+      targetIdx = currentIdx - 1;
+    } else if (
+      direction === 'right' &&
+      col < cols - 1 &&
+      currentIdx + 1 < tests.length
+    ) {
+      targetIdx = currentIdx + 1;
+    }
+
+    if (targetIdx !== currentIdx) focusPane(targetIdx);
   };
 
   const hasTests = tests.length > 0;
@@ -185,6 +214,15 @@ export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
     viewMode === 'split' && hasTests
       ? [
           { keys: 'm', hint: 'maximize', handler: toggleMaximize },
+          {
+            keys: 'left',
+            hintKey: '←↑↓→',
+            hint: 'navigate',
+            handler: () => navigatePane('left'),
+          },
+          { keys: 'right', handler: () => navigatePane('right') },
+          { keys: 'up', handler: () => navigatePane('up') },
+          { keys: 'down', handler: () => navigatePane('down') },
           { keys: '1', handler: () => focusPane(0) },
           { keys: '2', handler: () => focusPane(1) },
           { keys: '3', handler: () => focusPane(2) },
@@ -294,6 +332,7 @@ export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
                 <SessionPanel
                   testId={activeTest.id}
                   testName={activeTest.name}
+                  specName={activeTest.specName}
                   status={activeTest.status}
                   transcript={activeTest.transcript}
                   gradeTranscript={activeTest.gradeTranscript}
