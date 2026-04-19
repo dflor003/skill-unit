@@ -2,20 +2,23 @@
 
 ## Overview
 
-Test execution in Skill Unit is handled by a Node.js runner script (`skills/skill-unit/scripts/runner.js`) that spawns isolated CLI processes for each test prompt. This document explains the architecture and the decisions that led to it.
+Test execution in Skill Unit is owned by the `skill-unit` CLI (`src/cli/` + `src/core/`). A single command — `skill-unit test` — runs the full pipeline: discover spec files, compile manifests, execute prompts in isolated workspaces, grade responses with independent agents, generate a report, and record run stats.
+
+The `skill-unit` skill (`skills/skill-unit/SKILL.md`) delegates to the CLI via a thin wrapper script (`skills/skill-unit/scripts/run-cli.sh`). It does not orchestrate the pipeline itself.
 
 ## How It Works
 
-The evaluator skill (SKILL.md) writes a manifest JSON file describing the test cases, then invokes `runner.js` via `Bash`. The runner:
+The `test` command (`src/cli/commands/test.ts`) performs seven phases in order:
 
-1. Reads the manifest (spec name, fixture path, skill path, runner config, test cases).
-2. For each test case, creates an isolated workspace (see [workspaces.md](workspaces.md)).
-3. Installs the skill under test as a plugin in a sibling directory.
-4. Spawns the harness CLI (e.g., `claude`) with the prompt piped via stdin.
-5. Captures the raw response from stdout (stream-json parsed).
-6. Writes all responses to a JSON file for the evaluator to grade.
+1. **Load config** — read `.skill-unit.yml` from the repo root via `src/config/loader.ts`, applying defaults for missing fields.
+2. **Discover & filter** — walk `test-dir` for `*.spec.md` files (`src/core/discovery.ts`), parse each into a `Spec` (`src/core/compiler.ts`), apply CLI filters (`--name`, `--tag`, `--file`, `--test`, or positional args).
+3. **Compile** — produce a `Manifest` per spec (`buildManifest`), containing resolved fixture paths, test cases, runner config, and resolved tool permissions. Manifests are written to `.workspace/runs/{timestamp}/manifests/` for inspection/debugging.
+4. **Run** — for each test case, spawn the harness CLI via `src/core/runner.ts` in an isolated workspace (see [workspaces.md](workspaces.md)). A `Semaphore` limits concurrency to `runner.concurrency` (default 5). Each run writes a `.transcript.md` and `.log.jsonl`.
+5. **Grade** — dispatch a `grader` agent per test case (`src/core/grader.ts`), up to `execution.grader-concurrency` in parallel. Each grader reads one transcript and writes one `.results.md`.
+6. **Report** — assemble `report.md` deterministically from all `.results.md` files (`src/core/reporter.ts`). Emit a terminal summary, append to `$GITHUB_STEP_SUMMARY` in CI mode, and optionally write JUnit XML (`src/core/junit.ts`).
+7. **Record stats** — append a `RunResult` to `.skill-unit/stats.json` (`src/core/stats.ts`) for trend tracking in the TUI.
 
-The evaluator then reads the responses, grades each one inline against the spec's expectations, writes results to disk, and presents a summary.
+The CLI exits 0 if all tests passed, 1 otherwise.
 
 ## Why a CLI Runner Instead of Subagents
 
@@ -35,7 +38,7 @@ Subagent APIs are harness-specific. Claude Code uses the `Agent` tool, Copilot a
 
 ## What the Runner Controls
 
-The runner is not a thin shell wrapper. It controls the full CLI invocation to ensure proper isolation:
+`src/core/runner.ts` builds the full harness-CLI invocation to ensure proper isolation:
 
 | Concern                    | How the runner handles it                                                                                                                                        |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -50,53 +53,35 @@ The runner is not a thin shell wrapper. It controls the full CLI invocation to e
 
 ## Tool Profiles
 
-The runner uses tool profiles — functions that build the CLI argument array for a given harness. Currently only `claude` is implemented. Adding a new harness means adding a new profile function that maps the same parameters (model, max turns, plugin dir, allowed/disallowed tools, workspace path) to that harness's CLI flags.
-
-```js
-const TOOL_PROFILES = {
-  claude: (
-    model,
-    maxTurns,
-    pluginDir,
-    allowedTools,
-    disallowedTools,
-    workspacePath
-  ) => [
-    '--print',
-    '--verbose',
-    '--output-format',
-    'stream-json',
-    // ... full argument list
-  ],
-  // Future: copilot, codex profiles
-};
-```
-
-## Removed: test-executor Agent
-
-The original design spec and plan included a `test-executor` agent (`agents/test-executor.md`) — a subagent that would receive a prompt and execute it in a clean context. This agent was never used in the implementation and has been removed from the repository. The reasons:
-
-1. **Sub-subagent constraint** — Skills that spawn their own subagents would fail under a subagent executor.
-2. **Anti-bias weakness** — A subagent shares process context with the evaluator, making information leakage possible.
-3. **Harness lock-in** — Subagent APIs are harness-specific; a CLI runner is portable.
-4. **Architectural simplicity** — The runner script handles workspace creation, CLI invocation, output parsing, and cleanup in a single, testable unit. Adding a subagent layer would split this responsibility without adding value.
-
-The `grader` agent (`agents/grader.md`) is now actively used — the evaluator dispatches it once per test case for transcript-based grading. See the "Grader Delegation" section above.
+The runner uses tool profiles — functions that build the CLI argument array for a given harness. Currently only `claude` is implemented. Adding a new harness means adding a new profile function that maps the same parameters (model, max turns, plugin dir, allowed/disallowed tools, workspace path) to that harness's CLI flags. See `TOOL_PROFILES` in `src/core/runner.ts`.
 
 ## Grader Delegation
 
-After the runner completes, the evaluator dispatches the `grader` agent (`agents/grader.md`) once per test case. Each grader reads the full conversation transcript (`.transcript.md`) and writes a per-test-case results file (`.results.md`). Graders are dispatched in configurable batches (default 5 concurrent) to manage API costs.
+The `grader` agent (`agents/grader.md`) is dispatched once per test case by `gradeSpecs` in `src/core/grader.ts`. Each grader reads the full `.transcript.md` and writes a `.results.md` with pass/fail per expectation. Graders are dispatched in batches (default 5 concurrent) to manage API costs.
 
-The grader agent prompt is self-contained — all grading logic, transcript format understanding, and output format are baked into the agent definition. The evaluator's dispatch is lightweight: test metadata inline, plus paths to the transcript and output files.
+The grader prompt is self-contained — all grading logic, transcript format understanding, and output format live in the agent definition. The orchestrator's dispatch is lightweight: test metadata inline plus paths to the transcript and output files.
 
-A deterministic Node.js script (`scripts/report.js`) then assembles a consolidated `report.md` from all grader outputs. This separation means:
+Report assembly (`src/core/reporter.ts`) is deterministic — no AI involved, pure parsing and template assembly. This separation gives us:
 
-- **Grading** is AI-powered (nuanced evaluation of behavioral trajectories)
-- **Reporting** is deterministic (pure parsing and template assembly)
-- **The evaluator** stays lean (no transcript data in its context)
+- **Grading**: AI-powered (nuanced evaluation of behavioral trajectories)
+- **Reporting**: deterministic (trivially reproducible)
+- **The CLI**: thin orchestration (no transcript data in its context)
 
-See `docs/specs/2026-04-04-grader-delegation-design.md` for the full design rationale.
+See `docs/specs/2026-04-04-grader-delegation-design.md` for the full design rationale. Note: the spec was written when this logic lived in `scripts/report.js`; the current implementation is in `src/core/reporter.ts` and is called inline by `test.ts` rather than as a separate script invocation.
+
+## Relationship to the Skill
+
+The `skill-unit` skill (`skills/skill-unit/SKILL.md`) is a thin layer over the CLI:
+
+1. The agent reads the user's request.
+2. It maps intent to CLI filter flags (table in SKILL.md Step 1).
+3. It invokes `skills/skill-unit/scripts/run-cli.sh` — a bash wrapper that resolves `skill-unit` from PATH or `npx --no-install skill-unit`.
+4. It streams CLI output to the user.
+5. When the CLI exits, it reads `report.md` from the run directory and presents the summary.
+
+The skill never builds manifests, polls progress, or dispatches graders. The CLI owns the pipeline; the skill is a UX shell.
 
 ## Relationship to Other Architecture Docs
 
 - [workspaces.md](workspaces.md) — Workspace directory structure, lifecycle, and isolation design decisions.
+- [per-test-fixtures.md](per-test-fixtures.md) — Fixture layering (global + per-test) inside workspaces.

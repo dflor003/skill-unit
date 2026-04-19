@@ -202,7 +202,7 @@ describe('Dashboard', () => {
     // Act -- move from group to TEST-1, select it with space, then Enter
     stdin.write('\x1b[B'); // arrow down
     await vi.waitFor(() => {
-      expect(lastFrame()).toMatch(/>\s+\[ \]\s+basic-usage/);
+      expect(lastFrame()).toMatch(/>\s+\[ \]\s+TEST-1\s+basic-usage/);
     });
     await new Promise((r) => setImmediate(r));
     stdin.write(' ');
@@ -316,7 +316,7 @@ describe('Dashboard', () => {
       // Act -- arrow down to test, space to select one
       stdin.write('\x1b[B');
       await vi.waitFor(() => {
-        expect(lastFrame()).toMatch(/>\s+\[ \]\s+basic-usage/);
+        expect(lastFrame()).toMatch(/>\s+\[ \]\s+TEST-1\s+basic-usage/);
       });
       await new Promise((r) => setImmediate(r));
       stdin.write(' ');

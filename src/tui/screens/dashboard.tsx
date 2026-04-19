@@ -316,11 +316,9 @@ export function Dashboard({
               return (
                 <Box key={item.key} flexShrink={0}>
                   <Box flexGrow={1}>
-                    <Text color={isActive ? 'blue' : undefined}>
+                    <Text bold color={isActive ? 'blue' : 'cyan'}>
                       {isActive ? '>' : ' '} {checkbox}{' '}
-                      <Text bold color={isActive ? undefined : 'cyan'}>
-                        {specBreadcrumb(item.specPath, testDir)}
-                      </Text>
+                      {specBreadcrumb(item.specPath, testDir)}
                     </Text>
                   </Box>
                   {item.tags.length > 0 && (
@@ -334,6 +332,7 @@ export function Dashboard({
               <Box key={item.key} paddingLeft={2} flexShrink={0}>
                 <Text color={isActive ? 'blue' : undefined}>
                   {isActive ? '>' : ' '} {isChecked ? '[x]' : '[ ]'}{' '}
+                  <Text bold>{item.test.testCase.id}</Text>{' '}
                   <Text bold={isActive}>{item.test.testCase.name}</Text>
                 </Text>
               </Box>

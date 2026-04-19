@@ -69,7 +69,7 @@ The manifest JSON was updated to support this:
 
 ## Runner Changes
 
-The runner (`skills/skill-unit/scripts/runner.js`) creates each workspace by:
+The runner (`src/core/runner.ts`) creates each workspace by:
 
 1. Creating the `work/` directory
 2. Copying `global-fixture-path` into it (if present)

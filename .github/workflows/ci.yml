@@ -73,6 +73,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build CLI
+        run: npm run build
+
+      - name: Link skill-unit CLI globally
+        run: npm link
+
+      - name: Verify skill-unit CLI
+        run: skill-unit --help
+
       - name: Install Claude CLI
         run: |
           curl -fsSL https://claude.ai/install.sh | bash
