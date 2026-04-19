@@ -9,7 +9,6 @@
       "WebFetch",
       "WebSearch",
       "Skill",
-
       "Bash(echo *)",
       "Bash(cat *)",
       "Bash(ls *)",
@@ -28,7 +27,6 @@
       "Bash(test *)",
       "Bash(find *)",
       "Bash([*)",
-
       "Bash(git mv *)",
       "Bash(git log *)",
       "Bash(git show *)",
@@ -47,25 +45,22 @@
       "Bash(git cat-file *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-
       "Bash(docker *)",
       "Bash(docker compose *)",
       "Bash(gh *)",
-
       "Bash(node -c *)",
       "Bash(node */skill-unit/scripts/*)",
-
       "Bash(npm.cmd test *)",
       "Bash(npm.cmd run *)",
       "Bash(npm.cmd list *)",
       "Bash(npm.cmd info *)",
       "Bash(npx.cmd tsx *)",
-
       "Bash(npm test *)",
       "Bash(npm run *)",
       "Bash(npm list *)",
       "Bash(npm info *)",
-      "Bash(npx tsx *)"
+      "Bash(npx tsx *)",
+      "Bash(npm.cmd view *)"
     ],
     "deny": [
       "Read(./.env)",

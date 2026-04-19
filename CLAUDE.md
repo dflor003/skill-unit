@@ -78,6 +78,14 @@ IDE schema validation will flag the correct format as an error. Ignore it.
 
 Never use `git -C <path>`. Always use relative paths so that the auto-approve rules in `settings.json` match correctly.
 
+## CI Workflows
+
+Workflows live in `.github/workflows/`. Read the YAML to see what each one does — do not ask the user.
+
+The `gh` CLI is allow-listed (`Bash(gh *)`). When CI is red, pull the logs yourself with `gh run view <id> --log-failed` instead of asking the user to paste. If `--log-failed` is empty (e.g. a cancelled job), fall back to `--log`.
+
+**The `Skill-Unit Tests` job costs Anthropic API tokens** and is opt-in only: a PR must have the `run-skill-tests` label, or the workflow must be manually dispatched. Do not enable it casually.
+
 ## Dev Setup
 
 After cloning, run:
@@ -89,6 +97,20 @@ npm link
 ```
 
 The `npm link` step is required for the skill-unit skill's own self-tests. The `skill-unit` skill invokes the CLI as `skill-unit <subcommand>` (or `npx skill-unit <subcommand>`). For external users, `npm install skill-unit` creates `node_modules/.bin/skill-unit` automatically; `npm install` in this repo does NOT self-install the bin, so `npm link` is needed to expose it on PATH. CI does the same thing automatically.
+
+### Cross-platform optional deps
+
+A committed `.npmrc` at the repo root sets `include=optional`. The `package-lock.json` is generated cross-platform (Linux, Windows, macOS — x64 and arm64) so that Linux CI and Windows/macOS contributors all resolve cleanly from the same lockfile.
+
+**Daily workflow:** run `npm ci` (matches CI exactly — installs from the lockfile, doesn't modify it, picks up only your host's binaries). Plain `npm install` also works on a clean checkout but will gradually strip cross-platform optional entries if the lockfile is touched.
+
+**When you need to refresh the lockfile** — after editing `package.json`, after `npm install <pkg>` or `npm install -D <pkg>` (both of which strip cross-platform entries), or after CI fails with `npm error Missing: <pkg> from lock file` — run:
+
+```bash
+npm run lockfile:refresh
+```
+
+This wipes `node_modules` and `package-lock.json`, regenerates the lockfile with all platforms, then installs your host binaries on top without touching the lockfile. Commit the refreshed `package-lock.json`. CI will fail loudly on `npm ci` with the exact missing package if anyone forgets.
 
 If the link gets stale (e.g., after pulling changes that modified `src/cli/`), re-run `npm run build` so the linked shim resolves to fresh code. The link target (`dist/cli/index.js`) is the same file on disk; only the content of `dist/` changes.
 
@@ -113,6 +135,8 @@ Available scripts:
 | `npm run test:skills`   | Run skill-unit spec tests (requires CLI harness, costs tokens) |
 | `npm run lint`          | Lint `src/` with ESLint                                        |
 | `npm run typecheck`     | Type-check without emitting (tsc --noEmit)                     |
+| `npm run format`        | Format the repo with Prettier (writes)                         |
+| `npm run format:check`  | Prettier check without writing (the CI gate)                   |
 
 ## Validation Commands
 
@@ -121,6 +145,22 @@ After editing any `.js` file, validate syntax with `node -c <relative-path>`. Al
 ## Writing Style
 
 Never use em-dashes. Use commas, periods, or semicolons instead.
+
+## Before Committing
+
+A `simple-git-hooks` + `pretty-quick` pre-commit hook formats staged files automatically at `git commit` time, so you do not need to run `npm run format` manually. Lint, typecheck, and tests are NOT in the hook (too slow / too much noise) and remain your responsibility.
+
+Standard pre-commit sequence when you have been authorized to commit (either directly by the user or as a subagent executing a plan task):
+
+```bash
+npm run typecheck
+npm run lint
+npm test
+git add <specific-paths>
+git commit -m "..."
+```
+
+If the pre-commit hook reformats files outside your task scope, include those changes in your commit. Do not revert them. Prettier is the source of truth for style.
 
 ## Git Workflow
 

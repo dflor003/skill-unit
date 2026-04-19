@@ -3,6 +3,11 @@ import React from 'react';
 import { render } from 'ink-testing-library';
 import { ProgressTree } from '../../src/tui/components/progress-tree.js';
 import { Ticker } from '../../src/tui/components/ticker.js';
+import { KeyboardRegistryProvider } from '../../src/tui/keyboard/index.js';
+
+function renderWithProvider(element: React.ReactElement) {
+  return render(<KeyboardRegistryProvider>{element}</KeyboardRegistryProvider>);
+}
 
 describe('ProgressTree', () => {
   it('renders test cases with status icons', () => {

@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import path from 'node:path';
-import { Box, useApp, useInput, useStdout } from 'ink';
+import { Box, useApp, useStdout } from 'ink';
 import {
-  BottomBar,
-  type Screen,
-  type RunViewMode,
-} from './components/bottom-bar.js';
-import { ContextBar, type ContextHint } from './components/context-bar.js';
+  KeyboardRegistryProvider,
+  useKeyboardShortcuts,
+} from './keyboard/index.js';
+import { BottomBar, type Screen } from './components/bottom-bar.js';
 import { ConfirmDialog } from './components/confirm-dialog.js';
 import { CleanupDialog } from './components/cleanup-dialog.js';
 import { Dashboard } from './screens/dashboard.js';
@@ -32,6 +31,16 @@ import type { SkillUnitConfig } from '../types/config.js';
 const STATS_BASE_DIR = '.skill-unit';
 
 export function App() {
+  return (
+    <KeyboardRegistryProvider>
+      <AppInner />
+    </KeyboardRegistryProvider>
+  );
+}
+
+const NAV_SCREENS: Screen[] = ['dashboard', 'runs', 'stats', 'options'];
+
+function AppInner() {
   const [screen, setScreen] = useState<Screen>('dashboard');
   const [previousScreen, setPreviousScreen] = useState<Screen>('dashboard');
   const [specs, setSpecs] = useState<Spec[]>([]);
@@ -69,12 +78,6 @@ export function App() {
   >(null);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCleanupDialog, setShowCleanupDialog] = useState(false);
-  const [isEditingField, setIsEditingField] = useState(false);
-  const [runnerViewMode, setRunnerViewMode] = useState<RunViewMode>('primary');
-  const [contextHints, setContextHints] = useState<ContextHint[]>([]);
-  const handleContextHintsChange = useCallback((hints: ContextHint[]) => {
-    setContextHints(hints);
-  }, []);
   const { stdout } = useStdout();
   const { exit } = useApp();
   const [termHeight, setTermHeight] = useState(stdout?.rows ?? 24);
@@ -186,55 +189,64 @@ export function App() {
     setShowCancelDialog(false);
   }
 
-  const NAV_SCREENS: Screen[] = ['dashboard', 'runs', 'stats', 'options'];
+  const isRunnerActive = screen === 'runner' && runState.status === 'running';
 
-  useInput((input, key) => {
-    // Modal dialogs and text editors absorb all input
-    if (showCancelDialog || showCleanupDialog || isEditingField) return;
+  const cycleScreen = (delta: 1 | -1) => {
+    setScreen((prev) => {
+      const idx = NAV_SCREENS.indexOf(prev);
+      return NAV_SCREENS[
+        (idx + delta + NAV_SCREENS.length) % NAV_SCREENS.length
+      ]!;
+    });
+  };
 
-    const isRunnerActive = screen === 'runner' && runState.status === 'running';
+  useKeyboardShortcuts([
+    { keys: 'ctrl+c', handler: exit },
+    { keys: ['q', 'Q'], handler: exit, enabled: !isRunnerActive },
 
-    // Escape handling
-    if (key.escape) {
-      if (isRunnerActive) {
-        setShowCancelDialog(true);
-        return;
-      }
-      if (screen === 'runner') {
-        setScreen(previousScreen);
-        return;
-      }
-      return;
-    }
+    {
+      keys: 'escape',
+      handler: () => setShowCancelDialog(true),
+      enabled: isRunnerActive,
+    },
+    {
+      keys: 'escape',
+      handler: () => setScreen(previousScreen),
+      enabled: screen === 'runner' && !isRunnerActive,
+    },
+    {
+      keys: ['backspace', 'delete'],
+      handler: () => setScreen(previousScreen),
+      enabled: screen === 'runner' && !isRunnerActive,
+    },
 
-    // Backspace = back from runner (only when not running)
-    if (key.backspace || key.delete) {
-      if (screen === 'runner' && !isRunnerActive) {
-        setScreen(previousScreen);
-        return;
-      }
-    }
-
-    // Block all global nav during active run
-    if (isRunnerActive) return;
-
-    // Nav shortcuts are uppercase-only (Shift+letter) so they never collide
-    // with typing into text inputs like the dashboard search box.
-    if (input === 'D') setScreen('dashboard');
-    if (input === 'R') setScreen('runs');
-    if (input === 'S') setScreen('stats');
-    if (input === 'O') setScreen('options');
-    if (key.tab) {
-      setScreen((prev) => {
-        const idx = NAV_SCREENS.indexOf(prev);
-        const delta = key.shift ? -1 : 1;
-        return NAV_SCREENS[
-          (idx + delta + NAV_SCREENS.length) % NAV_SCREENS.length
-        ];
-      });
-    }
-    if (input === 'Q' || (key.ctrl && input === 'c')) exit();
-  });
+    {
+      keys: ['d', 'D'],
+      handler: () => setScreen('dashboard'),
+      enabled: !isRunnerActive,
+    },
+    {
+      keys: ['r', 'R'],
+      handler: () => setScreen('runs'),
+      enabled: !isRunnerActive,
+    },
+    {
+      keys: ['s', 'S'],
+      handler: () => setScreen('stats'),
+      enabled: !isRunnerActive,
+    },
+    {
+      keys: ['o', 'O'],
+      handler: () => setScreen('options'),
+      enabled: !isRunnerActive,
+    },
+    { keys: 'tab', handler: () => cycleScreen(1), enabled: !isRunnerActive },
+    {
+      keys: 'shift+tab',
+      handler: () => cycleScreen(-1),
+      enabled: !isRunnerActive,
+    },
+  ]);
 
   return (
     <Box flexDirection="column" height={termHeight}>
@@ -256,7 +268,6 @@ export function App() {
             <Dashboard
               specs={specs}
               testDir={appConfig['test-dir']}
-              onContextHintsChange={handleContextHintsChange}
               onRunTests={(tests) => {
                 setHistoricalRun(null);
                 setPreviousScreen('dashboard');
@@ -298,22 +309,11 @@ export function App() {
               runs={statsIndex.runs}
               onCleanup={handleCleanup}
               onViewRun={handleViewRun}
-              onContextHintsChange={handleContextHintsChange}
             />
           )}
-          {screen === 'stats' && (
-            <Statistics
-              index={statsIndex}
-              onContextHintsChange={handleContextHintsChange}
-            />
-          )}
+          {screen === 'stats' && <Statistics index={statsIndex} />}
           {screen === 'options' && (
-            <Options
-              config={appConfig}
-              onSave={handleSaveConfig}
-              onEditingChange={setIsEditingField}
-              onContextHintsChange={handleContextHintsChange}
-            />
+            <Options config={appConfig} onSave={handleSaveConfig} />
           )}
           {screen === 'runner' && (
             <Runner
@@ -330,18 +330,13 @@ export function App() {
                 historicalRun ? setHistoricalActiveTestId : selectTest
               }
               onRerunTests={handleRerunTests}
-              onViewModeChange={setRunnerViewMode}
             />
           )}
         </Box>
       )}
-      {screen !== 'runner' && !showCleanupDialog && (
-        <ContextBar hints={contextHints} />
-      )}
       <BottomBar
         activeScreen={screen}
         runStatus={screen === 'runner' ? runState.status : undefined}
-        runViewMode={screen === 'runner' ? runnerViewMode : undefined}
       />
     </Box>
   );

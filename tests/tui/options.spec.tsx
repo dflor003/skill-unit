@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import React from 'react';
 import { render } from 'ink-testing-library';
+import { KeyboardRegistryProvider } from '../../src/tui/keyboard/index.js';
 
 // Mock @inkjs/ui to avoid ESM linking issues in vmForks pool
 vi.mock('@inkjs/ui', () => ({
@@ -37,6 +38,10 @@ vi.mock('@inkjs/ui', () => ({
 
 import { Options } from '../../src/tui/screens/options.js';
 
+function renderWithProvider(ui: React.ReactElement) {
+  return render(<KeyboardRegistryProvider>{ui}</KeyboardRegistryProvider>);
+}
+
 const defaultConfig = {
   'test-dir': 'skill-tests',
   runner: { tool: 'claude', model: null, 'max-turns': 10, concurrency: 5 },
@@ -52,7 +57,7 @@ const defaultConfig = {
 describe('Options', () => {
   it('should render config fields', () => {
     // Act
-    const { lastFrame } = render(
+    const { lastFrame } = renderWithProvider(
       <Options config={defaultConfig} onSave={() => {}} />
     );
     const output = lastFrame()!;
@@ -64,31 +69,9 @@ describe('Options', () => {
     expect(output).toContain('timeout');
   });
 
-  it('should emit context hints on mount', () => {
-    // Arrange
-    const hintsCallback = vi.fn();
-
-    // Act
-    render(
-      <Options
-        config={defaultConfig}
-        onSave={() => {}}
-        onContextHintsChange={hintsCallback}
-      />
-    );
-
-    // Assert
-    expect(hintsCallback).toHaveBeenCalled();
-    const hints =
-      hintsCallback.mock.calls[hintsCallback.mock.calls.length - 1][0];
-    const keys = hints.map((h: { key: string }) => h.key);
-    expect(keys).toContain('[Enter]');
-    expect(keys).toContain('[s]');
-  });
-
   it('should show section headers', () => {
     // Act
-    const { lastFrame } = render(
+    const { lastFrame } = renderWithProvider(
       <Options config={defaultConfig} onSave={() => {}} />
     );
     const output = lastFrame()!;
@@ -102,7 +85,7 @@ describe('Options', () => {
 
   it('should show (none) for null model', () => {
     // Act
-    const { lastFrame } = render(
+    const { lastFrame } = renderWithProvider(
       <Options config={defaultConfig} onSave={() => {}} />
     );
 
@@ -112,7 +95,7 @@ describe('Options', () => {
 
   it('should show cursor on first field', () => {
     // Act
-    const { lastFrame } = render(
+    const { lastFrame } = renderWithProvider(
       <Options config={defaultConfig} onSave={() => {}} />
     );
 

@@ -17,6 +17,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+env:
+  SKIP_SIMPLE_GIT_HOOKS: 1
+
 jobs:
   check:
     name: Build & Test

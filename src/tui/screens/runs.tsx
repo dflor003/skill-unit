@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
 import type { StatsIndex } from '../../types/run.js';
-import type { ContextHint } from '../components/context-bar.js';
 import { formatTimestamp } from '../format.js';
+import { useKeyboardShortcuts } from '../keyboard/index.js';
 
 type RunEntry = StatsIndex['runs'][number];
 
@@ -10,7 +10,6 @@ interface RunManagerProps {
   runs: RunEntry[];
   onCleanup: () => void;
   onViewRun: (run: RunEntry) => void;
-  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 function formatDuration(ms: number): string {
@@ -25,12 +24,7 @@ function formatCost(cost: number): string {
   return `$${cost.toFixed(3)}`;
 }
 
-export function RunManager({
-  runs,
-  onCleanup,
-  onViewRun,
-  onContextHintsChange,
-}: RunManagerProps) {
+export function RunManager({ runs, onCleanup, onViewRun }: RunManagerProps) {
   const [cursor, setCursor] = useState(0);
 
   // Clamp cursor when runs list shrinks (e.g. after deletion)
@@ -40,32 +34,33 @@ export function RunManager({
     }
   }, [runs.length, cursor]);
 
-  useEffect(() => {
-    if (runs.length === 0) {
-      onContextHintsChange?.([]);
-    } else {
-      onContextHintsChange?.([
-        { key: '↑↓', label: 'navigate' },
-        { key: '[Enter]', label: 'view' },
-        { key: '[C]', label: 'cleanup' },
-      ]);
-    }
-  }, [runs.length, onContextHintsChange]);
-
-  useInput((input, key) => {
-    if (runs.length === 0) return;
-
-    if (key.upArrow) {
-      setCursor((c) => Math.max(0, c - 1));
-    } else if (key.downArrow) {
-      setCursor((c) => Math.min(runs.length - 1, c + 1));
-    } else if (input === 'C') {
-      onCleanup();
-    } else if (key.return) {
-      const run = runs[cursor];
-      if (run) onViewRun(run);
-    }
-  });
+  useKeyboardShortcuts([
+    {
+      keys: 'up',
+      enabled: runs.length > 0,
+      handler: () => setCursor((c) => Math.max(0, c - 1)),
+    },
+    {
+      keys: 'down',
+      enabled: runs.length > 0,
+      handler: () => setCursor((c) => Math.min(runs.length - 1, c + 1)),
+    },
+    {
+      keys: ['c', 'C'],
+      hint: 'cleanup',
+      enabled: runs.length > 0,
+      handler: onCleanup,
+    },
+    {
+      keys: 'enter',
+      hint: 'view',
+      enabled: runs.length > 0,
+      handler: () => {
+        const run = runs[cursor];
+        if (run) onViewRun(run);
+      },
+    },
+  ]);
 
   if (runs.length === 0) {
     return (

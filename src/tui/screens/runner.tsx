@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useKeyboardShortcuts } from '../keyboard/index.js';
 import { ProgressTree } from '../components/progress-tree.js';
 import { Ticker } from '../components/ticker.js';
 import { SessionPanel } from '../components/session-panel.js';
@@ -11,17 +12,11 @@ interface RunnerProps {
   runState: TestRunState;
   onSelectTest: (id: string) => void;
   onRerunTests?: (testIds: string[]) => void;
-  onViewModeChange?: (mode: 'primary' | 'split') => void;
 }
 
 type ViewMode = 'primary' | 'split';
 
-export function Runner({
-  runState,
-  onSelectTest,
-  onRerunTests,
-  onViewModeChange,
-}: RunnerProps) {
+export function Runner({ runState, onSelectTest, onRerunTests }: RunnerProps) {
   const { tests, activeTestId, elapsed, status } = runState;
   const [viewMode, setViewMode] = useState<ViewMode>('primary');
   const [splitFocusedId, setSplitFocusedId] = useState<string | null>(null);
@@ -46,134 +41,162 @@ export function Runner({
     return `${testId}:${vm}`;
   }
 
-  useInput((input, key) => {
-    if (tests.length === 0) return;
+  const toggleViewMode = () => {
+    setViewMode((prev) => (prev === 'primary' ? 'split' : 'primary'));
+  };
 
-    // Toggle view mode with [v]
-    if (input === 'v') {
-      setViewMode((prev) => {
-        const next = prev === 'primary' ? 'split' : 'primary';
-        if (onViewModeChange) onViewModeChange(next);
-        return next;
-      });
-      return;
+  const toggleCurrentTestSelection = () => {
+    if (!activeTestId) return;
+    setSelectedTests((prev) => {
+      const next = new Set(prev);
+      if (next.has(activeTestId)) {
+        next.delete(activeTestId);
+      } else {
+        next.add(activeTestId);
+      }
+      return next;
+    });
+  };
+
+  const rerunSelected = () => {
+    if (onRerunTests) onRerunTests(Array.from(selectedTests));
+  };
+
+  const scrollUp = () => {
+    if (!activeTestId) return;
+    const sk = scrollKey(activeTestId);
+    setScrollState((prev) => {
+      const curr = prev[sk] ?? { offset: 0, following: true };
+      return {
+        ...prev,
+        [sk]: { offset: curr.offset + 3, following: false },
+      };
+    });
+  };
+
+  const scrollDown = () => {
+    if (!activeTestId) return;
+    const sk = scrollKey(activeTestId);
+    setScrollState((prev) => {
+      const curr = prev[sk] ?? { offset: 0, following: true };
+      return {
+        ...prev,
+        [sk]: {
+          offset: Math.max(0, curr.offset - 3),
+          following: curr.offset - 3 <= 0,
+        },
+      };
+    });
+  };
+
+  const enableFollow = () => {
+    if (!activeTestId) return;
+    const sk = scrollKey(activeTestId);
+    setScrollState((prev) => ({
+      ...prev,
+      [sk]: { offset: 0, following: true },
+    }));
+  };
+
+  const toggleTranscriptView = () => {
+    if (!activeTestId) return;
+    setViewModes((prev) => {
+      const curr = prev[activeTestId] ?? 'execution';
+      return {
+        ...prev,
+        [activeTestId]: curr === 'execution' ? 'grading' : 'execution',
+      };
+    });
+    setManualToggled((prev) => new Set(prev).add(activeTestId));
+  };
+
+  const selectPreviousSession = () => {
+    const currentIdx = tests.findIndex((t) => t.id === activeTestId);
+    const prevIdx = Math.max(0, currentIdx - 1);
+    const prev = tests[prevIdx];
+    if (prev) onSelectTest(prev.id);
+  };
+
+  const selectNextSession = () => {
+    const currentIdx = tests.findIndex((t) => t.id === activeTestId);
+    const nextIdx = Math.min(tests.length - 1, currentIdx + 1);
+    const next = tests[nextIdx];
+    if (next) onSelectTest(next.id);
+  };
+
+  const toggleMaximize = () => {
+    const focusId = splitFocusedId ?? tests[0]?.id ?? null;
+    setMaximizedId((prev) => (prev === focusId ? null : focusId));
+  };
+
+  const focusPane = (index: number) => {
+    const target = tests[index];
+    if (target) {
+      setSplitFocusedId(target.id);
     }
+  };
 
-    if (viewMode === 'primary') {
-      // Selection toggle (only when run is complete)
-      if (input === ' ' && status === 'complete') {
-        if (activeTestId) {
-          setSelectedTests((prev) => {
-            const next = new Set(prev);
-            if (next.has(activeTestId)) {
-              next.delete(activeTestId);
-            } else {
-              next.add(activeTestId);
-            }
-            return next;
-          });
-        }
-        return;
-      }
+  const hasTests = tests.length > 0;
+  const isComplete = status === 'complete';
 
-      // Re-run selected tests
-      if (key.return && status === 'complete' && selectedTests.size > 0) {
-        if (onRerunTests) onRerunTests(Array.from(selectedTests));
-        return;
-      }
+  // Always-on scope (both view modes)
+  useKeyboardShortcuts([
+    {
+      keys: 'v',
+      hint: viewMode === 'primary' ? 'split' : 'primary',
+      enabled: hasTests,
+      handler: toggleViewMode,
+    },
+  ]);
 
-      // Scroll up
-      if (key.upArrow) {
-        if (activeTestId) {
-          const sk = scrollKey(activeTestId);
-          setScrollState((prev) => {
-            const curr = prev[sk] ?? { offset: 0, following: true };
-            return {
-              ...prev,
-              [sk]: { offset: curr.offset + 3, following: false },
-            };
-          });
-        }
-        return;
-      }
+  // Primary-mode scope
+  useKeyboardShortcuts(
+    viewMode === 'primary' && hasTests
+      ? [
+          {
+            keys: 'space',
+            hint: 'select',
+            enabled: isComplete,
+            handler: toggleCurrentTestSelection,
+          },
+          {
+            keys: 'enter',
+            hint: 're-run',
+            enabled: isComplete && selectedTests.size > 0,
+            handler: rerunSelected,
+          },
+          { keys: 'up', handler: scrollUp },
+          { keys: 'down', handler: scrollDown },
+          { keys: 'f', hint: 'follow', handler: enableFollow },
+          { keys: 't', hint: 'transcript', handler: toggleTranscriptView },
+          {
+            keys: 'left',
+            hintKey: '←→',
+            hint: 'sessions',
+            handler: selectPreviousSession,
+          },
+          { keys: 'right', handler: selectNextSession },
+        ]
+      : []
+  );
 
-      // Scroll down
-      if (key.downArrow) {
-        if (activeTestId) {
-          const sk = scrollKey(activeTestId);
-          setScrollState((prev) => {
-            const curr = prev[sk] ?? { offset: 0, following: true };
-            return {
-              ...prev,
-              [sk]: {
-                offset: Math.max(0, curr.offset - 3),
-                following: curr.offset - 3 <= 0,
-              },
-            };
-          });
-        }
-        return;
-      }
-
-      // Follow mode
-      if (input === 'f') {
-        if (activeTestId) {
-          const sk = scrollKey(activeTestId);
-          setScrollState((prev) => ({
-            ...prev,
-            [sk]: { offset: 0, following: true },
-          }));
-        }
-        return;
-      }
-
-      // Toggle execution/grading transcript
-      if (input === 't') {
-        if (activeTestId) {
-          setViewModes((prev) => {
-            const curr = prev[activeTestId] ?? 'execution';
-            return {
-              ...prev,
-              [activeTestId]: curr === 'execution' ? 'grading' : 'execution',
-            };
-          });
-          setManualToggled((prev) => new Set(prev).add(activeTestId));
-        }
-        return;
-      }
-
-      const currentIdx = tests.findIndex((t) => t.id === activeTestId);
-
-      if (key.leftArrow) {
-        const prevIdx = Math.max(0, currentIdx - 1);
-        const prev = tests[prevIdx];
-        if (prev) onSelectTest(prev.id);
-      } else if (key.rightArrow) {
-        const nextIdx = Math.min(tests.length - 1, currentIdx + 1);
-        const next = tests[nextIdx];
-        if (next) onSelectTest(next.id);
-      }
-    } else {
-      // Split pane mode: [1-9] sets focused pane, [m] toggles maximized
-      if (input === 'm') {
-        const focusId = splitFocusedId ?? tests[0]?.id ?? null;
-        setMaximizedId((prev) => (prev === focusId ? null : focusId));
-        return;
-      }
-
-      const num = parseInt(input, 10);
-      if (!isNaN(num) && num >= 1 && num <= 9) {
-        const target = tests[num - 1];
-        if (target) {
-          setSplitFocusedId(target.id);
-        }
-      }
-    }
-  });
-
-  useEffect(() => {
-    if (onViewModeChange) onViewModeChange(viewMode);
-  }, []); // Only report initial view mode on mount
+  // Split-mode scope
+  useKeyboardShortcuts(
+    viewMode === 'split' && hasTests
+      ? [
+          { keys: 'm', hint: 'maximize', handler: toggleMaximize },
+          { keys: '1', handler: () => focusPane(0) },
+          { keys: '2', handler: () => focusPane(1) },
+          { keys: '3', handler: () => focusPane(2) },
+          { keys: '4', handler: () => focusPane(3) },
+          { keys: '5', handler: () => focusPane(4) },
+          { keys: '6', handler: () => focusPane(5) },
+          { keys: '7', handler: () => focusPane(6) },
+          { keys: '8', handler: () => focusPane(7) },
+          { keys: '9', handler: () => focusPane(8) },
+        ]
+      : []
+  );
 
   useEffect(() => {
     for (const test of tests) {

@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Box, Text, useInput } from 'ink';
+import { Box, Text } from 'ink';
+import { useKeyboardShortcuts } from '../keyboard/index.js';
 import { Select, TextInput } from '@inkjs/ui';
 import type { SkillUnitConfig, LogLevel } from '../../types/config.js';
-import type { ContextHint } from '../components/context-bar.js';
 
 interface OptionsProps {
   config: SkillUnitConfig;
   onSave: (config: SkillUnitConfig) => void;
-  onEditingChange?: (editing: boolean) => void;
-  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 type FieldType = 'enum' | 'boolean' | 'number' | 'string';
@@ -124,12 +122,7 @@ const FIELDS: FieldDef[] = [
   },
 ];
 
-export function Options({
-  config,
-  onSave,
-  onEditingChange,
-  onContextHintsChange,
-}: OptionsProps) {
+export function Options({ config, onSave }: OptionsProps) {
   const [cursor, setCursor] = useState(0);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [draft, setDraft] = useState<SkillUnitConfig>(config);
@@ -142,80 +135,65 @@ export function Options({
 
   const hasChanges = JSON.stringify(draft) !== JSON.stringify(config);
 
-  useEffect(() => {
-    if (editingIndex !== null) {
-      const field = FIELDS[editingIndex];
-      if (field.type === 'enum') {
-        onContextHintsChange?.([
-          { key: '↑↓', label: 'navigate' },
-          { key: '[Enter]', label: 'select' },
-          { key: '[Esc]', label: 'cancel' },
-        ]);
-      } else {
-        onContextHintsChange?.([
-          { key: '[Enter]', label: 'submit' },
-          { key: '[Esc]', label: 'cancel' },
-        ]);
-      }
-    } else {
-      const hints: ContextHint[] = [
-        { key: '↑↓', label: 'navigate' },
-        { key: '[Enter]', label: 'edit' },
-        { key: '[s]', label: 'save' },
-      ];
-      if (hasChanges) {
-        hints.push({ key: '[Esc]', label: 'discard' });
-      }
-      onContextHintsChange?.(hints);
-    }
-  }, [editingIndex, hasChanges, onContextHintsChange]);
-
   function startEditing(index: number) {
     setEditingIndex(index);
-    onEditingChange?.(true);
   }
 
   function stopEditing() {
     setEditingIndex(null);
-    onEditingChange?.(false);
   }
 
-  useInput((input, key) => {
-    if (editingIndex !== null) {
-      if (key.escape) {
-        stopEditing();
-      }
-      return;
-    }
-
-    if (key.upArrow) {
-      setCursor((c) => Math.max(0, c - 1));
-    } else if (key.downArrow) {
-      setCursor((c) => Math.min(FIELDS.length - 1, c + 1));
-    } else if (key.return) {
-      const field = FIELDS[cursor];
-      if (field.type === 'boolean') {
-        const current = field.get(draft);
-        const toggled = current === 'true' ? 'false' : 'true';
-        setDraft(field.set(draft, toggled));
-      } else if (field.type === 'enum' && (field.options?.length ?? 0) <= 1) {
-        // Single-option enum: nothing to choose, skip the editor
-      } else {
-        startEditing(cursor);
-      }
-    } else if (input === 's' || input === 'S') {
-      onSave(draft);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 1500);
-    } else if (key.escape && hasChanges) {
-      setDraft(config);
-    }
-  });
+  useKeyboardShortcuts([
+    {
+      keys: 'up',
+      enabled: editingIndex === null,
+      handler: () => setCursor((c) => Math.max(0, c - 1)),
+    },
+    {
+      keys: 'down',
+      enabled: editingIndex === null,
+      handler: () => setCursor((c) => Math.min(FIELDS.length - 1, c + 1)),
+    },
+    {
+      keys: 'enter',
+      hint: 'edit',
+      enabled: editingIndex === null,
+      handler: () => {
+        const field = FIELDS[cursor]!;
+        if (field.type === 'boolean') {
+          const current = field.get(draft);
+          const toggled = current === 'true' ? 'false' : 'true';
+          setDraft(field.set(draft, toggled));
+        } else if (field.type === 'enum' && (field.options?.length ?? 0) <= 1) {
+          // Single-option enum: nothing to choose, skip the editor
+        } else {
+          startEditing(cursor);
+        }
+      },
+    },
+    {
+      keys: ['s', 'S'],
+      hint: 'save',
+      enabled: editingIndex === null,
+      handler: () => {
+        onSave(draft);
+        setSaved(true);
+        setTimeout(() => setSaved(false), 1500);
+      },
+    },
+    {
+      keys: 'escape',
+      hint: 'discard',
+      enabled: editingIndex === null && hasChanges,
+      handler: () => setDraft(config),
+    },
+  ]);
 
   let currentSection = '';
 
   return (
     <Box flexDirection="column">
+      {editingIndex !== null && <OptionsEditingScope onCancel={stopEditing} />}
       <Box marginBottom={1}>
         <Text bold>Options</Text>
         <Text color="gray"> -- .skill-unit.yml</Text>
@@ -271,6 +249,14 @@ export function Options({
       )}
     </Box>
   );
+}
+
+function OptionsEditingScope({ onCancel }: { onCancel: () => void }) {
+  useKeyboardShortcuts(
+    [{ keys: 'escape', hint: 'cancel', handler: onCancel }],
+    { modal: true }
+  );
+  return null;
 }
 
 function FieldEditor({

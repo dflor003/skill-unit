@@ -9,6 +9,15 @@ vi.mock('../../src/core/selection.js', () => ({
 }));
 
 import { Dashboard } from '../../src/tui/screens/dashboard.js';
+import { KeyboardRegistryProvider } from '../../src/tui/keyboard/index.js';
+
+function renderDashboard(props: React.ComponentProps<typeof Dashboard>) {
+  return render(
+    <KeyboardRegistryProvider>
+      <Dashboard {...props} />
+    </KeyboardRegistryProvider>
+  );
+}
 
 const mockSpecs = [
   {
@@ -35,26 +44,22 @@ const mockSpecs = [
 
 describe('Dashboard', () => {
   it('renders test list', () => {
-    const { lastFrame } = render(
-      <Dashboard
-        specs={mockSpecs}
-        testDir="skill-tests"
-        onRunTests={() => {}}
-      />
-    );
+    const { lastFrame } = renderDashboard({
+      specs: mockSpecs,
+      testDir: 'skill-tests',
+      onRunTests: () => {},
+    });
     const output = lastFrame()!;
     expect(output).toContain('basic-usage');
     expect(output).toContain('error-case');
   });
 
   it('shows test count', () => {
-    const { lastFrame } = render(
-      <Dashboard
-        specs={mockSpecs}
-        testDir="skill-tests"
-        onRunTests={() => {}}
-      />
-    );
+    const { lastFrame } = renderDashboard({
+      specs: mockSpecs,
+      testDir: 'skill-tests',
+      onRunTests: () => {},
+    });
     const output = lastFrame()!;
     expect(output).toContain('2');
   });
@@ -62,13 +67,11 @@ describe('Dashboard', () => {
   it('does not run tests when Enter is pressed with no selection', () => {
     // Arrange
     const onRunTests = vi.fn();
-    const { stdin } = render(
-      <Dashboard
-        specs={mockSpecs}
-        testDir="skill-tests"
-        onRunTests={onRunTests}
-      />
-    );
+    const { stdin } = renderDashboard({
+      specs: mockSpecs,
+      testDir: 'skill-tests',
+      onRunTests,
+    });
 
     // Act -- press Enter with nothing selected
     stdin.write('\r');
@@ -116,13 +119,11 @@ describe('Dashboard', () => {
         },
       ];
       const onRunTests = vi.fn();
-      const { stdin, lastFrame } = render(
-        <Dashboard
-          specs={specs}
-          testDir="skill-tests"
-          onRunTests={onRunTests}
-        />
-      );
+      const { stdin, lastFrame } = renderDashboard({
+        specs,
+        testDir: 'skill-tests',
+        onRunTests,
+      });
 
       // Act -- Shift+A to select all in current spec, then Enter to run
       stdin.write('A');
@@ -175,9 +176,11 @@ describe('Dashboard', () => {
       ];
 
       // Act
-      const { lastFrame } = render(
-        <Dashboard specs={specs} testDir="skill-tests" onRunTests={() => {}} />
-      );
+      const { lastFrame } = renderDashboard({
+        specs,
+        testDir: 'skill-tests',
+        onRunTests: () => {},
+      });
       const output = lastFrame()!;
 
       // Assert
@@ -191,13 +194,11 @@ describe('Dashboard', () => {
   it('runs selected tests when Enter is pressed', async () => {
     // Arrange -- cursor starts on the group; arrow down to land on first test
     const onRunTests = vi.fn();
-    const { stdin, lastFrame } = render(
-      <Dashboard
-        specs={mockSpecs}
-        testDir="skill-tests"
-        onRunTests={onRunTests}
-      />
-    );
+    const { stdin, lastFrame } = renderDashboard({
+      specs: mockSpecs,
+      testDir: 'skill-tests',
+      onRunTests,
+    });
 
     // Act -- move from group to TEST-1, select it with space, then Enter
     stdin.write('\x1b[B'); // arrow down
@@ -224,13 +225,11 @@ describe('Dashboard', () => {
     it('should select all tests in the group when Space is pressed', async () => {
       // Arrange -- cursor starts on the group header (index 0)
       const onRunTests = vi.fn();
-      const { stdin, lastFrame } = render(
-        <Dashboard
-          specs={mockSpecs}
-          testDir="skill-tests"
-          onRunTests={onRunTests}
-        />
-      );
+      const { stdin, lastFrame } = renderDashboard({
+        specs: mockSpecs,
+        testDir: 'skill-tests',
+        onRunTests,
+      });
 
       // Act
       stdin.write(' ');
@@ -244,13 +243,11 @@ describe('Dashboard', () => {
 
     it('should deselect all tests in the group when Space is pressed again', async () => {
       // Arrange
-      const { stdin, lastFrame } = render(
-        <Dashboard
-          specs={mockSpecs}
-          testDir="skill-tests"
-          onRunTests={() => {}}
-        />
-      );
+      const { stdin, lastFrame } = renderDashboard({
+        specs: mockSpecs,
+        testDir: 'skill-tests',
+        onRunTests: () => {},
+      });
 
       // Act -- select then deselect
       stdin.write(' ');
@@ -270,13 +267,11 @@ describe('Dashboard', () => {
   describe('group checkbox states', () => {
     it('should render [ ] when no tests in the group are selected', () => {
       // Arrange / Act
-      const { lastFrame } = render(
-        <Dashboard
-          specs={mockSpecs}
-          testDir="skill-tests"
-          onRunTests={() => {}}
-        />
-      );
+      const { lastFrame } = renderDashboard({
+        specs: mockSpecs,
+        testDir: 'skill-tests',
+        onRunTests: () => {},
+      });
 
       // Assert
       const output = lastFrame()!;
@@ -285,13 +280,11 @@ describe('Dashboard', () => {
 
     it('should render [x] when all tests in the group are selected', async () => {
       // Arrange
-      const { stdin, lastFrame } = render(
-        <Dashboard
-          specs={mockSpecs}
-          testDir="skill-tests"
-          onRunTests={() => {}}
-        />
-      );
+      const { stdin, lastFrame } = renderDashboard({
+        specs: mockSpecs,
+        testDir: 'skill-tests',
+        onRunTests: () => {},
+      });
 
       // Act -- space on group to select all
       stdin.write(' ');
@@ -305,13 +298,11 @@ describe('Dashboard', () => {
 
     it('should render [-] when some but not all tests are selected', async () => {
       // Arrange -- navigate to first test, select just that one
-      const { stdin, lastFrame } = render(
-        <Dashboard
-          specs={mockSpecs}
-          testDir="skill-tests"
-          onRunTests={() => {}}
-        />
-      );
+      const { stdin, lastFrame } = renderDashboard({
+        specs: mockSpecs,
+        testDir: 'skill-tests',
+        onRunTests: () => {},
+      });
 
       // Act -- arrow down to test, space to select one
       stdin.write('\x1b[B');
@@ -332,13 +323,11 @@ describe('Dashboard', () => {
   describe('when the user is typing a search query', () => {
     it('should route action keys into the query instead of firing actions', async () => {
       // Arrange
-      const { stdin, lastFrame } = render(
-        <Dashboard
-          specs={mockSpecs}
-          testDir="skill-tests"
-          onRunTests={() => {}}
-        />
-      );
+      const { stdin, lastFrame } = renderDashboard({
+        specs: mockSpecs,
+        testDir: 'skill-tests',
+        onRunTests: () => {},
+      });
 
       // Act -- typing "sa" includes an 'a' which used to trigger select-all
       stdin.write('s');
@@ -356,13 +345,11 @@ describe('Dashboard', () => {
 
     it('should clear the query when Esc is pressed', async () => {
       // Arrange
-      const { stdin, lastFrame } = render(
-        <Dashboard
-          specs={mockSpecs}
-          testDir="skill-tests"
-          onRunTests={() => {}}
-        />
-      );
+      const { stdin, lastFrame } = renderDashboard({
+        specs: mockSpecs,
+        testDir: 'skill-tests',
+        onRunTests: () => {},
+      });
 
       // Act -- type something, then press Esc
       stdin.write('abc');

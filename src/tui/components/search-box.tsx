@@ -3,7 +3,6 @@ import { Box, Text } from 'ink';
 
 interface SearchBoxProps {
   value: string;
-  onChange: (value: string) => void;
   placeholder?: string;
 }
 

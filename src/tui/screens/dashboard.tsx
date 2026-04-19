@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Box, Text, useInput, measureElement, type DOMElement } from 'ink';
+import { Box, Text, measureElement, type DOMElement } from 'ink';
+import { useKeyboardShortcuts } from '../keyboard/index.js';
 import type { Spec, TestCase } from '../../types/spec.js';
-import type { ContextHint } from '../components/context-bar.js';
 import { SearchBox } from '../components/search-box.js';
 import { Scrollbar } from '../components/scrollbar.js';
 import { loadSelection, saveSelection } from '../../core/selection.js';
@@ -48,7 +48,6 @@ interface DashboardProps {
   specs: Spec[];
   testDir: string;
   onRunTests: (tests: FlatTestCase[]) => void;
-  onContextHintsChange?: (hints: ContextHint[]) => void;
 }
 
 function flattenSpecs(specs: Spec[]): FlatTestCase[] {
@@ -147,12 +146,7 @@ function toggleGroup(group: GroupItem, prev: Set<string>): Set<string> {
 
 const SELECTION_DIR = '.skill-unit';
 
-export function Dashboard({
-  specs,
-  testDir,
-  onRunTests,
-  onContextHintsChange,
-}: DashboardProps) {
+export function Dashboard({ specs, testDir, onRunTests }: DashboardProps) {
   const allTests = flattenSpecs(specs);
   const [query, setQuery] = useState('');
   const [cursor, setCursor] = useState(0);
@@ -196,30 +190,6 @@ export function Dashboard({
     );
   }, [selected]);
 
-  useEffect(() => {
-    const searching = query.length > 0;
-    const hints = searching
-      ? [
-          { key: '↑↓', label: 'navigate' },
-          { key: '[Esc]', label: 'clear search' },
-          ...(selected.size > 0
-            ? [{ key: '[Enter]', label: `run ${selected.size} selected` }]
-            : []),
-          { key: 'type', label: 'to search' },
-        ]
-      : [
-          { key: '↑↓', label: 'navigate' },
-          { key: '[Space]', label: 'toggle' },
-          { key: '[a]', label: 'all' },
-          { key: '[A]', label: 'all in spec' },
-          ...(selected.size > 0
-            ? [{ key: '[Enter]', label: `run ${selected.size} selected` }]
-            : []),
-          { key: 'type', label: 'to search' },
-        ];
-    onContextHintsChange?.(hints);
-  }, [selected.size, query.length, onContextHintsChange]);
-
   // Refs mirror the latest state for the useInput handler. ink re-binds the
   // input listener via useEffect after each render, which lands a tick AFTER
   // commit. Reading state through refs keeps the handler correct even when
@@ -235,91 +205,104 @@ export function Dashboard({
   const onRunTestsRef = useRef(onRunTests);
   onRunTestsRef.current = onRunTests;
 
-  useInput((input, key) => {
-    const selected = selectedRef.current;
+  const toggleSelection = () => {
     const visible = visibleRef.current;
     const cursor = cursorRef.current;
-    const query = queryRef.current;
-    const searching = query.length > 0;
-
-    // Keys that always behave the same, regardless of search state.
-    if (key.upArrow) {
-      setCursor((c) => Math.max(0, c - 1));
-      return;
-    }
-    if (key.downArrow) {
-      setCursor((c) => Math.min(visible.length - 1, c + 1));
-      return;
-    }
-    if (key.return) {
-      if (selected.size === 0) return;
-      const toRun = testsInView.filter((t) => selected.has(t.key));
-      if (toRun.length > 0) onRunTestsRef.current(toRun);
-      return;
-    }
-    if (key.backspace || key.delete) {
-      setQuery((q) => q.slice(0, -1));
-      return;
-    }
-    if (key.escape) {
-      // Clear the query, snapping back to action mode.
-      setQuery('');
-      return;
-    }
-
-    // Action keys only fire when the search query is empty. Once the user is
-    // typing a search, these characters are forwarded to the query so users
-    // can type words containing them (e.g., "safe" would otherwise trip 'a').
-    if (!searching) {
-      if (input === ' ') {
-        const item = visible[cursor];
-        if (!item) return;
-        if (item.kind === 'test') {
-          setSelected((prev) => {
-            const next = new Set(prev);
-            if (next.has(item.test.key)) {
-              next.delete(item.test.key);
-            } else {
-              next.add(item.test.key);
-            }
-            return next;
-          });
+    const item = visible[cursor];
+    if (!item) return;
+    if (item.kind === 'test') {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(item.test.key)) {
+          next.delete(item.test.key);
         } else {
-          setSelected((prev) => toggleGroup(item, prev));
+          next.add(item.test.key);
         }
-        return;
-      }
-      if (input === 'a') {
-        const inViewKeys = visible
-          .filter((i): i is TestItem => i.kind === 'test')
-          .map((i) => i.key);
-        const allSelected = inViewKeys.every((k) => selected.has(k));
-        if (allSelected) {
-          setSelected(new Set());
-        } else {
-          setSelected(new Set(inViewKeys));
-        }
-        return;
-      }
-      if (input === 'A') {
-        const item = visible[cursor];
-        if (!item) return;
-        const specPath =
-          item.kind === 'test' ? item.test.specPath : item.specPath;
-        const group = visible.find(
-          (i): i is GroupItem => i.kind === 'group' && i.specPath === specPath
-        );
-        if (!group) return;
-        setSelected((prev) => toggleGroup(group, prev));
-        return;
-      }
+        return next;
+      });
+    } else {
+      setSelected((prev) => toggleGroup(item, prev));
     }
+  };
 
-    // Anything else printable becomes part of the query.
-    if (input && !key.ctrl && !key.meta) {
-      setQuery((q) => q + input);
+  const selectAllVisible = () => {
+    const visible = visibleRef.current;
+    const selected = selectedRef.current;
+    const inViewKeys = visible
+      .filter((i): i is TestItem => i.kind === 'test')
+      .map((i) => i.key);
+    const allSelected = inViewKeys.every((k) => selected.has(k));
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(inViewKeys));
     }
-  });
+  };
+
+  const selectGroup = () => {
+    const visible = visibleRef.current;
+    const cursor = cursorRef.current;
+    const item = visible[cursor];
+    if (!item) return;
+    const specPath = item.kind === 'test' ? item.test.specPath : item.specPath;
+    const group = visible.find(
+      (i): i is GroupItem => i.kind === 'group' && i.specPath === specPath
+    );
+    if (!group) return;
+    setSelected((prev) => toggleGroup(group, prev));
+  };
+
+  const runSelectedTests = () => {
+    const toRun = testsInView.filter((t) => selectedRef.current.has(t.key));
+    if (toRun.length > 0) onRunTestsRef.current(toRun);
+  };
+
+  const searching = query.length > 0;
+
+  useKeyboardShortcuts(
+    [
+      { keys: 'up', handler: () => setCursor((c) => Math.max(0, c - 1)) },
+      {
+        keys: 'down',
+        handler: () =>
+          setCursor((c) => Math.min(visibleRef.current.length - 1, c + 1)),
+      },
+      {
+        keys: 'enter',
+        hint: selected.size > 0 ? `run ${selected.size} selected` : 'run',
+        enabled: selected.size > 0,
+        handler: runSelectedTests,
+      },
+      {
+        keys: ['backspace', 'delete'],
+        handler: () => setQuery((q) => q.slice(0, -1)),
+        enabled: searching,
+      },
+      { keys: 'escape', handler: () => setQuery(''), enabled: searching },
+      {
+        keys: 'space',
+        hint: 'toggle',
+        enabled: !searching,
+        handler: toggleSelection,
+      },
+      {
+        keys: 'a',
+        hint: 'all',
+        enabled: !searching,
+        handler: selectAllVisible,
+      },
+      {
+        keys: 'A',
+        hint: 'all in spec',
+        enabled: !searching,
+        handler: selectGroup,
+      },
+    ],
+    {
+      textInput: true,
+      onText: (ch) => setQuery((q) => q + ch),
+    }
+  );
 
   const visibleStart = Math.max(0, Math.min(scrollOffset, visible.length));
   const visibleEnd = Math.min(visible.length, visibleStart + contentHeight);
@@ -337,7 +320,7 @@ export function Dashboard({
         </Text>
       </Box>
       <Box marginBottom={1} flexShrink={0}>
-        <SearchBox value={query} onChange={setQuery} />
+        <SearchBox value={query} />
       </Box>
       <Box marginBottom={1} flexShrink={0}>
         <Text color="gray">
