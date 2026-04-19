@@ -287,9 +287,11 @@ export function Dashboard({
   const scrollbarOffset = maxOffset - Math.min(scrollOffset, maxOffset);
 
   return (
-    <Box flexDirection="column" flexGrow={1}>
+    <Box flexDirection="column" flexGrow={1} overflow="hidden">
       <Box marginBottom={1} flexShrink={0}>
-        <Text bold>Dashboard</Text>
+        <Text bold color="white">
+          Dashboard
+        </Text>
       </Box>
       <Box marginBottom={1} flexShrink={0}>
         <SearchBox value={query} onChange={setQuery} />
@@ -300,11 +302,19 @@ export function Dashboard({
           {selected.size > 0 ? ` (${selected.size} selected)` : ''}
         </Text>
       </Box>
-      <Box flexDirection="row" flexGrow={1}>
+      <Box
+        ref={contentRef}
+        flexDirection="row"
+        flexGrow={1}
+        flexShrink={1}
+        minHeight={0}
+        overflow="hidden"
+      >
         <Box
-          ref={contentRef}
           flexDirection="column"
           flexGrow={1}
+          flexShrink={1}
+          minHeight={0}
           overflow="hidden"
         >
           {renderedItems.map((item, relativeIdx) => {
@@ -316,7 +326,7 @@ export function Dashboard({
               return (
                 <Box key={item.key} flexShrink={0}>
                   <Box flexGrow={1}>
-                    <Text bold color={isActive ? 'blue' : 'cyan'}>
+                    <Text bold color={isActive ? 'blue' : 'white'}>
                       {isActive ? '>' : ' '} {checkbox}{' '}
                       {specBreadcrumb(item.specPath, testDir)}
                     </Text>
@@ -332,8 +342,12 @@ export function Dashboard({
               <Box key={item.key} paddingLeft={2} flexShrink={0}>
                 <Text color={isActive ? 'blue' : undefined}>
                   {isActive ? '>' : ' '} {isChecked ? '[x]' : '[ ]'}{' '}
-                  <Text bold>{item.test.testCase.id}</Text>{' '}
-                  <Text bold={isActive}>{item.test.testCase.name}</Text>
+                  <Text bold color={isActive ? 'blue' : 'white'}>
+                    {item.test.testCase.id}
+                  </Text>{' '}
+                  <Text bold={isActive} color={isActive ? 'blue' : undefined}>
+                    {item.test.testCase.name}
+                  </Text>
                 </Text>
               </Box>
             );
