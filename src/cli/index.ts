@@ -4,6 +4,11 @@ import { lsCommand } from './commands/ls.js';
 import { compileCommand } from './commands/compile.js';
 import { testCommand } from './commands/test.js';
 import { reportCommand } from './commands/report.js';
+import { runsCommand } from './commands/runs.js';
+import { showCommand } from './commands/show.js';
+import { transcriptCommand } from './commands/transcript.js';
+import { gradingCommand } from './commands/grading.js';
+import { initCommand } from './commands/init.js';
 
 const main = defineCommand({
   meta: {
@@ -15,10 +20,25 @@ const main = defineCommand({
     compile: compileCommand,
     test: testCommand,
     report: reportCommand,
+    runs: runsCommand,
+    show: showCommand,
+    transcript: transcriptCommand,
+    grading: gradingCommand,
+    init: initCommand,
   },
   async run({ rawArgs }) {
     // Only handle the no-subcommand case; if a subcommand was provided it runs separately
-    const knownSubCommands = ['ls', 'compile', 'test', 'report'];
+    const knownSubCommands = [
+      'ls',
+      'compile',
+      'test',
+      'report',
+      'runs',
+      'show',
+      'transcript',
+      'grading',
+      'init',
+    ];
     const hasSubCommand = rawArgs.some((a) => knownSubCommands.includes(a));
     if (hasSubCommand) return;
 
@@ -44,11 +64,22 @@ const main = defineCommand({
       console.log('Usage: skill-unit <command> [options]');
       console.log('');
       console.log('Commands:');
-      console.log('  ls       List discovered spec files and test cases');
-      console.log('  compile  Parse spec files and write manifest JSON files');
-      console.log('  test     Run tests from spec files');
+      console.log('  init        Bootstrap a project for skill-unit');
+      console.log('  ls          List discovered spec files and test cases');
       console.log(
-        '  report   Generate a report from an existing test run directory'
+        '  compile     Parse spec files and write manifest JSON files'
+      );
+      console.log('  test        Run tests from spec files');
+      console.log(
+        '  report      Generate a report from an existing test run directory'
+      );
+      console.log('  runs        List recent test runs');
+      console.log('  show        Summarize a single run');
+      console.log(
+        '  transcript  Show the agent transcript for one test in a run'
+      );
+      console.log(
+        '  grading     Show the grader verdict for one test in a run'
       );
       console.log('');
       console.log(

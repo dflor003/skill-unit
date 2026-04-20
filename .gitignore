@@ -19,9 +19,12 @@ Desktop.ini
 
 # Skill Unit workspace (fixture scratch area)
 .workspace/
+!skill-tests/**/fixtures/**/.workspace/
+!skill-tests/**/fixtures/**/.workspace/**
 
 # AI
 .claude/settings.local.json
+.ci-debug/
 
 # Superpowers brainstorm sessions
 .superpowers/

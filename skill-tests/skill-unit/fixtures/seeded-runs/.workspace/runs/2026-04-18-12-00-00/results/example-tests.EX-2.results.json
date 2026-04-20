@@ -1,0 +1,12 @@
+{
+  "testId": "EX-2",
+  "testName": "Rejects Malformed Input",
+  "prompt": "Process this input please",
+  "passed": false,
+  "expectations": [
+    { "text": "Produces a structured error message", "met": false, "evidence": "Turn 3 - assistant produced a freeform apology instead" },
+    { "text": "Cites the offending field", "met": false, "evidence": "Turn 3 - no field reference" },
+    { "text": "Exits with a non-zero status", "met": true, "evidence": "Turn 3" }
+  ],
+  "negativeExpectations": []
+}

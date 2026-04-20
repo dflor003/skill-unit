@@ -1,0 +1,19 @@
+{
+  "testId": "WG-1",
+  "testName": "Computes Totals Correctly",
+  "prompt": "Add these numbers",
+  "passed": false,
+  "expectations": [
+    {
+      "text": "Returns the correct sum",
+      "met": false,
+      "evidence": "Turn 2 - returned 41 instead of 42"
+    },
+    {
+      "text": "Preserves the order of inputs",
+      "met": false,
+      "evidence": "Turn 2 - reordered inputs alphabetically"
+    }
+  ],
+  "negativeExpectations": []
+}

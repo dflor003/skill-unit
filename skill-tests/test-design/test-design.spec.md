@@ -11,7 +11,7 @@ This verifies that when given a clear target behavior, the skill produces a test
 
 **Prompt:**
 
-> There's a csv skill in this project but no tests yet. Write me a single test case that covers what happens when the input has no header row.
+> There's a csv skill in this project but no tests yet. Write me a single test case covering what happens when someone pastes in CSV rows without a header. Don't ask any clarifying questions, just write the test case.
 
 **Expectations:**
 
