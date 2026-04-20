@@ -1,0 +1,10 @@
+test-dir: skill-tests
+runner:
+  tool: claude
+  max-turns: 10
+  concurrency: 5
+output:
+  format: interactive
+execution:
+  timeout: 120s
+  grader-concurrency: 5

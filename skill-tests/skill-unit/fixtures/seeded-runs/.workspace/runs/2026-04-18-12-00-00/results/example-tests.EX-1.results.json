@@ -1,0 +1,10 @@
+{
+  "testId": "EX-1",
+  "testName": "Accepts Valid Input",
+  "prompt": "Process this input please",
+  "passed": true,
+  "expectations": [
+    { "text": "Returns a parsed object", "met": true, "evidence": "Turn 2" }
+  ],
+  "negativeExpectations": []
+}
