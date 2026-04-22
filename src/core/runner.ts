@@ -5,20 +5,24 @@
 // so the TUI can subscribe to live updates.
 //
 // Directory structure:
-//   .workspace/                        -- repo root, gitignored
-//     runs/{timestamp}/                -- one folder per run
-//       manifests/{spec}.manifest.json -- manifest + progress files
-//       logs/{spec}.{id}.log.jsonl     -- raw CLI output
-//       results/{spec}.{id}.transcript.md -- conversation transcript
-//       responses/{spec}.responses.json-- raw responses
-//     workspaces/{uuid}/               -- ephemeral, per test case
-//       work/                          -- agent cwd, contains fixtures
-//       plugin/                        -- skill-under-test (--plugin-dir)
+//   .workspace/                                 -- repo root, gitignored
+//     runs/{timestamp}/                         -- one folder per run
+//       manifests/{spec}.manifest.json          -- manifest + progress files
+//       logs/{spec}.{id}.log.jsonl              -- raw CLI output
+//       results/{spec}.{id}.transcript.md       -- conversation transcript
+//       responses/{spec}.responses.json         -- raw responses
+//     workspaces/{timestamp}/{spec}.{id}/       -- per test case, kept alive
+//       work/                                   -- agent cwd, contains fixtures
+//       plugin/                                 -- skill-under-test (--plugin-dir)
+//                                                  Graders can Read/Glob inside
+//                                                  work/ to verify filesystem
+//                                                  expectations. Removed by
+//                                                  cleanupRunWorkspaces() after
+//                                                  grading completes.
 // ---------------------------------------------------------------------------
 
 import fs from 'node:fs';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 
@@ -164,8 +168,41 @@ function ensureGitignore(dir: string, pattern: string): void {
   fs.appendFileSync(gitignorePath, `${pattern}\n`);
 }
 
-function uuid(): string {
-  return crypto.randomUUID();
+/**
+ * Turn a spec name or test id into a filesystem-safe segment. Replaces anything
+ * outside `[A-Za-z0-9._-]` with `_` so the resulting path is stable and legal
+ * on every platform.
+ */
+function safeSegment(s: string): string {
+  return s.replace(/[^A-Za-z0-9._-]/g, '_');
+}
+
+/**
+ * Deterministic path to a test case's workspace for a given run. Both the
+ * runner and the grader derive paths via this function so the grader can read
+ * the post-test filesystem state written by the agent.
+ */
+export function workspacePathFor(
+  timestamp: string,
+  specName: string,
+  testId: string
+): string {
+  return path.join(
+    '.workspace',
+    'workspaces',
+    timestamp,
+    `${safeSegment(specName)}.${safeSegment(testId)}`,
+    'work'
+  );
+}
+
+/**
+ * Remove every per-test workspace created for a given run. Safe to call after
+ * grading completes; no-op if the run directory doesn't exist.
+ */
+export function cleanupRunWorkspaces(timestamp: string): void {
+  const dir = path.join('.workspace', 'workspaces', timestamp);
+  rmSync(dir);
 }
 
 /**
@@ -609,8 +646,8 @@ async function _runTestAsync(
 
   const testId = testCase.id;
   const prompt = testCase.prompt;
-  const workspaceId = uuid();
-  const workspaceBase = path.join(workspacesDir, workspaceId);
+  const workspaceId = `${safeSegment(specName)}.${safeSegment(testId)}`;
+  const workspaceBase = path.join(workspacesDir, timestamp, workspaceId);
   const workspacePath = path.join(workspaceBase, 'work');
   const pluginPath = path.join(workspaceBase, 'plugin');
 
@@ -682,7 +719,9 @@ async function _runTestAsync(
     `${specName}.${testId}.transcript.md`
   );
 
-  const keepWorkspaces = false; // controlled by config in the future
+  // Workspaces are kept alive until grading completes; the grader needs to
+  // Read/Glob them to verify filesystem expectations. cleanupRunWorkspaces()
+  // removes the whole `workspaces/{timestamp}/` directory once grading is done.
 
   let exitCode: number;
   let timedOut = false;
@@ -720,12 +759,6 @@ async function _runTestAsync(
     runLog.error(`[${testId}]: ${error.message}`);
     exitCode = 1;
     durationMs = 0;
-  }
-
-  // Cleanup workspace unless keepWorkspaces is set
-  if (!keepWorkspaces) {
-    runLog.verbose(`[${testId}]: Cleaning up workspace`);
-    rmSync(workspaceBase);
   }
 
   const status = exitCode === 0 ? 'OK' : `FAIL(${exitCode})`;

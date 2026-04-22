@@ -18,7 +18,7 @@ When skill-unit is invoked for the first time in a repo that has never been set 
 - Creates a `.skill-unit.yml` file at the repo root with default settings
 - Adds `.workspace` to the `.gitignore` file
 - Adds `Bash(node */skill-unit/scripts/*)` to the allowed commands in `.claude/settings.json`
-- Informs the user that the project has been bootstrapped for skill-unit
+- Invokes the skill-unit CLI's `init` subcommand via `run-cli.sh` (or equivalent wrapper)
 
 **Negative Expectations:**
 
