@@ -8,7 +8,7 @@ import {
   buildManifest,
   formatTimestamp,
 } from '../../core/compiler.js';
-import { runTest } from '../../core/runner.js';
+import { runTest, cleanupRunWorkspaces } from '../../core/runner.js';
 import { gradeSpecs } from '../../core/grader.js';
 import { generateReport, generateSummary } from '../../core/reporter.js';
 import { formatCiReport } from '../../core/ci-reporter.js';
@@ -327,6 +327,9 @@ export const testCommand = defineCommand({
 
     log.info('Grading test results...');
     await gradeSpecs(filtered, config, timestamp);
+
+    // Graders have finished; the post-test workspaces are no longer needed.
+    cleanupRunWorkspaces(timestamp);
 
     // -- Phase 3: Generate report -----------------------------------------------
 

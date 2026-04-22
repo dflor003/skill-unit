@@ -7,22 +7,22 @@ The `.workspace/` directory at the repository root is the single location for al
 ## Directory Structure
 
 ```
-.workspace/                                 # repo root, gitignored
-  runs/{timestamp}/                         # one folder per test run
+.workspace/                                       # repo root, gitignored
+  runs/{timestamp}/                               # one folder per test run
     manifests/
-      {spec-name}.manifest.json             # input manifest for the runner
-      {spec-name}.progress.json             # real-time progress (polled by evaluator)
+      {spec-name}.manifest.json                   # input manifest for the runner
+      {spec-name}.progress.json                   # real-time progress (polled by evaluator)
     logs/
-      {spec-name}.{test-id}.log.jsonl       # raw CLI stream-json output (debug artifact)
+      {spec-name}.{test-id}.log.jsonl             # raw CLI stream-json output (debug artifact)
     responses/
-      {spec-name}.responses.json            # abbreviated responses (used for progress)
+      {spec-name}.responses.json                  # abbreviated responses (used for progress)
     results/
-      {spec-name}.{test-id}.transcript.md   # conversation transcript (from runner)
-      {spec-name}.{test-id}.results.md      # grader evaluation (from grader agent)
-      report.md                             # consolidated report (from report script)
-  workspaces/{uuid}/                        # one per test case, ephemeral
-    work/                                   # agent's working directory (cwd)
-    plugin/                                 # skill-under-test installed as plugin
+      {spec-name}.{test-id}.transcript.md         # conversation transcript (from runner)
+      {spec-name}.{test-id}.results.md            # grader evaluation (from grader agent)
+      report.md                                   # consolidated report (from report script)
+  workspaces/{timestamp}/{spec-name}.{test-id}/   # one per test case, per run
+    work/                                         # agent's working directory (cwd)
+    plugin/                                       # skill-under-test installed as plugin
       .claude-plugin/plugin.json
       skills/{skill-name}/SKILL.md
 ```
@@ -34,14 +34,16 @@ The runner module (`src/core/runner.ts`, invoked by the `skill-unit test` CLI co
 1. **Setup phase** — The runner reads the manifest JSON and creates the `.workspace/` directory at the repo root if it doesn't exist. It idempotently adds `.workspace/` to the repo's `.gitignore`. It then creates the run-specific subdirectories under `runs/{timestamp}/`.
 
 2. **Per test case** — For each test case in the manifest:
-   - A UUID is generated via `crypto.randomUUID()`.
-   - A workspace base directory is created at `.workspace/workspaces/{uuid}/`.
-   - **`work/`** — The global fixture folder (from `global-fixtures` in spec frontmatter) is copied into `{uuid}/work/` first. Then any per-test fixtures (from the test case's `**Fixtures:**` section) are layered on top in list order, allowing per-test fixtures to add or override files from the global fixture. If no fixtures are configured, an empty directory is created. This becomes the agent's `cwd`.
-   - **`plugin/`** — If the spec declares a `skill` field, the skill directory is copied into `{uuid}/plugin/skills/{skill-name}/` and a bare `plugin.json` is generated at `{uuid}/plugin/.claude-plugin/plugin.json`. The `--plugin-dir` flag points here.
+   - A deterministic workspace id is derived as `{safeSpecName}.{safeTestId}` (non-alphanumeric characters replaced with `_`). Deterministic naming lets the grader reconstruct the path from `(timestamp, specName, testId)` without a side channel.
+   - A workspace base directory is created at `.workspace/workspaces/{timestamp}/{workspaceId}/`.
+   - **`work/`** — The global fixture folder (from `global-fixtures` in spec frontmatter) is copied into `{workspaceId}/work/` first. Then any per-test fixtures (from the test case's `**Fixtures:**` section) are layered on top in list order, allowing per-test fixtures to add or override files from the global fixture. If no fixtures are configured, an empty directory is created. This becomes the agent's `cwd`.
+   - **`plugin/`** — If the spec declares a `skill` field, the skill directory is copied into `{workspaceId}/plugin/skills/{skill-name}/` and a bare `plugin.json` is generated at `{workspaceId}/plugin/.claude-plugin/plugin.json`. The `--plugin-dir` flag points here.
 
 3. **Execution** — The CLI harness is spawned with `cwd` set to the `work/` directory. The `--plugin-dir` flag points to the sibling `plugin/` directory. File tool permissions are scoped to `work/`.
 
-4. **Cleanup** — After all test cases complete, the runner removes each `{uuid}/` directory (both `work/` and `plugin/`). The `--keep-workspaces` flag skips this step for debugging.
+4. **Grading** — The grader agent (one per test case) receives the workspace path in its prompt and may Read/Glob inside `work/` to verify filesystem expectations (e.g. "`.skill-unit.yml` was created"). This is the reason workspaces survive past the run and up to grading completion.
+
+5. **Cleanup** — After all graders finish, the orchestrator calls `cleanupRunWorkspaces(timestamp)` which removes the entire `workspaces/{timestamp}/` directory. Both the CLI `test` command and the TUI hook trigger this.
 
 ## Design Decisions
 
@@ -55,14 +57,18 @@ Earlier designs placed a `.workspaces/` directory inside each spec's directory (
 
 A single `.workspace/` at the repo root solves all three: one gitignore entry, one location for all artifacts, and no spec-specific information in the path.
 
-### Why UUID workspace names?
+### Why `{timestamp}/{spec-name}.{test-id}` workspace paths?
 
-Test workspaces were originally named `{timestamp}-{test-id}` (e.g., `2026-04-03-22-11-16-TDD-7`). This leaked:
+Earlier the workspace was named with a random UUID (e.g., `a1b2c3d4-...`) to keep the path opaque from the agent. That was valuable, but it had two follow-on costs:
 
-- **The test ID** — telling the agent which test case it was executing.
-- **The timestamp** — hinting that this is an automated test run.
+- **No reconstruction from outside** — anything that needs to find a workspace after the fact (notably the grader) required a side-channel lookup; there was no way to derive the path from stable identifiers.
+- **Flat directory** — all runs shared one `workspaces/` directory, so cleanup had to be per-test and couldn't be scoped to a single run.
 
-UUID names (e.g., `a1b2c3d4-e5f6-7890-abcd-ef1234567890`) are opaque — the agent sees a directory name that reveals nothing about the testing context.
+The current layout nests workspaces under `workspaces/{timestamp}/{spec-name}.{test-id}/`:
+
+- The grader reconstructs the path from the inputs it already has (`timestamp`, `specName`, `testId`).
+- A whole run's workspaces can be cleaned up with one `rm -rf workspaces/{timestamp}/`.
+- Leakage to the agent is still avoided: the agent's `cwd` is the inner `work/` directory. The parent `{spec-name}.{test-id}/` is not mentioned in the system prompt, and Glob/Read scoping prevents the agent from traversing up.
 
 ### Why `work/` and `plugin/` as siblings?
 
@@ -94,22 +100,21 @@ Evaluator (SKILL.md)
   ├─ writes manifest to .workspace/runs/{ts}/manifests/{spec}.manifest.json
   ├─ invokes runner.js with manifest path
   │
-  │  Runner (runner.js)
+  │  Runner (runner.ts)
   │    ├─ creates .workspace/ at repo root (idempotent)
   │    ├─ creates run dirs: manifests/, logs/, responses/, results/
   │    │
   │    ├─ for each test case:
-  │    │   ├─ generates UUID
-  │    │   ├─ creates .workspace/workspaces/{uuid}/work/ (copies global + per-test fixtures)
-  │    │   ├─ creates .workspace/workspaces/{uuid}/plugin/ (installs skill)
+  │    │   ├─ derives workspaceId = {spec}.{id} (sanitized)
+  │    │   ├─ creates .workspace/workspaces/{ts}/{spec}.{id}/work/ (copies global + per-test fixtures)
+  │    │   ├─ creates .workspace/workspaces/{ts}/{spec}.{id}/plugin/ (installs skill)
   │    │   ├─ spawns CLI: cwd=work/, --plugin-dir=plugin/
   │    │   ├─ writes transcript to .workspace/runs/{ts}/results/{spec}.{id}.transcript.md
   │    │   ├─ writes raw log to .workspace/runs/{ts}/logs/{spec}.{id}.log.jsonl
+  │    │   ├─ leaves workspace on disk (cleanup deferred until after grading)
   │    │   └─ updates progress file
   │    │
-  │    ├─ writes responses to .workspace/runs/{ts}/responses/
-  │    ├─ cleans up workspaces/{uuid}/ directories
-  │    └─ writes final progress with responses-path
+  │    └─ writes responses to .workspace/runs/{ts}/responses/
   │
   ├─ polls progress file for status updates
   ├─ reads responses file (for completion confirmation)
@@ -117,8 +122,11 @@ Evaluator (SKILL.md)
   │
   │  Grader (agents/grader.md) — one per test case
   │    ├─ reads .workspace/runs/{ts}/results/{spec}.{id}.transcript.md
+  │    ├─ may Read/Glob inside .workspace/workspaces/{ts}/{spec}.{id}/work/
+  │    │   to verify filesystem expectations
   │    └─ writes .workspace/runs/{ts}/results/{spec}.{id}.results.md
   │
+  ├─ calls cleanupRunWorkspaces(timestamp) to remove workspaces/{ts}/
   ├─ invokes report.js to generate consolidated report
   │
   │  Report Script (report.js)

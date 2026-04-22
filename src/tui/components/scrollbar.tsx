@@ -6,6 +6,11 @@ interface ScrollbarProps {
   visibleLines: number;
   scrollOffset: number;
   height: number;
+  // 'log' (default): scrollOffset=0 means at bottom (newest first, thumb at bottom
+  // when viewing latest). Used for chat/transcript streams.
+  // 'list': scrollOffset=0 means at top. Used for top-to-bottom lists where the
+  // user moves a cursor from first to last item.
+  direction?: 'log' | 'list';
 }
 
 export function Scrollbar({
@@ -13,6 +18,7 @@ export function Scrollbar({
   visibleLines,
   scrollOffset,
   height,
+  direction = 'log',
 }: ScrollbarProps) {
   if (totalLines <= visibleLines || height <= 0) {
     return <Box />;
@@ -25,8 +31,6 @@ export function Scrollbar({
   const maxOffset = Math.max(0, totalLines - visibleLines);
   const clampedOffset = Math.min(scrollOffset, maxOffset);
 
-  // scrollOffset=0 means at bottom, scrollOffset=maxOffset means at top
-  // We want thumb at bottom when offset=0, at top when offset=maxOffset
   const thumbTop =
     maxOffset > 0
       ? Math.round((clampedOffset / maxOffset) * (height - thumbHeight))
@@ -34,9 +38,9 @@ export function Scrollbar({
 
   const rows: string[] = [];
   for (let i = 0; i < height; i++) {
-    // Invert: high offset = top of content = thumb at top of track
-    const invertedPos = height - thumbHeight - thumbTop;
-    if (i >= invertedPos && i < invertedPos + thumbHeight) {
+    const pos =
+      direction === 'log' ? height - thumbHeight - thumbTop : thumbTop;
+    if (i >= pos && i < pos + thumbHeight) {
       rows.push('\u2588'); // █
     } else {
       rows.push('\u2591'); // ░

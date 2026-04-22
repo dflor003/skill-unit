@@ -203,12 +203,13 @@ describe('GRADER_PROFILES.claude', () => {
     expect(args[i + 1]).toBe('haiku');
   });
 
-  it('restricts tools to Read and Write', () => {
+  it('restricts tools to Read, Glob, and Write', () => {
     // Assert
     const i = args.indexOf('--allowedTools');
     expect(i).toBeGreaterThanOrEqual(0);
     expect(args[i + 1]).toBe('Read');
-    expect(args[i + 2]).toBe('Write');
+    expect(args[i + 2]).toBe('Glob');
+    expect(args[i + 3]).toBe('Write');
   });
 
   it('loads only local settings so user-global skills do not leak in', () => {

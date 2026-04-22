@@ -72,7 +72,7 @@ Requests that mention skills or tests but are not asking to run the test suite s
 
 **Negative Expectations:**
 
-- Does not begin discovering spec files
+- Does not invoke the skill-unit CLI (no `run-cli.sh` or `skill-unit` subcommands)
 - Does not invoke the runner or produce a test report
 
 ---

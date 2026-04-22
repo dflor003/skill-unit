@@ -1,7 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import fs from 'node:fs';
 import path from 'node:path';
-import { runTest, type RunHandle } from '../../core/runner.js';
+import {
+  runTest,
+  cleanupRunWorkspaces,
+  type RunHandle,
+} from '../../core/runner.js';
 import { gradeTest, type GradeHandle } from '../../core/grader.js';
 import { generateReport, isResultsFilePassed } from '../../core/reporter.js';
 import { recordRun } from '../../core/stats.js';
@@ -268,6 +272,9 @@ export function useTestRun(): [TestRunState, TestRunActions] {
       function checkRunComplete(): void {
         if (completedCount >= totalTasks) {
           flushTranscripts();
+          // All tests and their graders have finished; the post-test
+          // workspaces can now be removed.
+          cleanupRunWorkspaces(timestamp);
           // Generate report
           const runDir = path.join('.workspace', 'runs', timestamp);
           const reportResult = generateReport(runDir);
