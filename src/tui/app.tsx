@@ -165,11 +165,22 @@ function AppInner() {
 
     setHistoricalRun(null);
 
+    // Re-parse specs from disk so edits made since app start propagate to the
+    // rerun inputs and to the Dashboard.
+    let freshSpecs = specs;
+    try {
+      const paths = discoverSpecPaths(appConfig['test-dir']);
+      freshSpecs = paths.map((p) => parseSpecFile(p));
+      setSpecs(freshSpecs);
+    } catch {
+      // Non-fatal: fall back to in-memory specs
+    }
+
     const selectedTestIds = new Set(testIds);
     const timestamp = formatTimestamp(new Date());
 
     const matchedSpecNames = new Set(testsToRerun.map((t) => t.specName));
-    const selectedSpecs = specs.filter((s) => {
+    const selectedSpecs = freshSpecs.filter((s) => {
       const specName = s.frontmatter.name || path.basename(s.path, '.spec.md');
       return matchedSpecNames.has(specName);
     });

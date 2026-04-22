@@ -27,6 +27,7 @@ import {
   formatUsageSummary,
 } from './transcript-formatter.js';
 import { renderResultsMarkdown, normalizeGraderJson } from './reporter.js';
+import { workspacePathFor } from './runner.js';
 import type { Spec } from '../types/spec.js';
 import type { SkillUnitConfig } from '../types/config.js';
 
@@ -137,6 +138,7 @@ export function buildGraderPrompt(
     `${specName}.${tc.id}.transcript.md`
   );
   const seedPath = path.join(resultsDir, `${specName}.${tc.id}.results.json`);
+  const workspacePath = workspacePathFor(timestamp, specName, tc.id);
 
   // Fill-in-the-blank contract: the framework has already pre-written the
   // seed JSON file with the canonical schema and every expectation's `text`
@@ -149,7 +151,7 @@ export function buildGraderPrompt(
   // that the normalizer had to paper over.
   return `Grade this test case by filling in the pre-seeded results file.
 
-**Step 1.** Read the transcript. This is your evidence -- every decision must trace to something in it:
+**Step 1.** Read the transcript. This is your primary evidence for behavioral expectations -- every decision must trace to something in it:
 
 \`${transcriptPath}\`
 
@@ -157,16 +159,24 @@ export function buildGraderPrompt(
 
 \`${seedPath}\`
 
-**Step 3.** For each \`null\` in the seed, decide the correct value based on the transcript:
+**Step 3.** If any expectation references filesystem state (created/modified files, settings, directory structure), verify it directly against the test workspace. This is the post-test state left behind by the agent-under-test:
+
+\`${workspacePath}\`
+
+Use Read for specific files (e.g. \`${workspacePath}/.skill-unit.yml\`) and Glob for pattern checks. Filesystem evidence trumps transcript silence: if the agent created a file but did not narrate doing so, the expectation is still met. If the workspace directory does not exist, treat filesystem expectations as unmet and note that in \`evidence\`.
+
+**Skip nested \`.workspace/\` inside the workspace** (e.g. \`${workspacePath}/.workspace/...\`). Those are run artifacts the test agent created, not state to verify. Do not Glob or Read inside them. If an empty Glob result is the correct answer for this test (no fixtures, nothing created), accept it and move on — do not escalate or retry with different patterns.
+
+**Step 4.** For each \`null\` in the seed, decide the correct value based on the evidence:
 - Each \`expectations[i].met\`: \`true\` if the behavior in \`text\` was observed, else \`false\`.
-- Each \`expectations[i].evidence\`: a short string citing specific turn numbers from the transcript.
-- Each \`negativeExpectations[i].met\`: \`true\` if the prohibited behavior did NOT occur (the negative requirement was upheld), \`false\` if the transcript shows the prohibited behavior.
-- Each \`negativeExpectations[i].evidence\`: a short string citing the transcript.
+- Each \`expectations[i].evidence\`: a short string citing specific turn numbers from the transcript, or a file path in the workspace, or both.
+- Each \`negativeExpectations[i].met\`: \`true\` if the prohibited behavior did NOT occur (the negative requirement was upheld), \`false\` if the transcript or workspace shows the prohibited behavior.
+- Each \`negativeExpectations[i].evidence\`: a short string citing the transcript or workspace state.
 - \`passed\`: \`true\` only if every \`met\` above is \`true\`; otherwise \`false\`.
 
-**Step 4.** Use the Write tool to overwrite the seed file at the same path. Preserve the schema EXACTLY: do not rename any field, do not add new fields, do not remove fields. The only values that change are the \`null\`s.
+**Step 5.** Use the Write tool to overwrite the seed file at the same path. Preserve the schema EXACTLY: do not rename any field, do not add new fields, do not remove fields. The only values that change are the \`null\`s.
 
-After writing, stop. Do not produce additional output.`;
+Write as soon as every \`null\` is decidable. Do not pre-fetch additional files for corroboration. After writing, stop. Do not produce additional output.`;
 }
 
 // -- Agent path resolution ----------------------------------------------------
@@ -179,12 +189,20 @@ export function resolveAgentPath(): string | null {
 
 // -- CLI tool profiles for grader invocation ----------------------------------
 
-// The grader runs as an isolated session: haiku model, Read/Write only, no
-// user-global skills or MCP servers. Without these flags, `--agent` alone does
-// NOT enforce the agent file's `model` or `tools` frontmatter, so the grader
-// inherits the parent session's Opus model and every installed skill, which
-// causes the grader to wander (e.g. exhausting max-turns on Bash exploration)
-// and to deviate from the exact output format the reporter parses.
+// The grader runs as an isolated session: haiku model, Read/Glob/Write only,
+// no user-global skills or MCP servers. Without these flags, `--agent` alone
+// does NOT enforce the agent file's `model` or `tools` frontmatter, so the
+// grader inherits the parent session's Opus model and every installed skill,
+// which causes the grader to wander (e.g. exhausting max-turns on Bash
+// exploration) and to deviate from the exact output format the reporter
+// parses. Glob is allowed so the grader can verify filesystem expectations
+// against the post-test workspace (see buildGraderPrompt, Step 3). Bash is
+// explicitly disallowed: `--allowedTools` whitelists for permission-free use
+// but does NOT enforce exclusivity, and `--permission-mode dontAsk` lets every
+// other tool through. Without an explicit deny the grader will fall back to
+// `find`/`ls` whenever Glob comes up dry, burning the turn budget. max-turns
+// is set high enough for the worst case (multiple filesystem expectations,
+// each requiring a Read).
 export const GRADER_PROFILES: Record<string, (agentPath: string) => string[]> =
   {
     claude: (agentPath) => [
@@ -193,7 +211,7 @@ export const GRADER_PROFILES: Record<string, (agentPath: string) => string[]> =
       '--output-format',
       'stream-json',
       '--max-turns',
-      '5',
+      '20',
       '--permission-mode',
       'dontAsk',
       '--no-chrome',
@@ -205,7 +223,10 @@ export const GRADER_PROFILES: Record<string, (agentPath: string) => string[]> =
       'haiku',
       '--allowedTools',
       'Read',
+      'Glob',
       'Write',
+      '--disallowedTools',
+      'Bash',
       '--agent',
       agentPath,
     ],

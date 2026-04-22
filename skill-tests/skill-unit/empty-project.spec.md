@@ -2,6 +2,7 @@
 name: skill-unit-empty-project
 skill: skill-unit
 tags: [failure-mode]
+global-fixtures: ./fixtures/bootstrapped-no-specs
 ---
 
 ### SU-3: Informs User When No Spec Files Are Found

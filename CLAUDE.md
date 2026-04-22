@@ -53,6 +53,7 @@ Current docs. You MUST update this list any time you add, delete, or rename arch
 - `docs/architecture/per-test-fixtures.md` -- per-test fixture isolation strategy
 - `docs/architecture/test-design.md` -- test design skill architecture
 - `docs/architecture/test-execution.md` -- test execution pipeline
+- `docs/architecture/troubleshooting.md` -- troubleshooting entry point (read-only CLI subcommands)
 - `docs/architecture/tui-design.md` -- TUI/CLI architecture, screens, data flow, keyboard navigation
 - `docs/architecture/workspaces.md` -- workspace isolation
 
