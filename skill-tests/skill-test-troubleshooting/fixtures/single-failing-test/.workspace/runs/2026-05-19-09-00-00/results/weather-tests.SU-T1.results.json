@@ -1,0 +1,30 @@
+{
+  "testId": "SU-T1",
+  "testName": "Answers a Weather Question",
+  "prompt": "what's the weather",
+  "passed": false,
+  "expectations": [
+    {
+      "text": "Activates the weather skill",
+      "met": false,
+      "evidence": "Transcript shows no Skill tool call for weather. The agent answered from general knowledge instead."
+    },
+    {
+      "text": "Responds with a one-line summary in the documented format",
+      "met": false,
+      "evidence": "Agent produced a multi-paragraph answer suggesting other weather apps."
+    }
+  ],
+  "negativeExpectations": [
+    {
+      "text": "Does not produce a long explanation or follow-up questions",
+      "met": false,
+      "evidence": "Multiple paragraphs and a follow-up question about city."
+    },
+    {
+      "text": "Does not say it cannot answer",
+      "met": false,
+      "evidence": "'I don't have direct access to live weather information.'"
+    }
+  ]
+}

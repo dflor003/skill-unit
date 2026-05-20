@@ -104,7 +104,7 @@ describe('Markdown', () => {
         '',
         '    Tokens -- in: 3 | cache write: 10081 | out: 56',
         '',
-        'Skill: **my-plugins:test-design** -- Write a single test case',
+        'Skill: **my-plugins:skill-test-design** -- Write a single test case',
         '',
         '---',
         '',

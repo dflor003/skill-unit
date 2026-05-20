@@ -1,0 +1,25 @@
+{
+  "testId": "RC-1",
+  "testName": "Produces a Student Summary",
+  "prompt": "tell me",
+  "passed": false,
+  "expectations": [
+    {
+      "text": "Activates the report-card skill",
+      "met": false,
+      "evidence": "Transcript shows no Skill tool call. The prompt 'tell me' carries no signal that this is a school/grade query."
+    },
+    {
+      "text": "Produces a one-paragraph summary",
+      "met": false,
+      "evidence": "Agent asked a clarifying question instead."
+    }
+  ],
+  "negativeExpectations": [
+    {
+      "text": "Does not respond with a clarifying question",
+      "met": false,
+      "evidence": "Agent asked 'Tell you what?'"
+    }
+  ]
+}

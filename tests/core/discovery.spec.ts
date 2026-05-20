@@ -51,7 +51,7 @@ describe('filterSpecs', () => {
       frontmatter: {
         name: 'design-tests',
         tags: ['e2e'],
-        skill: 'test-design',
+        skill: 'skill-test-design',
       },
       testCases: [
         {
@@ -97,17 +97,17 @@ describe('filterSpecs', () => {
   describe('when filtering by skill', () => {
     it('should match the exact skill field', () => {
       // Act
-      const result = filterSpecs(specs, { skill: ['test-design'] });
+      const result = filterSpecs(specs, { skill: ['skill-test-design'] });
 
       // Assert
       expect(result).toHaveLength(1);
-      expect(result[0].frontmatter.skill).toBe('test-design');
+      expect(result[0].frontmatter.skill).toBe('skill-test-design');
     });
 
     it('should support multiple skills', () => {
       // Act
       const result = filterSpecs(specs, {
-        skill: ['test-design', 'skill-unit'],
+        skill: ['skill-test-design', 'skill-unit'],
       });
 
       // Assert
@@ -146,11 +146,11 @@ describe('filterSpecs', () => {
 
     it('should match the skill field as a substring', () => {
       // Act
-      const result = filterSpecs(specs, { search: 'test-design' });
+      const result = filterSpecs(specs, { search: 'skill-test-design' });
 
       // Assert
       expect(result).toHaveLength(1);
-      expect(result[0].frontmatter.skill).toBe('test-design');
+      expect(result[0].frontmatter.skill).toBe('skill-test-design');
     });
 
     it('should match the file basename', () => {

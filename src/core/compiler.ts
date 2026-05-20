@@ -53,6 +53,15 @@ export function parseFrontmatter(content: string): {
     name: (parsed['name'] as string) ?? '',
     tags: (parsed['tags'] as string[]) ?? [],
     ...(parsed['skill'] !== undefined && { skill: parsed['skill'] as string }),
+    ...(parsed['extra-skills'] !== undefined && {
+      'extra-skills': parsed['extra-skills'] as string[],
+    }),
+    ...(parsed['extra-agents'] !== undefined && {
+      'extra-agents': parsed['extra-agents'] as string[],
+    }),
+    ...(parsed['extra-hooks'] !== undefined && {
+      'extra-hooks': parsed['extra-hooks'] as string[],
+    }),
     ...(parsed['timeout'] !== undefined && {
       timeout: parsed['timeout'] as string,
     }),
@@ -324,6 +333,48 @@ export function resolveSkillPath(
   return null;
 }
 
+export function resolveAgentPath(
+  agentName: string | null | undefined,
+  repoRoot: string
+): string | null {
+  if (!agentName) return null;
+
+  // Check .claude/agents/{name}.md first, then agents/{name}.md
+  const candidates = [
+    path.join(repoRoot, '.claude', 'agents', `${agentName}.md`),
+    path.join(repoRoot, 'agents', `${agentName}.md`),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return path.relative(repoRoot, candidate);
+    }
+  }
+
+  return null;
+}
+
+export function resolveHookPath(
+  hookName: string | null | undefined,
+  repoRoot: string
+): string | null {
+  if (!hookName) return null;
+
+  // Check .claude/hooks/{name}/ first, then hooks/{name}/
+  const candidates = [
+    path.join(repoRoot, '.claude', 'hooks', hookName),
+    path.join(repoRoot, 'hooks', hookName),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isDirectory()) {
+      return path.relative(repoRoot, candidate);
+    }
+  }
+
+  return null;
+}
+
 // -- Manifest generation ------------------------------------------------------
 
 export interface BuildManifestOptions {
@@ -372,6 +423,43 @@ export function buildManifest(
     repoRoot
   );
 
+  const extraSkills = (fm['extra-skills'] as string[] | undefined) ?? [];
+  const extraAgents = (fm['extra-agents'] as string[] | undefined) ?? [];
+  const extraHooks = (fm['extra-hooks'] as string[] | undefined) ?? [];
+
+  const extraSkillPaths = extraSkills.map((name) => {
+    const p = resolveSkillPath(name, repoRoot);
+    if (!p) {
+      throw new Error(
+        `extra-skills: could not resolve "${name}". ` +
+          `Searched .claude/skills/${name}/SKILL.md and skills/${name}/SKILL.md.`
+      );
+    }
+    return p;
+  });
+
+  const extraAgentPaths = extraAgents.map((name) => {
+    const p = resolveAgentPath(name, repoRoot);
+    if (!p) {
+      throw new Error(
+        `extra-agents: could not resolve "${name}". ` +
+          `Searched .claude/agents/${name}.md and agents/${name}.md.`
+      );
+    }
+    return p;
+  });
+
+  const extraHookPaths = extraHooks.map((name) => {
+    const p = resolveHookPath(name, repoRoot);
+    if (!p) {
+      throw new Error(
+        `extra-hooks: could not resolve "${name}". ` +
+          `Searched .claude/hooks/${name}/ and hooks/${name}/.`
+      );
+    }
+    return p;
+  });
+
   // Resolve tool permissions
   const { allowed, disallowed } = resolveToolPermissions(
     config as ToolPermissionConfig,
@@ -406,6 +494,9 @@ export function buildManifest(
     'spec-name': (fm['name'] as string) || path.basename(spec.path, '.spec.md'),
     'global-fixture-path': globalFixturePath,
     'skill-path': skillPath,
+    'extra-skill-paths': extraSkillPaths,
+    'extra-agent-paths': extraAgentPaths,
+    'extra-hook-paths': extraHookPaths,
     timestamp: timestamp ?? formatTimestamp(new Date()),
     timeout: String(timeout),
     runner: {

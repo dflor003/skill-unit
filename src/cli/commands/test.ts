@@ -329,7 +329,9 @@ export const testCommand = defineCommand({
     await gradeSpecs(filtered, config, timestamp);
 
     // Graders have finished; the post-test workspaces are no longer needed.
-    cleanupRunWorkspaces(timestamp);
+    if (!args['keep-workspaces']) {
+      cleanupRunWorkspaces(timestamp);
+    }
 
     // -- Phase 3: Generate report -----------------------------------------------
 

@@ -1,6 +1,9 @@
 export interface SpecFrontmatter {
   name: string;
   skill?: string;
+  'extra-skills'?: string[];
+  'extra-agents'?: string[];
+  'extra-hooks'?: string[];
   tags: string[];
   timeout?: string;
   'global-fixtures'?: string;
@@ -37,6 +40,9 @@ export interface Manifest {
   'spec-name': string;
   'global-fixture-path': string | null;
   'skill-path': string | null;
+  'extra-skill-paths': string[];
+  'extra-agent-paths': string[];
+  'extra-hook-paths': string[];
   timestamp: string;
   timeout: string;
   runner: {

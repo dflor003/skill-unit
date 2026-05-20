@@ -504,7 +504,7 @@ function parseResultsFilePath(
 // -- Extract spec name from file name -----------------------------------------
 
 function extractSpecName(fileName: string): string {
-  // e.g., "test-design-tests.TDD-1.results.md" -> "test-design-tests"
+  // e.g., "skill-test-design-tests.TDD-1.results.md" -> "skill-test-design-tests"
   const withoutExt = fileName.replace(/\.results\.md$/, '');
   const lastDot = withoutExt.lastIndexOf('.');
   return lastDot > 0 ? withoutExt.substring(0, lastDot) : withoutExt;

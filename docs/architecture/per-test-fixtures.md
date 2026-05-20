@@ -94,4 +94,4 @@ A test case might need multiple independent fixture layers (e.g., a skill fixtur
 
 ## Related
 
-- Fixture neutrality rules and test-design-specific decisions are documented in `docs/architecture/test-design.md`.
+- Fixture neutrality rules and skill-test-design-specific decisions are documented in `docs/architecture/skill-test-design.md`.

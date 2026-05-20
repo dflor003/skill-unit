@@ -74,7 +74,7 @@ Whichever path you take, do not offer the user a menu of other actions when the 
 - Specific test cases matched → `test --test <ID1>,<ID2>`
 - Multiple candidates with no clear winner → show the list to the user and ask which to run.
 
-If `ls --search <X>` returns nothing, relay that to the user and suggest creating tests with `/test-design <X>` rather than trying other filters.
+If `ls --search <X>` returns nothing, relay that to the user and suggest creating tests with `/skill-test-design <X>` rather than trying other filters.
 
 Pass-through overrides (apply only if the user asks):
 
@@ -105,7 +105,7 @@ The CLI performs the entire pipeline in one call:
 
 While the CLI runs, do not poll, do not call the grader agent yourself, do not regenerate the manifest. The CLI owns the whole pipeline.
 
-If no spec files are discovered, the CLI logs `No spec files found matching filters`. Relay this to the user and suggest creating a test case with the `test-design` skill (`/test-design <skill-name>`).
+If no spec files are discovered, the CLI logs `No spec files found matching filters`. Relay this to the user and suggest creating a test case with the `skill-test-design` skill (`/skill-test-design <skill-name>`).
 
 #### Step 3: Present the Report
 
@@ -139,24 +139,26 @@ When asked to troubleshoot failing tests or inspect past run artifacts, use the 
 
 Example mappings (illustrations, not a mandatory routing table):
 
-| User says                                           | Reasonable invocation                |
-| --------------------------------------------------- | ------------------------------------ |
-| "Did the last run pass?" / "What was the last run?" | `runs --limit 1`                     |
-| "Show me recent runs"                               | `runs --limit 10`                    |
-| "Show me only failed runs"                          | `runs --failed-only`                 |
-| "Why did the last run fail?"                        | `show latest --failed-only`          |
-| "Show run `<timestamp>`"                            | `show <timestamp>`                   |
-| "Why did `<test-id>` fail?"                         | `grading latest <test-id>`           |
-| "Show the transcript for `<test-id>`"               | `transcript latest <test-id>`        |
-| "Give me the full transcript for `<test-id>`"       | `transcript latest <test-id> --full` |
+| User says                                                     | Reasonable invocation                |
+| ------------------------------------------------------------- | ------------------------------------ |
+| "Did the last run pass?" / "What was the last run?"           | `runs --limit 1`                     |
+| "Show me recent runs"                                         | `runs --limit 10`                    |
+| "Show me only failed runs"                                    | `runs --failed-only`                 |
+| "Why did the last run fail?"                                  | `show latest --failed-only`          |
+| "Show run `<timestamp>`"                                      | `show <timestamp>`                   |
+| "How did `<test-id>` go?" / "What happened with `<test-id>`?" | `grading latest <test-id>`           |
+| "Why did `<test-id>` fail?"                                   | `grading latest <test-id>`           |
+| "Show the transcript for `<test-id>`"                         | `transcript latest <test-id>`        |
+| "Give me the full transcript for `<test-id>`"                 | `transcript latest <test-id> --full` |
 
 Constraints that apply to every troubleshooting invocation:
 
 - **Run identifiers**: either the literal string `latest` (newest run) or a full timestamp directory name like `2026-04-19-18-24-23`. There is no prefix matching.
 - **Test identifiers**: exact, case-sensitive test IDs as they appear in spec files (e.g. `SU-1`).
-- **Ambiguous names**: if the user names something that could be a skill, spec, or test case (e.g. "the widget tests", "report-card"), resolve it with `ls --search <term>` before calling `transcript` or `grading`. `ls --search` does case-insensitive partial matching across spec name, frontmatter `skill:`, file basename, test case ID, and test case name.
+- **Ambiguous names — resolve first.** If the user names something that could be a skill, spec, or test case (e.g. "the widget tests", "report-card"), your **first** CLI call must be `ls --search <term>`. Only after you see the search result may you call any troubleshooting subcommand (`runs`, `show`, `transcript`, `grading`). Skipping this and going straight to e.g. `show latest` because "the latest run probably has it" is wrong even when it happens to work — the disambiguation step is what the user is relying on you to do. The only exception is when the user supplied an exact, unambiguous identifier (a literal test ID like `SU-T1`, or a full run timestamp). `ls --search` does case-insensitive partial matching across spec name, frontmatter `skill:`, file basename, test case ID, and test case name.
 - **Default to summaries**: the subcommands print structured summaries by default. Pass `--full` only when the user explicitly asks for the entire transcript or grader output (e.g. "show me the whole transcript", "give me the complete log", "line-by-line"). Phrases like "how did X go" or "show me the transcript" are summary-intent.
 - **No direct file reads**: never fall back to Read/Glob/Grep on `.workspace/runs/`. The `--full` flag exists so you don't have to.
+- **Always relay verdict AND reason.** When answering about a specific test (e.g. "How did `<id>` go?", "Why did `<id>` fail?"), your reply MUST state the verdict (pass/fail) AND, for failing tests, quote the failure reason from the CLI's output. The CLI prints both on a `Reason:` line; do not summarize that line away or drop it. A reply that only says "EX-2 failed" without naming the reason is incomplete.
 
 If the CLI says `No runs yet.`, relay that to the user and suggest `skill-unit test --all`. If it reports an unknown run or test id, the error lists available ids; pick one from that list.
 
