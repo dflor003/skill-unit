@@ -1,0 +1,30 @@
+{
+  "testId": "INV-1",
+  "testName": "Reports How Many Widgets Are in Stock",
+  "prompt": "how many widgets are in stock?",
+  "passed": false,
+  "expectations": [
+    {
+      "text": "Activates the inventory skill",
+      "met": false,
+      "evidence": "Transcript shows no Skill tool call. The skill's description only triggers on jargon like 'SKU lookup' or 'warehouse delta', not on natural phrasing."
+    },
+    {
+      "text": "Responds with a one-line summary in the format \"{item}: {count} in stock.\"",
+      "met": false,
+      "evidence": "Agent produced multi-paragraph guidance instead."
+    }
+  ],
+  "negativeExpectations": [
+    {
+      "text": "Does not ask the user for clarification",
+      "met": true,
+      "evidence": "Agent did not ask a clarifying question."
+    },
+    {
+      "text": "Does not respond with multiple paragraphs",
+      "met": false,
+      "evidence": "Response is multiple paragraphs."
+    }
+  ]
+}

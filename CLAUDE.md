@@ -4,6 +4,17 @@
 
 Skill Unit is a plugin that brings structured, reproducible unit testing to AI agent skills. It uses `*.spec.md` files with a familiar unit-testing mental model: define prompts, declare expected outcomes, and get pass/fail results. Each test prompt runs in an isolated CLI session with no access to expectations, ensuring unbiased evaluation.
 
+## Distribution Channels (read before touching `package.json` or `.claude-plugin/`)
+
+This repo ships through **two independent channels**. Keep them separate.
+
+1. **npm package (`skill-unit`)** — the CLI. Defined by `package.json`; `files: ["dist/"]` controls what the tarball contains. Installed via `npm install skill-unit` and exposes the `skill-unit` binary. Users who only want the CLI get just `dist/`.
+2. **Claude Code plugin** — the skills and their supporting subagents. Defined by `.claude-plugin/plugin.json` and includes `skills/`, `agents/`, etc. Installed via the plugin marketplace; the CLI is a peer dependency the plugin's scripts call out to.
+
+Concretely: `agents/grader.md` is a **plugin** artifact, not an npm artifact. Do **not** add `agents/` to `package.json`'s `files` field — that smuggles a plugin file into the npm tarball and conflates the two channels. When a project that installs the npm CLI also wants the grader, it gets it via the plugin (or by providing its own `agents/grader.md` at the project root, which `resolveAgentPath` checks first).
+
+The hand-off between the two channels: the skill's `scripts/run-cli.sh` resolves `skill-unit` from `PATH` (or `npx`), so the plugin invokes the npm-installed CLI as a subprocess. The CLI never assumes the plugin exists.
+
 ## Project Structure
 
 ```
@@ -22,8 +33,9 @@ tests/            # Vitest unit and component tests
   cli/            # CLI command tests
   tui/            # Ink component tests
 skills/           # Plugin skills (companion role, not in npm package)
-  skill-unit/     # The test runner skill
-  test-design/    # The test case designer skill
+  skill-unit/                 # The test runner skill
+  skill-test-design/          # The test case designer skill
+  skill-test-troubleshooting/ # Diagnoses failing or flaky skill tests
 agents/           # Subagent definitions (markdown with YAML frontmatter)
   grader.md       # Grading agent for evaluating test results
 skill-tests/      # Test suites as *.spec.md files
@@ -40,9 +52,10 @@ docs/
 ## Running and Writing Tests
 
 - **Running tests**: Run `/skill-unit` or ask to "run skill tests." The skill handles execution, isolation, and reporting.
-- **Designing test cases**: Run `/test-design` or ask to "design test cases." The skill guides you through writing spec files.
+- **Designing test cases**: Run `/skill-test-design` or ask to "design test cases." The skill guides you through writing spec files.
+- **Troubleshooting failing tests**: Run `/skill-test-troubleshooting` or ask "why does this test keep failing?" to diagnose flaky or broken specs.
 - Test cases live in the `skill-tests/` directory as `*.spec.md` files.
-- Both skills are registered in `.claude/settings.json`.
+- All skills are registered in `.claude/settings.json`.
 
 ## Architecture Documentation
 
@@ -51,7 +64,7 @@ When making a significant architecture decision (new directory structures, isola
 Current docs. You MUST update this list any time you add, delete, or rename architecture documents:
 
 - `docs/architecture/per-test-fixtures.md` -- per-test fixture isolation strategy
-- `docs/architecture/test-design.md` -- test design skill architecture
+- `docs/architecture/skill-test-design.md` -- skill-test-design skill architecture
 - `docs/architecture/test-execution.md` -- test execution pipeline
 - `docs/architecture/troubleshooting.md` -- troubleshooting entry point (read-only CLI subcommands)
 - `docs/architecture/tui-design.md` -- TUI/CLI architecture, screens, data flow, keyboard navigation

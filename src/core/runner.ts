@@ -68,9 +68,10 @@ export function scopeToolsToWorkspace(
   allowedTools: string[],
   workspacePath: string
 ): string[] {
+  const normalized = workspacePath.replace(/\\/g, '/');
   return allowedTools.map((tool) => {
     if (FILE_TOOLS.has(tool)) {
-      return `${tool}(${workspacePath}/**)`;
+      return `${tool}(${normalized}/**)`;
     }
     return tool;
   });
@@ -205,27 +206,79 @@ export function cleanupRunWorkspaces(timestamp: string): void {
   rmSync(dir);
 }
 
+export interface InstallSkillPluginOptions {
+  extraSkillPaths?: string[];
+  extraAgentPaths?: string[];
+  extraHookPaths?: string[];
+}
+
 /**
- * Install the skill under test as a plugin at the given path.
+ * Install the skill under test (and any extra plugin assets) at the given path.
  * Creates:
- *   {pluginPath}/skills/{skill-name}/   -- the skill files
- *   {pluginPath}/.claude-plugin/plugin.json -- bare plugin manifest
- * Returns the plugin dir path to pass via --plugin-dir, or null if skill not found.
+ *   {pluginPath}/skills/{primary-skill}/        -- primary skill files
+ *   {pluginPath}/skills/{extra-skill-name}/...  -- each extra skill
+ *   {pluginPath}/agents/                        -- either auto-copied from the
+ *                                                  primary skill's source plugin
+ *                                                  root (when no extraAgentPaths
+ *                                                  are passed) OR populated only
+ *                                                  from the listed extraAgentPaths.
+ *   {pluginPath}/hooks/{hook-name}/...          -- each extra hook directory
+ *   {pluginPath}/.claude-plugin/plugin.json     -- bare plugin manifest
+ * Returns the plugin dir path to pass via --plugin-dir, or null if primary not found.
  */
 export function installSkillPlugin(
   skillSrcPath: string,
-  pluginPath: string
+  pluginPath: string,
+  options: InstallSkillPluginOptions = {}
 ): string | null {
   if (!skillSrcPath || !fs.existsSync(skillSrcPath)) {
     log.warn(`Skill path not found: ${skillSrcPath}`);
     return null;
   }
 
-  const skillName = path.basename(skillSrcPath);
+  const extraSkillPaths = options.extraSkillPaths ?? [];
+  const extraAgentPaths = options.extraAgentPaths ?? [];
+  const extraHookPaths = options.extraHookPaths ?? [];
 
-  // Copy skill into the plugin directory
-  const skillsDest = path.join(pluginPath, 'skills', skillName);
-  copyDirSync(skillSrcPath, skillsDest);
+  // Copy primary skill
+  const primarySkillName = path.basename(skillSrcPath);
+  copyDirSync(skillSrcPath, path.join(pluginPath, 'skills', primarySkillName));
+
+  // Copy each extra skill (each lives at <repo>/<...>/skills/<name>/)
+  for (const extra of extraSkillPaths) {
+    const extraName = path.basename(extra);
+    copyDirSync(extra, path.join(pluginPath, 'skills', extraName));
+  }
+
+  // Agent mounting:
+  //   - If extraAgentPaths is non-empty: mount ONLY those listed agents.
+  //   - If extraAgentPaths is empty: preserve current auto-mount behavior
+  //     (copy the entire sibling agents/ dir of the primary skill's plugin).
+  if (extraAgentPaths.length > 0) {
+    const agentsDest = path.join(pluginPath, 'agents');
+    fs.mkdirSync(agentsDest, { recursive: true });
+    for (const agentFile of extraAgentPaths) {
+      fs.copyFileSync(
+        agentFile,
+        path.join(agentsDest, path.basename(agentFile))
+      );
+    }
+  } else {
+    const sourcePluginRoot = path.dirname(path.dirname(skillSrcPath));
+    const sourceAgentsDir = path.join(sourcePluginRoot, 'agents');
+    if (
+      fs.existsSync(sourceAgentsDir) &&
+      fs.statSync(sourceAgentsDir).isDirectory()
+    ) {
+      copyDirSync(sourceAgentsDir, path.join(pluginPath, 'agents'));
+    }
+  }
+
+  // Copy each extra hook directory
+  for (const hook of extraHookPaths) {
+    const hookName = path.basename(hook);
+    copyDirSync(hook, path.join(pluginPath, 'hooks', hookName));
+  }
 
   // Generate bare plugin manifest
   const pluginMetaDir = path.join(pluginPath, '.claude-plugin');
@@ -606,6 +659,9 @@ async function _runTestAsync(
   const specName = manifest['spec-name'];
   const rawGlobalFixturePath = manifest['global-fixture-path'];
   const rawSkillPath = manifest['skill-path'];
+  const rawExtraSkillPaths = manifest['extra-skill-paths'] ?? [];
+  const rawExtraAgentPaths = manifest['extra-agent-paths'] ?? [];
+  const rawExtraHookPaths = manifest['extra-hook-paths'] ?? [];
   const timestamp = manifest.timestamp;
   const timeoutStr = manifest.timeout;
   const runner = manifest.runner;
@@ -614,6 +670,9 @@ async function _runTestAsync(
     ? path.resolve(cwd, rawGlobalFixturePath)
     : null;
   const skillPath = rawSkillPath ? path.resolve(cwd, rawSkillPath) : null;
+  const extraSkillPaths = rawExtraSkillPaths.map((p) => path.resolve(cwd, p));
+  const extraAgentPaths = rawExtraAgentPaths.map((p) => path.resolve(cwd, p));
+  const extraHookPaths = rawExtraHookPaths.map((p) => path.resolve(cwd, p));
 
   const tool = runner.tool || 'claude';
   const model = runner.model || null;
@@ -693,7 +752,11 @@ async function _runTestAsync(
 
   // Install skill under test as a plugin (sibling to work dir)
   const pluginDir = skillPath
-    ? installSkillPlugin(skillPath, pluginPath)
+    ? installSkillPlugin(skillPath, pluginPath, {
+        extraSkillPaths,
+        extraAgentPaths,
+        extraHookPaths,
+      })
     : null;
 
   // Scope file tools to this test case's workspace path

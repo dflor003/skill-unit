@@ -2,6 +2,7 @@
 name: skill-unit-runner-tests
 skill: skill-unit
 tags: [integration, happy-path]
+timeout: 180s
 global-fixtures: ./fixtures/report-card
 allowed-tools:
   - Read

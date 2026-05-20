@@ -25,6 +25,7 @@ Desktop.ini
 # AI
 .claude/settings.local.json
 .ci-debug/
+.worktrees/
 
 # Superpowers brainstorm sessions
 .superpowers/

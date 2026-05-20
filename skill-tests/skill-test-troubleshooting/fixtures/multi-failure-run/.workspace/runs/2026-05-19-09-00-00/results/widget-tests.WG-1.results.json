@@ -1,0 +1,25 @@
+{
+  "testId": "WG-1",
+  "testName": "Totals a Small Widget Order",
+  "prompt": "please",
+  "passed": false,
+  "expectations": [
+    {
+      "text": "Activates the widget skill",
+      "met": false,
+      "evidence": "Prompt 'please' carries no widget signal; skill never activated."
+    },
+    {
+      "text": "Responds with `Total: ${amount}`",
+      "met": false,
+      "evidence": "Agent asked for clarification instead."
+    }
+  ],
+  "negativeExpectations": [
+    {
+      "text": "Does not ask the user for clarification",
+      "met": false,
+      "evidence": "Agent asked 'Could you tell me more...'"
+    }
+  ]
+}

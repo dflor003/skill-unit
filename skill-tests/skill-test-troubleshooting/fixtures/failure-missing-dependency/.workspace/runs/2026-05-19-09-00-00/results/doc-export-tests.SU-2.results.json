@@ -1,0 +1,25 @@
+{
+  "testId": "SU-2",
+  "testName": "Exports Markdown to PDF",
+  "prompt": "export notes.md to PDF",
+  "passed": false,
+  "expectations": [
+    {
+      "text": "Activates the doc-export skill",
+      "met": true,
+      "evidence": "Turn 2 shows Skill activation."
+    },
+    {
+      "text": "Reports the path to a generated PDF",
+      "met": false,
+      "evidence": "pandoc is not installed (command not found, exit 127); no PDF was generated."
+    }
+  ],
+  "negativeExpectations": [
+    {
+      "text": "Does not crash with an unhandled error",
+      "met": false,
+      "evidence": "Bash command exited 127: 'pandoc: command not found'."
+    }
+  ]
+}

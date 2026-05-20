@@ -18,7 +18,10 @@ Frontmatter is a YAML block delimited by `---` at the top of the file.
 | Field                    | Required | Type     | Description                                                                                                                                                                                                |
 | ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `name`                   | Yes      | string   | Human-readable name for the test suite. Shown in results output.                                                                                                                                           |
-| `skill`                  | No       | string   | Skill being tested. Informational — not used for filtering or execution.                                                                                                                                   |
+| `skill`                  | No       | string   | Primary skill being tested. The runner mounts this skill into the per-test workspace plugin. Also used for filtering (`--skill X`).                                                                        |
+| `extra-skills`           | No       | list     | Additional skills to mount in the workspace plugin alongside the primary `skill`. See "Extra Plugin Assets" below.                                                                                         |
+| `extra-agents`           | No       | list     | Additional agents to mount in the workspace plugin. Specifying this overrides the default auto-mount of the primary skill's sibling `agents/` directory. See "Extra Plugin Assets" below.                  |
+| `extra-hooks`            | No       | list     | Additional hooks to mount in the workspace plugin. See "Extra Plugin Assets" below.                                                                                                                        |
 | `tags`                   | No       | list     | Tags for filtering test runs (e.g., `[happy-path, slash-command]`).                                                                                                                                        |
 | `timeout`                | No       | duration | Per-test timeout for this suite. Overrides the global default from `.skill-unit.yml`. Example: `90s`.                                                                                                      |
 | `global-fixtures`        | No       | path     | Path to a fixture folder copied into the working directory for every test case in this file. Relative paths are resolved from the spec file's directory. Per-test fixtures (see below) are layered on top. |
@@ -28,6 +31,31 @@ Frontmatter is a YAML block delimited by `---` at the top of the file.
 | `disallowed-tools`       | No       | list     | Fully replaces the resolved disallowed tools list from global config.                                                                                                                                      |
 | `allowed-tools-extra`    | No       | list     | Adds entries to the resolved allowed tools list (union). Ignored if `allowed-tools` is also present.                                                                                                       |
 | `disallowed-tools-extra` | No       | list     | Adds entries to the resolved disallowed tools list (union). Ignored if `disallowed-tools` is also present.                                                                                                 |
+
+### Extra Plugin Assets
+
+A spec may declare additional skills, agents, or hooks that the runner mounts in the per-test workspace beyond the primary `skill:`. All three fields are optional arrays of asset names.
+
+```yaml
+extra-skills:
+  - other-skill
+extra-agents:
+  - reviewer
+extra-hooks:
+  - on-stop
+```
+
+Resolution rules:
+
+- `extra-skills` looks under `.claude/skills/<name>/SKILL.md` then `skills/<name>/SKILL.md`.
+- `extra-agents` looks under `.claude/agents/<name>.md` then `agents/<name>.md`.
+- `extra-hooks` looks under `.claude/hooks/<name>/` (directory) then `hooks/<name>/`.
+
+Unresolved names fail at compile time with a message naming the missing entry and the locations searched.
+
+Specifying `extra-agents` overrides the default behavior of auto-mounting the primary skill's sibling `agents/` directory: only the listed agents are mounted. Omit the field to keep the auto-mount.
+
+The `--skill X` filter still matches only the primary `skill:` field. Mounting another skill via `extra-skills` does not make this spec discoverable through a filter on that name.
 
 ### Tool Permissions
 

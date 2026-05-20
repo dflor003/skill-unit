@@ -153,7 +153,7 @@ export const initCommand = defineCommand({
 
     if (changed) {
       console.log(
-        'Project bootstrapped for skill-unit. Create your first test with `/test-design <skill-name>`.'
+        'Project bootstrapped for skill-unit. Create your first test with `/skill-test-design <skill-name>`.'
       );
     } else {
       console.log(

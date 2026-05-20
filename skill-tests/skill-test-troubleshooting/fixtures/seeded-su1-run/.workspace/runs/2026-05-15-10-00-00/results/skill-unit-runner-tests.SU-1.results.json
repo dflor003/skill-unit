@@ -1,0 +1,11 @@
+{
+  "testId": "SU-1",
+  "testName": "Runs Tests and Produces a Report",
+  "prompt": "Run the tests for the report-card skill",
+  "passed": true,
+  "expectations": [
+    { "text": "Executes the test prompts via the runner", "met": true, "evidence": "Turn 2" },
+    { "text": "Presents a summary report with pass/fail results", "met": true, "evidence": "Turn 3" }
+  ],
+  "negativeExpectations": []
+}

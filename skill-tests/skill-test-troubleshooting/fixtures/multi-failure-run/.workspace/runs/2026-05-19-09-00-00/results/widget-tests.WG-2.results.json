@@ -1,0 +1,25 @@
+{
+  "testId": "WG-2",
+  "testName": "Totals a Larger Widget Order",
+  "prompt": "compute it",
+  "passed": false,
+  "expectations": [
+    {
+      "text": "Activates the widget skill",
+      "met": false,
+      "evidence": "Prompt 'compute it' carries no widget signal; skill never activated."
+    },
+    {
+      "text": "Responds with `Total: ${amount}`",
+      "met": false,
+      "evidence": "Agent asked for clarification instead."
+    }
+  ],
+  "negativeExpectations": [
+    {
+      "text": "Does not ask the user for clarification",
+      "met": false,
+      "evidence": "Agent asked 'Compute what?'"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "testId": "SU-1",
+  "testName": "Starts a Timer",
+  "prompt": "start a timer",
+  "passed": true,
+  "expectations": [
+    { "text": "Activates the timer skill", "met": true, "evidence": "Skill activation in transcript." },
+    { "text": "Responds with `Timer: {seconds}s`", "met": true, "evidence": "Turn 3: 'Timer: 0s'." }
+  ],
+  "negativeExpectations": []
+}

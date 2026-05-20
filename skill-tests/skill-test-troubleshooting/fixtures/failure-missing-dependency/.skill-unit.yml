@@ -1,0 +1,5 @@
+test-dir: skill-tests
+runner:
+  tool: claude
+  model: haiku
+  max-turns: 10
