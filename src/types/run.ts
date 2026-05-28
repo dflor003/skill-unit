@@ -31,6 +31,7 @@ export interface RunResult {
   testCount: number;
   passed: number;
   failed: number;
+  timedOut: number;
   durationMs: number;
   cost: number;
   tokens: number;
@@ -77,6 +78,7 @@ export interface StatsIndex {
     testCount: number;
     passed: number;
     failed: number;
+    timedOut: number;
     duration: number;
     cost: number;
     tokens: number;

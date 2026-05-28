@@ -46,9 +46,13 @@ const { MdStream } = createLogger;
 const FILE_TOOLS = new Set(['Read', 'Edit', 'Glob', 'Grep']);
 
 /**
- * Build a system prompt that constrains the agent to the given workspace path.
+ * Build a system prompt that constrains the agent to the given workspace path
+ * and informs it of its turn budget.
  */
-export function buildSystemPrompt(workspacePath: string): string {
+export function buildSystemPrompt(
+  workspacePath: string,
+  maxTurns: number
+): string {
   return `You are working in the directory: ${workspacePath}
 You MUST NOT read, write, or access any files outside this directory.
 All file operations (Read, Write, Edit, Glob, Grep, Bash) must target only files within this directory.
@@ -56,7 +60,11 @@ Do not use parent directory traversal or absolute paths outside this directory.
 
 Always use relative paths from within the working directory for all tool calls.
 
-Always use the Write or Edit tools for writing files. DO NOT fall back to the Bash tool for file writes if a tool call is blocked. Instead, inform the user and wait for further instructions.`;
+Always use the Write or Edit tools for writing files. DO NOT fall back to the Bash tool for file writes if a tool call is blocked. Instead, inform the user and wait for further instructions.
+
+## Turn Budget
+
+You have up to ${maxTurns} assistant turns to complete this task. Be decisive. Prefer reaching a conclusion over exhaustive investigation. If the task is out of scope, if you cannot make progress, or if you have determined the answer, state your conclusion and stop rather than continuing to explore.`;
 }
 
 /**
@@ -125,7 +133,7 @@ export const TOOL_PROFILES: Record<string, ArgBuilder> = {
     'local',
     '--strict-mcp-config',
     '--system-prompt',
-    buildSystemPrompt(workspacePath),
+    buildSystemPrompt(workspacePath, maxTurns),
     ...(model ? ['--model', model] : []),
     ...(pluginDir ? ['--plugin-dir', pluginDir] : []),
     ...(allowedTools.length ? ['--allowedTools', ...allowedTools] : []),

@@ -522,7 +522,16 @@ export interface GenerateReportResult {
   error?: string;
 }
 
-export function generateReport(runDir: string): GenerateReportResult {
+export interface TimedOutTestSummary {
+  id: string;
+  name: string;
+  specName: string;
+}
+
+export function generateReport(
+  runDir: string,
+  timedOut: TimedOutTestSummary[]
+): GenerateReportResult {
   const resultsDir = path.join(runDir, 'results');
 
   if (!fs.existsSync(resultsDir)) {
@@ -633,6 +642,19 @@ export function generateReport(runDir: string): GenerateReportResult {
     }
   }
 
+  if (timedOut.length > 0) {
+    fileLines.push('## Timed Out');
+    fileLines.push('');
+    fileLines.push(
+      "These tests did not finish within their wall-clock timeout. The transcripts are truncated and any grader verdict on them is inconclusive. Tune the spec's `runner.max-turns` or `timeout`, or tighten the prompt, before drawing conclusions about skill behavior."
+    );
+    fileLines.push('');
+    for (const t of timedOut) {
+      fileLines.push(`- **${t.id}** (${t.specName}) — ${t.name}`);
+    }
+    fileLines.push('');
+  }
+
   // Write report file
   const reportPath = path.join(resultsDir, 'report.md');
   fs.writeFileSync(reportPath, fileLines.join('\n'), 'utf-8');
@@ -698,19 +720,22 @@ export function generateReport(runDir: string): GenerateReportResult {
 // -- Generate compact terminal summary from RunResult -------------------------
 
 export function generateSummary(runResult: RunResult): string {
-  const { passed, failed, testCount, durationMs, cost, tokens } = runResult;
+  const { passed, failed, timedOut, testCount, durationMs, cost, tokens } =
+    runResult;
   const durationSec = (durationMs / 1000).toFixed(1);
   const costStr = `$${cost.toFixed(4)}`;
   const tokStr = tokens.toLocaleString();
 
-  const parts = [
-    `${passed} passed`,
-    `${failed} failed`,
+  const parts = [`${passed} passed`, `${failed} failed`];
+  if (timedOut > 0) {
+    parts.push(`${timedOut} timed out`);
+  }
+  parts.push(
     `${testCount} total`,
     `${durationSec}s`,
     costStr,
-    `${tokStr} tokens`,
-  ];
+    `${tokStr} tokens`
+  );
 
   return parts.join(' | ');
 }

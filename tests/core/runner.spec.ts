@@ -11,9 +11,21 @@ import {
 
 describe('buildSystemPrompt', () => {
   it('includes workspace path constraint', () => {
-    const prompt = buildSystemPrompt('/workspace/abc123');
+    const prompt = buildSystemPrompt('/workspace/abc123', 10);
     expect(prompt).toContain('/workspace/abc123');
     expect(prompt).toContain('workspace');
+  });
+
+  it('includes the turn budget number', () => {
+    const prompt = buildSystemPrompt('/workspace/abc123', 7);
+    expect(prompt).toContain('Turn Budget');
+    expect(prompt).toContain('up to 7 assistant turns');
+  });
+
+  it('includes the decisiveness directive', () => {
+    const prompt = buildSystemPrompt('/workspace/abc123', 10);
+    expect(prompt).toContain('Be decisive');
+    expect(prompt).toContain('state your conclusion and stop');
   });
 });
 
