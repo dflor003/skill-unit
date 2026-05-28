@@ -14,6 +14,7 @@ import { generateReport, generateSummary } from '../../core/reporter.js';
 import { formatCiReport } from '../../core/ci-reporter.js';
 import { generateJUnitXml } from '../../core/junit.js';
 import { recordRun } from '../../core/stats.js';
+import { computeExitCode } from '../../core/exit-code.js';
 import { createLogger } from '../../core/logger.js';
 import type {
   SpecFilter,
@@ -336,7 +337,21 @@ export const testCommand = defineCommand({
     // -- Phase 3: Generate report -----------------------------------------------
 
     const runDir = path.join('.workspace', 'runs', timestamp);
-    const reportResult = generateReport(runDir);
+    const timedOutSummaries = testRunResults
+      .filter((tr) => tr.timedOut)
+      .map((tr) => {
+        const specName = tr.manifest['spec-name'];
+        let testName = tr.testCase.id;
+        for (const spec of filtered) {
+          const tc = spec.testCases.find((c) => c.id === tr.testCase.id);
+          if (tc) {
+            testName = tc.name;
+            break;
+          }
+        }
+        return { id: tr.testCase.id, name: testName, specName };
+      });
+    const reportResult = generateReport(runDir, timedOutSummaries);
 
     // -- Phase 4: Build RunResult and record stats ------------------------------
 
@@ -392,8 +407,13 @@ export const testCommand = defineCommand({
       };
     });
 
-    const totalPassed = testResults.filter((t) => t.passed).length;
-    const totalFailed = testResults.filter((t) => !t.passed).length;
+    const totalPassed = testResults.filter((t) => t.status === 'passed').length;
+    const totalTimedOut = testResults.filter(
+      (t) => t.status === 'timedout'
+    ).length;
+    const totalFailed = testResults.filter(
+      (t) => !t.passed && t.status !== 'timedout'
+    ).length;
 
     const runResult: RunResult = {
       id: timestamp,
@@ -401,6 +421,7 @@ export const testCommand = defineCommand({
       testCount: testResults.length,
       passed: totalPassed,
       failed: totalFailed,
+      timedOut: totalTimedOut,
       durationMs: runDurationMs,
       cost: testRunResults.reduce((sum, r) => sum + (r.costUsd ?? 0), 0),
       tokens: testRunResults.reduce(
@@ -451,8 +472,9 @@ export const testCommand = defineCommand({
 
     // -- Exit code --------------------------------------------------------------
 
-    if (totalFailed > 0) {
-      process.exit(1);
+    const exitCode = computeExitCode(totalFailed, totalTimedOut);
+    if (exitCode !== 0) {
+      process.exit(exitCode);
     }
   },
 });

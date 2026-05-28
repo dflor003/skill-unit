@@ -119,6 +119,22 @@ describe('stats', () => {
       expect(index.tests['runner/TEST-1'].passCount).toBe(1);
       expect(index.tests['runner/TEST-2'].passCount).toBe(0);
     });
+
+    it('persists timedOut on the StatsIndex.runs entry', () => {
+      const result = makeRunResult({
+        id: '2026-05-27-12-00-00',
+        testCount: 3,
+        passed: 1,
+        failed: 1,
+        timedOut: 1,
+      });
+
+      recordRun(result, tmpDir);
+
+      const index = loadIndex(tmpDir);
+      expect(index.runs).toHaveLength(1);
+      expect(index.runs[0].timedOut).toBe(1);
+    });
   });
 
   describe('loadIndex', () => {

@@ -277,7 +277,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
           cleanupRunWorkspaces(timestamp);
           // Generate report
           const runDir = path.join('.workspace', 'runs', timestamp);
-          const reportResult = generateReport(runDir);
+          const reportResult = generateReport(runDir, []);
 
           // Build RunResult for stats recording
           const testResults: TestResult[] = allTasks.map((task) => {
@@ -314,8 +314,15 @@ export function useTestRun(): [TestRunState, TestRunActions] {
             };
           });
 
-          const totalPassed = testResults.filter((t) => t.passed).length;
-          const totalFailed = testResults.filter((t) => !t.passed).length;
+          const totalPassed = testResults.filter(
+            (t) => t.status === 'passed'
+          ).length;
+          const totalTimedOut = testResults.filter(
+            (t) => t.status === 'timedout'
+          ).length;
+          const totalFailed = testResults.filter(
+            (t) => !t.passed && t.status !== 'timedout'
+          ).length;
           const totalDuration = startTimeRef.current
             ? Date.now() - startTimeRef.current
             : 0;
@@ -326,6 +333,7 @@ export function useTestRun(): [TestRunState, TestRunActions] {
             testCount: testResults.length,
             passed: totalPassed,
             failed: totalFailed,
+            timedOut: totalTimedOut,
             durationMs: totalDuration,
             cost: totalCost,
             tokens: totalTokens,

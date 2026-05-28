@@ -24,7 +24,7 @@ export const reportCommand = defineCommand({
     }
 
     log.info(`Generating report from: ${runDir}`);
-    const result = generateReport(runDir);
+    const result = generateReport(runDir, []);
 
     if (result.error) {
       log.error(result.error);

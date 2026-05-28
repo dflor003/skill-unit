@@ -465,7 +465,7 @@ describe('generateReport with grader JSON', () => {
     );
 
     // Act
-    const report = generateReport(tmpDir);
+    const report = generateReport(tmpDir, []);
 
     // Assert
     const entry = report.grouped['spec'][0];
@@ -485,7 +485,7 @@ describe('generateReport with grader JSON', () => {
     );
 
     // Act
-    const report = generateReport(tmpDir);
+    const report = generateReport(tmpDir, []);
 
     // Assert
     const entry = report.grouped['spec'][0];
@@ -574,7 +574,7 @@ describe('generateReport testId recovery from filename', () => {
     );
 
     // Act
-    const report = generateReport(tmpDir);
+    const report = generateReport(tmpDir, []);
 
     // Assert
     const entry = report.grouped['spec'][0];
@@ -590,7 +590,7 @@ describe('generateReport testId recovery from filename', () => {
     );
 
     // Act
-    const report = generateReport(tmpDir);
+    const report = generateReport(tmpDir, []);
 
     // Assert
     const entry = report.grouped['spec'][0];
@@ -606,7 +606,7 @@ describe('generateReport testId recovery from filename', () => {
     );
 
     // Act
-    const report = generateReport(tmpDir);
+    const report = generateReport(tmpDir, []);
 
     // Assert
     const entry = report.grouped['spec'][0];
@@ -615,14 +615,60 @@ describe('generateReport testId recovery from filename', () => {
   });
 });
 
+describe('generateReport with timed-out tests', () => {
+  let tmpDir: string;
+
+  beforeEach(() => {
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sk-report-timeout-'));
+    fs.mkdirSync(path.join(tmpDir, 'results'), { recursive: true });
+
+    const minimalJson = {
+      testId: 'SU-1',
+      testName: 'A passing test',
+      passed: true,
+      expectations: [{ text: 'works', met: true }],
+      negativeExpectations: [],
+    };
+    fs.writeFileSync(
+      path.join(tmpDir, 'results', 'demo.SU-1.results.md'),
+      `\`\`\`json\n${JSON.stringify(minimalJson)}\n\`\`\`\n`
+    );
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('emits a Timed Out section when at least one test timed out', () => {
+    const timedOut = [
+      { id: 'SU-2', name: 'A timed-out test', specName: 'demo' },
+    ];
+
+    const report = generateReport(tmpDir, timedOut);
+    const reportMd = fs.readFileSync(report.reportPath!, 'utf-8');
+
+    expect(reportMd).toContain('## Timed Out');
+    expect(reportMd).toContain('SU-2');
+    expect(reportMd).toContain('A timed-out test');
+  });
+
+  it('does not emit a Timed Out section when no tests timed out', () => {
+    const report = generateReport(tmpDir, []);
+    const reportMd = fs.readFileSync(report.reportPath!, 'utf-8');
+
+    expect(reportMd).not.toContain('## Timed Out');
+  });
+});
+
 describe('generateSummary', () => {
-  it('produces terminal summary with pass/fail counts', () => {
+  it('produces terminal summary with pass/fail counts when no timeouts', () => {
     const runResult = {
       id: '2026-04-07-10-00-00',
       timestamp: '2026-04-07T10:00:00Z',
       testCount: 3,
       passed: 2,
       failed: 1,
+      timedOut: 0,
       durationMs: 5000,
       cost: 0.05,
       tokens: 3000,
@@ -632,5 +678,26 @@ describe('generateSummary', () => {
     expect(summary).toContain('2 passed');
     expect(summary).toContain('1 failed');
     expect(summary).toContain('3 total');
+    expect(summary).not.toContain('timed out');
+  });
+
+  it('includes the timed out count when greater than zero', () => {
+    const runResult = {
+      id: '2026-04-07-10-00-00',
+      timestamp: '2026-04-07T10:00:00Z',
+      testCount: 4,
+      passed: 2,
+      failed: 1,
+      timedOut: 1,
+      durationMs: 5000,
+      cost: 0.05,
+      tokens: 3000,
+      tests: [],
+    };
+    const summary = generateSummary(runResult);
+    expect(summary).toContain('2 passed');
+    expect(summary).toContain('1 failed');
+    expect(summary).toContain('1 timed out');
+    expect(summary).toContain('4 total');
   });
 });
