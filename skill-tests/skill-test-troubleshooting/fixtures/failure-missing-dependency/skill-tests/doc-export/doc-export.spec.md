@@ -4,7 +4,7 @@ skill: doc-export
 tags: [happy-path]
 ---
 
-### SU-2: Exports Markdown to PDF
+### DE-1: Exports Markdown to PDF
 
 The skill should convert a Markdown file to PDF and report the output path.
 

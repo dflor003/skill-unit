@@ -10,9 +10,9 @@ test-dir: skill-tests
 runner:
   # The harness CLI to use. Supported: claude (more coming soon).
   tool: claude
-  model: haiku
+  model: claude-sonnet-5
   # Model to use for test execution (optional, uses harness default if omitted).
-  # model: sonnet
+  # model: haiku
   # Max conversation turns per test case.
   max-turns: 25
   # Maximum number of spec files to run their test runners in parallel.

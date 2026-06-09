@@ -1,5 +1,5 @@
 {
-  "testId": "SU-2",
+  "testId": "DE-1",
   "testName": "Exports Markdown to PDF",
   "prompt": "export notes.md to PDF",
   "passed": false,

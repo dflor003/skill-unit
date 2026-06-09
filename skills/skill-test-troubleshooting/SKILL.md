@@ -74,7 +74,15 @@ bash "${CLAUDE_PLUGIN_ROOT}/skills/skill-unit/scripts/run-cli.sh" grading latest
 
 `--full` is appropriate here. Diagnosis needs the actual turn-by-turn detail, not the summary.
 
+**Never change directories. Invoke the CLI from your starting working directory**, the directory you were launched in (the one containing `skill-tests/`). Run history resolution is relative to the CLI's working directory, so `cd`-ing anywhere else (a parent directory, a wrapper script's location, any other path that looks like a project root) makes this project's runs invisible or, worse, points the CLI at a different project's run history entirely. If a path in an instruction or error message tempts you to `cd`, reference the file by its path instead and stay where you are.
+
+If the wrapper script path is not accessible from your working directory, do not spend turns hunting for it. Call the CLI directly instead: `skill-unit <subcommand>`, or `npx skill-unit <subcommand>` if the bare command is not on PATH. The wrapper only does this resolution for you.
+
 If the test has no recorded runs, do not guess. Either run it once via `run-cli.sh test --test <id>` to produce a fresh transcript, or stop and report that there is no history to diagnose. Pick "run it" when the user clearly wants the test fixed; pick "stop and report" if running the test would be slow or expensive and the user has not authorized it.
+
+If the test has run history and the recent runs are **passing**, there is no failure to diagnose. Report that the test has not been failing, citing the runs you checked, and stop. Do not modify any files. The user calling a test "flaky" or "failing" is a claim to verify against the run history, not a fact to take on faith; when the history contradicts the claim, the history wins. Inventing a plausible defect to fix anyway is the worst outcome this skill can produce.
+
+**Evidence gathering ends when you have the transcript and the grading output.** Those two artifacts are the diagnosis input; everything else (the spec file, the skill's SKILL.md) is read only to confirm a specific hypothesis the evidence already suggests. Do not keep listing directories, re-running lookups, or re-reading files you have seen. Once the evidence is in hand, move directly to Step 3, classify the failure, and act on the classification. An incomplete diagnosis delivered decisively beats a perfect diagnosis that never arrives.
 
 ### Step 3: Classify the failure mode
 

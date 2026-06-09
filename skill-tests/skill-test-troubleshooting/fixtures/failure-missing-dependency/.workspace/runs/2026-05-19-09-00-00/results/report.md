@@ -6,5 +6,5 @@
 
 ## doc-export-tests (0 passed, 1 failed)
 
-- ❌ **SU-2: Exports Markdown to PDF** (1/3) — [transcript](doc-export-tests.SU-2.transcript.md) | [grading](doc-export-tests.SU-2.results.md)
+- ❌ **DE-1: Exports Markdown to PDF** (1/3) — [transcript](doc-export-tests.DE-1.transcript.md) | [grading](doc-export-tests.DE-1.results.md)
   Reason: pandoc not installed (command not found, exit 127). Spec and skill are correct.

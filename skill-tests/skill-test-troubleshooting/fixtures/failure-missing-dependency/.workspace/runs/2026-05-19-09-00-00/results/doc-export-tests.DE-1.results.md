@@ -1,4 +1,4 @@
-# SU-2: Exports Markdown to PDF — FAIL
+# DE-1: Exports Markdown to PDF — FAIL
 
 - ✓ Activates the doc-export skill
 - ✗ Reports the path to a generated PDF

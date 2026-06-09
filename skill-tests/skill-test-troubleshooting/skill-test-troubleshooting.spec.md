@@ -296,7 +296,7 @@ If the diagnosis indicates the failure is environmental (a missing system depend
 
 **Prompt:**
 
-> Fix the failing SU-2 test.
+> Fix the failing DE-1 test.
 
 **Expectations:**
 

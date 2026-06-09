@@ -1,4 +1,4 @@
-# Transcript: SU-2
+# Transcript: DE-1
 
 **Prompt:** export notes.md to PDF
 
@@ -6,7 +6,7 @@
 
 - **Model:** claude-haiku-4-5-20251001
 - **Skills:** my-plugins:doc-export
-- **CWD:** /workspace/doc-export-tests.SU-2/work
+- **CWD:** /workspace/doc-export-tests.DE-1/work
 
 ---
 
