@@ -38,3 +38,27 @@ The agent burns turns searching for files, reading examples, or spawning Explore
 **How to spot it:** The transcript is full of `find`, `ls`, Glob, or Bash calls with no meaningful output between them.
 
 **Fix:** This is often a symptom of the skill not activating (see above). If the skill did activate but the skill itself is exploring too much, check whether the skill's instructions tell it to use specific Glob patterns rather than open-ended searches.
+
+### Agent swallows the prompt's failure presupposition
+
+The prompt asserts something is broken ("fix the flaky X test") when the run history shows it passing. Instead of reporting that nothing is wrong, the agent invents a plausible-sounding defect and "fixes" it, modifying files based on pure speculation.
+
+**How to spot it:** The grading output shows the agent inspected run history that contained only passes, then pivoted to a confident diagnosis anyway ("I can see the issue now") and edited the skill or spec.
+
+**Fix:** This is a skill-instruction gap, not a prompt or fixture problem. The skill being tested needs an explicit branch for "history exists and passes": report that the test has not been failing and stop, without modifying files. Treat the user's claim of failure as something to verify, not a premise to satisfy.
+
+### CLI invoked from the wrong working directory
+
+The agent calls a cwd-sensitive CLI (like `skill-unit`, which resolves `.workspace/runs/` relative to its working directory) after `cd`-ing somewhere else, typically to the directory containing a wrapper script. The CLI truthfully reports "no run history," the agent believes it, and goes down an expensive re-run or re-create path even though seeded history exists.
+
+**How to spot it:** A Bash call of the form `cd <somewhere> && <cli> transcript latest <id>` returning "no run history," in a workspace whose fixture seeds `.workspace/runs/`. Subsequent turns show the agent re-running tests or scaffolding files the fixture already provides.
+
+**Fix:** The skill's instructions must pin the invocation directory: run the CLI from the agent's starting working directory and never `cd` elsewhere to invoke wrappers. Reference scripts by path instead of changing directory to them. Avoid the phrase "project root" in instructions; an agent whose visible paths include a parent project may resolve "project root" to that parent instead of its own working directory.
+
+### Test ID collides with another reachable project
+
+The fixture defines a test whose ID also exists in a project the agent can reach (a parent repository visible in the workspace path, for instance). When the agent's lookups in the wrong location succeed, it diagnoses and "fixes" the identically-named test in the wrong project, completely bypassing the fixture.
+
+**How to spot it:** The transcript shows lookups returning spec names or run history that do not exist in the fixture. The grading output describes the agent working on a test whose content does not match the fixture's test.
+
+**Fix:** Rename the fixture's test ID to something unique that cannot collide with the host project's real test IDs. Fixture test IDs should never reuse well-known IDs from the project that runs the test suite.

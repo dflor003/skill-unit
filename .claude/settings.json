@@ -27,6 +27,7 @@
       "Bash(test *)",
       "Bash(find *)",
       "Bash([*)",
+      "Bash(sed *)",
       "Bash(git mv *)",
       "Bash(git log *)",
       "Bash(git show *)",
@@ -89,7 +90,6 @@
     ],
     "ask": [
       "Bash(curl *)",
-      "Bash(sed *)",
       "Bash(rm *)",
       "Bash(git pull *)",
       "Bash(git checkout *)",

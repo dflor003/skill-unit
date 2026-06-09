@@ -92,7 +92,7 @@ Don't push trivial tweaks just to "see what CI thinks" of the skill tests — ev
 ## Common gotchas
 
 - **`--log-failed` returning "Binary file (standard input) matches"** when piped to grep: add `-a` (force text). The timestamps look like binary to grep's heuristic.
-- **The skill-unit job's failures can be flaky** because the agent under test is haiku, which sometimes produces unusually terse responses. Before declaring a real regression, re-run the failing test locally: `npm run su -- test --test <ID>`. Local should match CI in pass/fail roughly 80%+ of the time; if local consistently passes and CI consistently fails, it's the spec design (often expectation strictness vs. haiku terseness) rather than a code bug.
+- **The skill-unit job's failures can be flaky** because the agent under test is a nondeterministic model (whichever `runner.model` is set in `.skill-unit.yml`; do not assume a specific one). Before declaring a real regression, re-run the failing test locally: `npm run su -- test --test <ID>`. Local should match CI in pass/fail most of the time; if local consistently passes and CI consistently fails, it's the spec design (often expectation strictness vs. the model's response style) rather than a code bug.
 - **Don't `gh run rerun <id>`** the Skill-Unit Tests job to "see if it stabilizes" without confirming with the user first — every rerun costs tokens.
 - **The artifact name is `skill-unit-results`**, exactly. Not `skill-unit-tests` or `test-results`. `gh run download <id>` with no `--name` will fail if other artifacts also exist; use `--name` explicitly.
 - **`gh run view <id>` without `--log` or `--log-failed`** shows a high-level summary that does NOT include test results. The summary lives in the step log, not the run metadata.
