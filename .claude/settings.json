@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_THRIFTY_SONIC": "0"
+  },
   "permissions": {
     "allow": [
       "Read",
@@ -46,6 +49,21 @@
       "Bash(git cat-file *)",
       "Bash(git add *)",
       "Bash(git commit *)",
+      "Bash(git-wt *)",
+      "Bash(git worktree list)",
+      "Bash(git worktree list *)",
+      "Bash(git -C *.worktrees/* push)",
+      "Bash(git -C *.worktrees/* push *)",
+      "Bash(git -C *.worktrees/* add *)",
+      "Bash(git -C *.worktrees/* commit *)",
+      "Bash(git -C *.worktrees/* status)",
+      "Bash(git -C *.worktrees/* status *)",
+      "Bash(git -C *.worktrees/* log *)",
+      "Bash(git -C *.worktrees/* diff *)",
+      "Bash(git -C *.worktrees/* fetch *)",
+      "Bash(git -C *.worktrees/* rebase *)",
+      "Bash(git -C *.worktrees/* branch)",
+      "Bash(git -C *.worktrees/* branch *)",
       "Bash(docker *)",
       "Bash(docker compose *)",
       "Bash(gh *)",
@@ -83,8 +101,13 @@
       "Bash(git remote remove *)",
       "Bash(git config *)",
       "Bash(git clone *)",
+      "Bash(git -C *.worktrees/* push -f *)",
+      "Bash(git -C *.worktrees/* push --force *)",
+      "Bash(git worktree add *)",
+      "Bash(git worktree remove *)",
+      "Bash(git worktree move *)",
+      "Bash(git worktree prune*)",
       "Bash(git submodule *)",
-      "Bash(git -C *)",
       "Bash(python *)",
       "Bash(python3 *)"
     ],
