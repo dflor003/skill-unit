@@ -69,6 +69,7 @@ Current docs. You MUST update this list any time you add, delete, or rename arch
 - `docs/architecture/troubleshooting.md` -- troubleshooting entry point (read-only CLI subcommands)
 - `docs/architecture/tui-design.md` -- TUI/CLI architecture, screens, data flow, keyboard navigation
 - `docs/architecture/workspaces.md` -- workspace isolation
+- `docs/architecture/worktrees.md` -- git worktree workflow via worktrunk
 
 ## Rules Files
 
@@ -90,7 +91,30 @@ IDE schema validation will flag the correct format as an error. Ignore it.
 
 ## Git Commands
 
-Never use `git -C <path>`. Always use relative paths so that the auto-approve rules in `settings.json` match correctly.
+- **Bare `git push` is denied everywhere**, including inside a worktree. Push with `git -C .worktrees/<folder> push -u origin <branch>`, forward slashes only.
+- `git -C .worktrees/<folder> ...` is allow-listed for `push`, `add`, `commit`, `status`, `log`, `diff`, `fetch`, `rebase`, `branch`. Other `git -C` targets prompt.
+- **Never push from the main checkout.** The deny list cannot enforce this; you must.
+- Startup warnings about the `git -C *.worktrees/*` rules are known and accepted. Never add a `Bash(git -C *)` deny to silence them, which disables every worktree rule.
+- Otherwise prefer plain relative paths so the rules match.
+
+## Worktrees
+
+Lifecycle goes through [worktrunk](https://worktrunk.dev). **The binary is `git-wt`, not `wt`** (Windows Terminal owns `wt`). Raw `git worktree add|remove|move|prune` is denied.
+
+| Task   | Command                           |
+| ------ | --------------------------------- |
+| Create | `git-wt switch --create <branch>` |
+| List   | `git-wt list`                     |
+| Remove | `git-wt remove <branch>`          |
+| Config | `git-wt config show`              |
+| Hooks  | `git-wt hook show`                |
+
+Worktrees land in `.worktrees/<branch>` (gitignored). `.config/wt.toml` runs `npm ci` then `npm run build` on create.
+
+- **Verify every removal.** `git-wt remove` runs in the background and reports success regardless. Check `git worktree list`, `ls .worktrees/`, and `git branch --list`. The real error is in `.git/wt/logs/<folder>-<id>/internal/remove.log`. Re-running will not finish it; use `rm -rf .worktrees/<folder>` then `git branch -d <branch>`.
+- **Never pass `--yes` to hook approvals.** That is the user's security decision; ask them to run `git-wt config approvals add`.
+
+Machine setup, placement config, and Windows troubleshooting: `docs/architecture/worktrees.md`.
 
 ## CI Workflows
 
@@ -110,7 +134,9 @@ npm run build
 npm link
 ```
 
-The `npm link` step is required for the skill-unit skill's own self-tests. The `skill-unit` skill invokes the CLI as `skill-unit <subcommand>` (or `npx skill-unit <subcommand>`). For external users, `npm install skill-unit` creates `node_modules/.bin/skill-unit` automatically; `npm install` in this repo does NOT self-install the bin, so `npm link` is needed to expose it on PATH. CI does the same thing automatically.
+The `npm link` step exposes the CLI on your PATH for use from other projects. It is no longer what makes this repo's own self-tests work: `skills/skill-unit/scripts/run-cli.sh` resolves this checkout's `dist/cli/index.js` before consulting PATH whenever it runs inside the skill-unit repo or one of its worktrees. `npm run build` is therefore the step that actually matters, since that resolution targets `dist/`.
+
+That ordering exists because `npm link` is global. It points the PATH binary at exactly one checkout, so without it a worktree's `/skill-unit` run would silently exercise the main checkout's build instead of the code under test. For external users, `npm install skill-unit` creates `node_modules/.bin/skill-unit` automatically; `npm install` in this repo does NOT self-install the bin. CI does the same thing automatically.
 
 ### Cross-platform optional deps
 
@@ -178,4 +204,6 @@ If the pre-commit hook reformats files outside your task scope, include those ch
 
 ## Git Workflow
 
-Do NOT commit changes as you go. Let the user review and commit. Never run `git add` or `git commit` unless the user explicitly asks you to.
+**In the main checkout:** do NOT commit changes as you go. Let the user review and commit. Never run `git add` or `git commit` unless the user explicitly asks you to.
+
+**In a worktree under `.worktrees/`:** commit, push, and open a Draft PR without being asked. Marking a PR Ready for Review and merging it stay the user's call. Push with the worktree form from "Git Commands" above; a bare `git push` is denied even from inside the worktree.

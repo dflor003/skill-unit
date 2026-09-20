@@ -1,0 +1,12 @@
+# Worktrunk project config. Rationale: docs/architecture/worktrees.md
+#
+# pre-start blocks; post-start would let an agent run tests before `npm ci` finishes.
+# Separate [[pre-start]] tables run in sequence; one table with two keys runs them concurrently.
+#
+# Placement lives in user config, not here: `worktree-path` is ignored in project config.
+
+[[pre-start]]
+install = "npm ci"
+
+[[pre-start]]
+build = "npm run build"
